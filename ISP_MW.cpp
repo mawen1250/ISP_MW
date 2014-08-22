@@ -23,13 +23,13 @@ int main(int argc, char ** argv)
     char * FileName = new char[PATHLEN];
     char * Ext = new char[EXTLEN];
 
-	// Default Parameters
+    // Default Parameters
     double sigmaS = 1.0;
     double sigmaR = 0.1;
     string Flag = ".Bilateral";
     string Format = ".png";
 
-	// Arguments Process
+    // Arguments Process
     if (argc <= 1)
     {
         return 0;
@@ -65,7 +65,7 @@ int main(int argc, char ** argv)
         }
     }
     
-	// Clean
+    // Clean
     delete[] args;
     delete[] Drive, Dir, FileName, Ext;
 
