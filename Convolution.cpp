@@ -1,14 +1,14 @@
 #include <iostream>
-#include "include/Convolution.h"
-#include "include/Image_Type.h"
+#include "include\Convolution.h"
+#include "include\Image_Type.h"
 
  
-Plane & Convolution3V(Plane & Plane, bool norm, float K0, float K1, float K2)
+Plane & Convolution3V(Plane & Plane, bool norm, FLType K0, FLType K1, FLType K2)
 {
     PCType i, j, k, l, m, n;
     PCType length = 1;
-    float sum;
-    float P0=0, P1=0, P2=0;
+    FLType sum;
+    FLType P0=0, P1=0, P2=0;
     DType * index, * upper;
 
     if(norm)
@@ -32,7 +32,7 @@ Plane & Convolution3V(Plane & Plane, bool norm, float K0, float K1, float K2)
     {
         P0 = P1;
         P1 = P2;
-        P2 = (float)(*index);
+        P2 = (FLType)(*index);
         
         if(i<j)
         {
@@ -62,12 +62,12 @@ Plane & Convolution3V(Plane & Plane, bool norm, float K0, float K1, float K2)
 }
 
 
-Plane & Convolution3H(Plane & Plane, bool norm, float K0, float K1, float K2)
+Plane & Convolution3H(Plane & Plane, bool norm, FLType K0, FLType K1, FLType K2)
 {
     PCType i, j, k;
     PCType length = 1;
-    float sum;
-    float P0=0, P1=0, P2=0;
+    FLType sum;
+    FLType P0=0, P1=0, P2=0;
     DType * index, * upper;
 
     if(norm)
@@ -88,7 +88,7 @@ Plane & Convolution3H(Plane & Plane, bool norm, float K0, float K1, float K2)
     {
         P0 = P1;
         P1 = P2;
-        P2 = (float)(*index);
+        P2 = (FLType)(*index);
         
         if(i<j)
         {
@@ -117,12 +117,12 @@ Plane & Convolution3H(Plane & Plane, bool norm, float K0, float K1, float K2)
 }
 
 
-Plane & Convolution3(Plane & Plane, bool norm, float K0, float K1, float K2, float K3, float K4, float K5, float K6, float K7, float K8)
+Plane & Convolution3(Plane & Plane, bool norm, FLType K0, FLType K1, FLType K2, FLType K3, FLType K4, FLType K5, FLType K6, FLType K7, FLType K8)
 {
     PCType i, j, k;
     PCType length = 1;
-    float sum;
-    float P0=0, P1=0, P2=0, P3=0, P4=0, P5=0, P6=0, P7=0, P8=0;
+    FLType sum;
+    FLType P0=0, P1=0, P2=0, P3=0, P4=0, P5=0, P6=0, P7=0, P8=0;
     DType * index0, * index1, * upper1, * index2;
 
     DType * pp = new DType[Plane.PixelCount()];
@@ -151,9 +151,9 @@ Plane & Convolution3(Plane & Plane, bool norm, float K0, float K1, float K2, flo
     
     for (i = 0, index0 = pp, index1 = Plane.Data() + Plane.Width(), index2 = pp + Plane.Width() * 2, upper1 = Plane.Data() + Plane.PixelCount() - Plane.Width()*length;;)
     {
-        P0 = P1; P1 = P2; P2 = (float)(*index0);
-        P3 = P4; P4 = P5; P5 = (float)(*index1);
-        P6 = P7; P7 = P8; P8 = (float)(*index2);
+        P0 = P1; P1 = P2; P2 = (FLType)(*index0);
+        P3 = P4; P4 = P5; P5 = (FLType)(*index1);
+        P6 = P7; P7 = P8; P8 = (FLType)(*index2);
         
         if(i<j)
         {

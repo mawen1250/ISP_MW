@@ -11,12 +11,9 @@
 #include "ImageIO.h"
 #include "Transform.h"
 #include "Convolution.h"
+#include "Gaussian.h"
 #include "Bilateral.h"
-
-
-const int DRIVELEN = 16;
-const int PATHLEN = 512;
-const int EXTLEN = 64;
+#include "Highlight_Removal.h"
 
 
 #endif

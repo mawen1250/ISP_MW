@@ -1,29 +1,44 @@
-#include "include/Transform.h"
-#include "include/Image_Type.h"
+#include <iostream>
+
+#include "include\Transform.h"
+#include "include\Image_Type.h"
 
 
-Plane & Transpose(Plane & Plane)
+Plane & Transpose(Plane & output, const Plane & input)
 {
-    PCType i, j;
-    DType * index0, * upper0, * index1, * upper1;
+    PCType i, j, k;
+    PCType sw = input.Width();
+    PCType sh = input.Height();
+    PCType pcount = input.PixelCount();
+    k = pcount - 1;
     
-    DType * pp = new DType[Plane.PixelCount()];
-
-    i = Plane.Width();
-    j = Plane.PixelCount() - 1;
-    
-    for (index0 = Plane.Data(), upper0 = Plane.Data() + Plane.PixelCount(), index1 = pp, upper1 = pp + Plane.PixelCount(); index0 < upper0; index0++)
+    // Apply transpose
+    for (i = 0, j = 0; i < pcount; i++, j+=sw)
     {
-        *index0 = *index1;
-        index1 += i;
-
-        if(index1>=upper1)
-        {
-            index1 -= j;
-        }
+        if (j > k) j -= k;
+        output[i] = input[j];
     }
-    
-    delete[] pp;
 
-    return Plane;
+    // Change Plane info
+    output.Width(sh);
+    output.Height(sw);
+    output.PixelCount(pcount);
+
+    // Output
+    return output;
+}
+
+
+void Transpose(float * output, const float * const input, const PCType sw, const PCType sh)
+{
+    PCType i, j, k;
+    PCType pcount = sw*sh;
+    k = pcount - 1;
+
+    // Apply transpose
+    for (i = 0, j = 0; i < pcount; i++, j += sw)
+    {
+        if (j > k) j -= k;
+        output[i] = input[j];
+    }
 }

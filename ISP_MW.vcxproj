@@ -121,6 +121,8 @@
   <ItemGroup>
     <ClCompile Include="Bilateral.cpp" />
     <ClCompile Include="Convolution.cpp" />
+    <ClCompile Include="Gaussian.cpp" />
+    <ClCompile Include="Highlight_Removal.cpp" />
     <ClCompile Include="ImageIO.cpp" />
     <ClCompile Include="Image_Type.cpp" />
     <ClCompile Include="ISP_MW.cpp" />
@@ -128,11 +130,15 @@
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\args.h" />
     <ClInclude Include="include\Bilateral.h" />
     <ClInclude Include="include\Calculation.h" />
     <ClInclude Include="include\Convolution.h" />
+    <ClInclude Include="include\Gaussian.h" />
+    <ClInclude Include="include\Highlight_Removal.h" />
     <ClInclude Include="include\ImageIO.h" />
     <ClInclude Include="include\Image_Type.h" />
+    <ClInclude Include="include\IO.h" />
     <ClInclude Include="include\ISP_MW.h" />
     <ClInclude Include="include\Specification.h" />
     <ClInclude Include="include\Transform.h" />

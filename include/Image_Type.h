@@ -8,6 +8,7 @@
 typedef sint32 FCType;
 typedef sint32 PCType;
 typedef uint32 DType;
+typedef double FLType;
 
 
 const int HD_Width_U = 2048;
@@ -135,9 +136,18 @@ public:
     DType * Data() { return Data_; };
     DType * const Data() const { return Data_; };
 
+    void Width(PCType Width) { Width_ = Width; };
+    void Height(PCType Height) { Height_ = Height; };
+    void PixelCount(PCType PixelCount) { PixelCount_ = PixelCount; };
+    void BitDepth(DType BitDepth) { BitDepth_ = BitDepth; }
+    void Floor(DType Floor) { Floor_ = Floor; }
+    void Neutral(DType Neutral) { Neutral_ = Neutral; }
+    void Ceil(DType Ceil) { Ceil_ = Ceil; }
+    void ValueRange(DType ValueRange) { ValueRange_ = ValueRange; }
+
     template <typename T> friend DType Quantize(T input, const Plane & Plane)
     {
-        return input <= Plane.Floor_ ? Plane.Floor_ : input >= Plane.Ceil_ ? Plane.Ceil_ : (DType)(input + 0.5);
+        return input <= Plane.Floor_ ? Plane.Floor_ : input >= Plane.Ceil_ ? Plane.Ceil_ : (DType)(input + T(0.5));
     }
 };
 

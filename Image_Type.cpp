@@ -1,5 +1,5 @@
 #include <iostream>
-#include "include/Image_Type.h"
+#include "include\Image_Type.h"
 
 
 // Default functions
@@ -482,6 +482,8 @@ Frame_YUV & Frame_YUV::operator=(const Frame_YUV & src)
             V_ = new Plane(*src.V_);
         }
     }
+
+    return *this;
 }
 
 bool Frame_YUV::operator==(const Frame_YUV & b) const
@@ -723,6 +725,8 @@ Frame_RGB & Frame_RGB::operator=(const Frame_RGB & src)
     {
         B_ = nullptr;
     }
+
+    return *this;
 }
 
 bool Frame_RGB::operator==(const Frame_RGB & b) const
