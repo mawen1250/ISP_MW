@@ -9,8 +9,7 @@ Plane & Transpose(Plane & output, const Plane & input);
 inline Plane & Transpose(Plane & input)
 {
     Plane temp(input);
-    Transpose(input, temp);
-    return input;
+    return Transpose(input, temp);
 }
 inline Frame_YUV & Transpose(Frame_YUV & output, const Frame_YUV & input)
 {
@@ -22,8 +21,7 @@ inline Frame_YUV & Transpose(Frame_YUV & output, const Frame_YUV & input)
 inline Frame_YUV & Transpose(Frame_YUV & input)
 {
     Frame_YUV temp(input);
-    Transpose(input, temp);
-    return input;
+    return Transpose(input, temp);
 }
 inline Frame_RGB & Transpose(Frame_RGB & output, const Frame_RGB & input)
 {
@@ -35,12 +33,19 @@ inline Frame_RGB & Transpose(Frame_RGB & output, const Frame_RGB & input)
 inline Frame_RGB & Transpose(Frame_RGB & input)
 {
     Frame_RGB temp(input);
-    Transpose(input, temp);
-    return input;
+    return Transpose(input, temp);
 }
 
 
-void Transpose(float * output, const float * const input, const PCType sw, const PCType sh);
+Plane_FL & Transpose(Plane_FL & output, const Plane_FL & input);
+inline Plane_FL & Transpose(Plane_FL & input)
+{
+    Plane_FL temp(input);
+    return Transpose(input, temp);
+}
+
+
+void Transpose(FLType * output, const FLType * const input, const PCType sw, const PCType sh);
 
 
 #endif

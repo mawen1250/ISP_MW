@@ -3,15 +3,48 @@
 
 
 #include "Image_Type.h"
+#include "cmath"
 
 
-STAT ColorPrim_Parameter(ColorPrim ColorPrim, double * green_x, double * green_y, double * blue_x, double * blue_y, double * red_x, double * red_y, double * white_x, double * white_y);
+void ColorPrim_Parameter(ColorPrim ColorPrim, FLType & green_x, FLType & green_y, FLType & blue_x, FLType & blue_y, FLType & red_x, FLType & red_y, FLType & white_x, FLType & white_y);
 
 
-STAT Transfer_Parameter(TransferChar TransferChar, double * k0, double * phi, double * alpha, double * power, double * div);
+void TransferChar_Parameter(TransferChar TransferChar, FLType & k0, FLType & phi, FLType & alpha, FLType & power, FLType & div);
+inline void TransferChar_Parameter(TransferChar TransferChar, FLType & k0, FLType & phi, FLType & alpha, FLType & power)
+{
+    FLType temp;
+    TransferChar_Parameter(TransferChar, k0, phi, alpha, power, temp);
+}
+inline void TransferChar_Parameter(TransferChar TransferChar, FLType & k0, FLType & div)
+{
+    FLType temp;
+    TransferChar_Parameter(TransferChar, k0, temp, temp, temp, div);
+}
 
 
-STAT ColorMatrix_Parameter(ColorMatrix ColorMatrix, double * Kr, double * Kg, double * Kb);
+void ColorMatrix_Parameter(ColorMatrix ColorMatrix, FLType & Kr, FLType & Kg, FLType & Kb);
+
+
+// Conversion functions
+inline FLType TransferChar_gamma2linear(FLType data, FLType k0, FLType phi, FLType alpha, FLType power)
+{
+    return data < k0*phi ? data / phi : std::pow((data + alpha) / (1 + alpha), 1 / power);
+}
+
+inline FLType TransferChar_linear2gamma(FLType data, FLType k0, FLType phi, FLType alpha, FLType power)
+{
+    return data < k0 ? phi*data : (1 + alpha)*std::pow(data, power) - alpha;
+}
+
+inline FLType TransferChar_gamma2linear(FLType data, FLType k0, FLType div)
+{
+    return data == 0 ? 0 : std::pow(10, (data - 1)*div);
+}
+
+inline FLType TransferChar_linear2gamma(FLType data, FLType k0, FLType div)
+{
+    return data < k0 ? 0 : 1 + std::log10(data) / div;
+}
 
 
 #endif

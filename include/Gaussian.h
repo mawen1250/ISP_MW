@@ -12,8 +12,7 @@ Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma = 1.0
 inline Plane Gaussian2D(const Plane & input, const double sigma = 1.0)
 {
     Plane output(input, false);
-    Gaussian2D(output, input, sigma);
-    return output;
+    return Gaussian2D(output, input, sigma);
 }
 inline Frame_YUV Gaussian2D(const Frame_YUV & input, const double sigma = 1.0)
 {
@@ -34,8 +33,8 @@ inline Frame_RGB Gaussian2D(const Frame_RGB & input, const double sigma = 1.0)
 
 
 void Recursive_Gaussian_Parameters(const double sigma, double & B, double & B1, double & B2, double & B3);
-void Recursive_Gaussian2D_Vertical(FLType * data, const PCType sw, const PCType sh, const FLType B, const FLType B1, const FLType B2, const FLType B3);
-void Recursive_Gaussian2D_Horizontal(FLType * data, const PCType sw, const PCType sh, const FLType B, const FLType B1, const FLType B2, const FLType B3);
+void Recursive_Gaussian2D_Vertical(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3);
+void Recursive_Gaussian2D_Horizontal(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3);
 
 
 #endif

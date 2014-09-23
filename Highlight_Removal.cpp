@@ -1,5 +1,6 @@
 ﻿#include <iostream>
 #include <cmath>
+#include "include\Highlight_Removal.h"
 #include "include\Bilateral.h"
 #include "include\Type_Conv.h"
 #include "include\Image_Type.h"
@@ -19,12 +20,9 @@ Frame_RGB & Specular_Highlight_Removal(Frame_RGB & output, const Frame_RGB & inp
     Plane PlambdaMax(input.R(), false);
     Plane PsigmaMaxF(input.R(), false);
 
-    PsigmaMax.Floor(0);
-    PsigmaMax.Ceil(ValueRange);
-    PlambdaMax.Floor(0);
-    PlambdaMax.Ceil(ValueRange);
-    PsigmaMaxF.Floor(0);
-    PsigmaMaxF.Ceil(ValueRange);
+    PsigmaMax.ReQuantize(input.R().BitDepth(), 0, 0, ValueRange);
+    PlambdaMax.ReQuantize(input.R().BitDepth(), 0, 0, ValueRange);
+    PsigmaMaxF.ReQuantize(input.R().BitDepth(), 0, 0, ValueRange);
 
     DType diffthr = (DType)(thr * ValueRange + 0.5);
     FLType specular_component;
@@ -94,9 +92,9 @@ Frame_RGB & Specular_Highlight_Removal(Frame_RGB & output, const Frame_RGB & inp
         else
         {
             specular_component = (Max(Max(R, G), B) - sigmaMax*(R + G + B)) / (1 - 3 * sigmaMax);
-            output.R()[i] = Quantize(R - specular_component, output.R());
-            output.G()[i] = Quantize(G - specular_component, output.G());
-            output.B()[i] = Quantize(B - specular_component, output.B());
+            output.R()[i] = output.R().Quantize(R - specular_component);
+            output.G()[i] = output.G().Quantize(G - specular_component);
+            output.B()[i] = output.B().Quantize(B - specular_component);
         }
         /*output.R()[i] = PsigmaMax[i];
         output.G()[i] = PsigmaMax[i];

@@ -39,7 +39,7 @@ Frame_RGB ImageReader(const std::string & filename, const FCType FrameNum, const
     if (image.isContinuous())
     {
         uchar * p = image.ptr<uchar>(0);
-        for (i = 0, j = 0; i<pcount; i++)
+        for (i = 0, j = 0; i < pcount; i++)
         {
             B[i] = p[j++] * 257;
             G[i] = p[j++] * 257;

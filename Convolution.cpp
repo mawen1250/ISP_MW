@@ -41,7 +41,7 @@ Plane & Convolution3V(Plane & Plane, bool norm, FLType K0, FLType K1, FLType K2)
         }
         else
         {
-            *(index-n) = Quantize(K0*P0 + K1*P1 + K2*P2, Plane);
+            *(index - n) = Plane.Quantize(K0*P0 + K1*P1 + K2*P2);
             
             i++;
             index  += k;
@@ -97,7 +97,7 @@ Plane & Convolution3H(Plane & Plane, bool norm, FLType K0, FLType K1, FLType K2)
         }
         else
         {
-            *(index-length) = Quantize(K0*P0 + K1*P1 + K2*P2, Plane);
+            *(index - length) = Plane.Quantize(K0*P0 + K1*P1 + K2*P2);
             
             i++;
             index++;
@@ -164,7 +164,7 @@ Plane & Convolution3(Plane & Plane, bool norm, FLType K0, FLType K1, FLType K2, 
         }
         else
         {
-            *(index1-length) = Quantize(K0*P0 + K1*P1 + K2*P2 + K3*P3 + K4*P4 + K5*P5 + K6*P6 + K7*P7 + K8*P8, Plane);
+            *(index1 - length) = Plane.Quantize(K0*P0 + K1*P1 + K2*P2 + K3*P3 + K4*P4 + K5*P5 + K6*P6 + K7*P7 + K8*P8);
             
             i++;
             index0++;

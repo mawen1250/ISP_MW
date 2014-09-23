@@ -6,12 +6,13 @@
 
 
 //#define Test
-//#define Test_Write
+#define Test_Write
 
 //#define Gaussian
-#define Bilateral
+//#define Bilateral
 //#define Transpose_
 //#define Specular_Highlight_Removal_
+#define Tone_Mapping
 
 
 using namespace std;
@@ -23,7 +24,7 @@ int main(int argc, char ** argv)
     PCType i;
     const int Loop = 15;
 
-    Frame_RGB Frame = ImageReader("D:\\Test Images\\02.bmp");
+    Frame_RGB Frame = ImageReader("D:\\Test Images\\04.bmp");
 
 #ifdef Test_Write
     Frame_RGB PFrame;
@@ -35,8 +36,11 @@ int main(int argc, char ** argv)
     PFrame = Transpose(Frame);
 #elif defined(Specular_Highlight_Removal_)
     PFrame = Specular_Highlight_Removal(Frame);
+#elif defined(Tone_Mapping)
+    PFrame = Adaptive_Global_Tone_Mapping(Frame);
 #endif
-    ImageWriter(PFrame, "D:\\Test Images\\02.Test.png");
+    ImageWriter(PFrame, "D:\\Test Images\\04.Test.png");
+    system("pause");
 #else // Test_Write
     for (i = 0; i<Loop; i++) {
 #if defined(Gaussian)
@@ -56,7 +60,9 @@ int main(int argc, char ** argv)
     return Gaussian2D_IO(argc, argv);
 #elif defined(Bilateral)
     return Bilateral2D_IO(argc, argv);
+#elif defined(Tone_Mapping)
+    return Adaptive_Global_Tone_Mapping_IO(argc, argv);
 #endif
-
+    
 #endif // Test
 }

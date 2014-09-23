@@ -7,6 +7,8 @@
 #include "Calculation.h"
 #include "Image_Type.h"
 #include "Specification.h"
+#include "LUT.h"
+#include "Histogram.h"
 
 #include "ImageIO.h"
 #include "Transform.h"
@@ -14,6 +16,7 @@
 #include "Gaussian.h"
 #include "Bilateral.h"
 #include "Highlight_Removal.h"
+#include "Tone_Mapping.h"
 
 
 #endif

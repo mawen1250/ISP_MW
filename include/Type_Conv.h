@@ -184,6 +184,12 @@ inline T Min(T a, T b)
     return a > b ? b : a;
 }
 
+template <typename T>
+inline T Clip(T input, T lower, T upper)
+{
+    return input >= upper ? upper : input <= lower ? lower : input;
+}
+
 
 // Abs
 template <typename T>

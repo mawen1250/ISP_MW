@@ -91,22 +91,16 @@ Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma)
 
     const PCType pcount = input.PixelCount();
 
-    FLType * data = new FLType[pcount];
-    for (i = 0; i < pcount; i++)
-    {
-        data[i] = (FLType)input[i];
-    }
+    Plane_FL data(input);
 
-    Recursive_Gaussian2D_Horizontal(data, input.Width(), input.Height(), B, B1, B2, B3);
-    Recursive_Gaussian2D_Vertical(data, input.Width(), input.Height(), B, B1, B2, B3);
+    Recursive_Gaussian2D_Horizontal(data, B, B1, B2, B3);
+    Recursive_Gaussian2D_Vertical(data, B, B1, B2, B3);
 
     for (i = 0; i < pcount; i++)
     {
-        output[i] = Quantize(data[i], output);
+        output[i] = output.GetD(data[i]);
     }
     
-    delete[] data;
-
     return output;
 }
 
@@ -126,9 +120,11 @@ void Recursive_Gaussian_Parameters(const double sigma, double & B, double & B1, 
     B3 = b3 / b0;
 }
 
-void Recursive_Gaussian2D_Vertical(FLType * data, const PCType sw, const PCType sh, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+void Recursive_Gaussian2D_Vertical(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3)
 {
     PCType i, j, lower, upper;
+    PCType sw = data.Width();
+    PCType sh = data.Height();
     PCType pcount = sw*sh;
     FLType P1, P2, P3;
 
@@ -161,9 +157,11 @@ void Recursive_Gaussian2D_Vertical(FLType * data, const PCType sw, const PCType 
     }
 }
 
-void Recursive_Gaussian2D_Horizontal(FLType * data, const PCType sw, const PCType sh, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+void Recursive_Gaussian2D_Horizontal(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3)
 {
     PCType i, j, lower, upper;
+    PCType sw = data.Width();
+    PCType sh = data.Height();
     FLType P1, P2, P3;
 
     for (j = 0; j < sh; j++)

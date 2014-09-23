@@ -2,6 +2,7 @@
 #include <cmath>
 #include "include\Bilateral.h"
 #include "include\Gaussian.h"
+#include "include\LUT.h"
 #include "include\Type_Conv.h"
 #include "include\Image_Type.h"
 #include "include\IO.h"
@@ -92,10 +93,8 @@ Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, cons
     const PCType xUpper = radiusx + 1, yUpper = radiusy + 1;
 
     // Generate LUT
-    FLType * GS_LUT = nullptr;
-    FLType * GR_LUT = new FLType[ref.ValueRange()];
-
-    Gaussian_Distribution2D_Range_LUT_Generation(GR_LUT, ref.ValueRange(), sigmaR*ref.ValueRange());
+    LUT<FLType> GR_LUT = Gaussian_Distribution2D_Range_LUT_Generation(ref.ValueRange(), sigmaR*ref.ValueRange());
+    LUT<FLType> GS_LUT;
 
     // Choose the appropriate algorithm to apply bilateral filter
     int algorithm = (radiusx * 2 + 1)*(radiusy * 2 + 1) * 8 > (PCType)(PBFICnum * 96) ? 1 : 0;
@@ -103,8 +102,7 @@ Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, cons
     switch (algorithm)
     {
     case 0:
-        GS_LUT = new FLType[xUpper*yUpper];
-        Gaussian_Distribution2D_Spatial_LUT_Generation(GS_LUT, xUpper, yUpper, sigmaS);
+        GS_LUT = Gaussian_Distribution2D_Spatial_LUT_Generation(xUpper, yUpper, sigmaS);
         Bilateral2D_0(output, input, ref, GS_LUT, GR_LUT, radiusx, radiusy);
         break;
     case 1:
@@ -113,47 +111,50 @@ Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, cons
     }
     
     // Clear and output
-    delete[] GR_LUT;
-    delete[] GS_LUT;
-
     return output;
 }
 
 
-void Gaussian_Distribution2D_Spatial_LUT_Generation(FLType * GS_LUT, const PCType xUpper, const PCType yUpper, const double sigmaS)
+LUT<FLType> Gaussian_Distribution2D_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS)
 {
     PCType x, y;
+    LUT<FLType> GS_LUT(xUpper*yUpper);
 
     for (y = 0; y < yUpper; y++)
     {
         for (x = 0; x < xUpper; x++)
         {
-            GS_LUT[y*xUpper + x] = (FLType)Gaussian_Distribution2D_x2((double)(x*x + y*y), sigmaS);
+            GS_LUT[y*xUpper + x] = Gaussian_Distribution2D_x2((FLType)(x*x + y*y), sigmaS);
         }
     }
+
+    return GS_LUT;
 }
 
-void Gaussian_Distribution2D_Range_LUT_Generation(FLType * GR_LUT, const DType ValueRange, const double sigmaR)
+LUT<FLType> Gaussian_Distribution2D_Range_LUT_Generation(const DType ValueRange, const double sigmaR)
 {
     DType i;
     const DType upper = Min(ValueRange, (DType)(sigmaR*sigmaRMul + 0.5));
+    LUT<FLType> GR_LUT(ValueRange + 1);
 
-    for (i = 0; i < upper; i++)
+    for (i = 0; i <= upper; i++)
     {
-        GR_LUT[i] = (FLType)Gaussian_Distribution2D((double)i, sigmaR);
+        GR_LUT[i] = Gaussian_Distribution2D((FLType)i, sigmaR);
     }
     // For unknown reason, when more range weights equal 0, the runtime speed gets lower - mainly in function Recursive_Gaussian2D_Horizontal.
     // To avoid this problem, we set range weights whose range values are larger than sigmaR*sigmaRMul to the Gaussian distribution value at sigmaR*sigmaRMul.
-    const FLType upperLUTvalue = GR_LUT[upper - 1];
+    const FLType upperLUTvalue = GR_LUT[upper];
     for (; i < ValueRange; i++)
     {
         GR_LUT[i] = upperLUTvalue;
     }
+
+    return GR_LUT;
 }
 
 
 // Implementation of Bilateral filter with truncated spatial window
-Plane & Bilateral2D_0(Plane & output, const Plane & input, const Plane & ref, FLType * GS_LUT, FLType * GR_LUT, const PCType radiusx, const PCType radiusy)
+Plane & Bilateral2D_0(Plane & output, const Plane & input, const Plane & ref, const LUT<FLType> & GS_LUT, const LUT<FLType> & GR_LUT, const PCType radiusx, const PCType radiusy)
 {
     const PCType xUpper = radiusx + 1, yUpper = radiusy + 1;
 
@@ -183,7 +184,7 @@ Plane & Bilateral2D_0(Plane & output, const Plane & input, const Plane & ref, FL
                     Sum += input[index1] * Weight;
                 }
             }
-            output[index0] = Quantize(Sum / WeightSum, output);
+            output[index0] = output.Quantize(Sum / WeightSum);
         }
         for (; i < input.Width(); i++, index0++)
         {
@@ -197,7 +198,7 @@ Plane & Bilateral2D_0(Plane & output, const Plane & input, const Plane & ref, FL
 
 
 // Implementation of O(1) Bilateral filter algorithm from "Qingxiong Yang, Kar-Han Tan, Narendra Ahuja - Real-Time O(1) Bilateral Filtering"
-Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, FLType * GR_LUT, const double sigmaS, const DType PBFICnum)
+Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, const LUT<FLType> & GR_LUT, const double sigmaS, const DType PBFICnum)
 {
     DType i;
     PCType j;
@@ -206,7 +207,7 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, FL
     PCType pcount = ref.PixelCount();
     
     // Get the minimum and maximum pixel value of Plane "ref"
-    DType rLower = ref.Ceil(), rUpper = ref.Floor(), rRange;
+    DType rLower = ref.Ceil(), rUpper = ref.Floor(), rRange; // First set rLower to the highest number and rUpper to the lowest number
 
     for (j = 0; j < pcount; j++)
     {
@@ -228,13 +229,13 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, FL
     Recursive_Gaussian_Parameters(sigmaS, B, B1, B2, B3);
 
     // Generate quantized PBFICs
-    FLType * Wk = new FLType[pcount];
-    FLType * Jk = new FLType[pcount];
-    FLType ** PBFIC = new FLType * [PBFICnum];
+    Plane_FL Wk(ref, false);
+    Plane_FL Jk(ref, false);
+    Plane_FL * PBFIC = new Plane_FL[PBFICnum];
     
     for (i = 0; i < PBFICnum; i++)
     {
-        PBFIC[i] = new FLType[pcount];
+        PBFIC[i] = Plane_FL(ref, false);
 
         for (j = 0; j < pcount; j++)
         {
@@ -242,10 +243,10 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, FL
             Jk[j] = Wk[j] * input[j];
         }
 
-        Recursive_Gaussian2D_Horizontal(Wk, input.Width(), input.Height(), B, B1, B2, B3);
-        Recursive_Gaussian2D_Vertical(Wk, input.Width(), input.Height(), B, B1, B2, B3);
-        Recursive_Gaussian2D_Horizontal(Jk, input.Width(), input.Height(), B, B1, B2, B3);
-        Recursive_Gaussian2D_Vertical(Jk, input.Width(), input.Height(), B, B1, B2, B3);
+        Recursive_Gaussian2D_Horizontal(Wk, B, B1, B2, B3);
+        Recursive_Gaussian2D_Vertical(Wk, B, B1, B2, B3);
+        Recursive_Gaussian2D_Horizontal(Jk, B, B1, B2, B3);
+        Recursive_Gaussian2D_Vertical(Jk, B, B1, B2, B3);
 
         for (j = 0; j < pcount; j++)
         {
@@ -261,14 +262,11 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, FL
             if (ref[j] < PBFICk[i + 1] && ref[j] >= PBFICk[i]) break;
         }
 
-        output[j] = Quantize(((PBFICk[i + 1] - ref[j])*PBFIC[i][j] + (ref[j] - PBFICk[i])*PBFIC[i + 1][j]) / (PBFICk[i + 1] - PBFICk[i]), output);
+        output[j] = output.Quantize(((PBFICk[i + 1] - ref[j])*PBFIC[i][j] + (ref[j] - PBFICk[i])*PBFIC[i + 1][j]) / (PBFICk[i + 1] - PBFICk[i]));
     }
 
     // Clear and output
-    for (i = 0; i < PBFICnum; i++) delete[] PBFIC[i];
     delete[] PBFIC;
-    delete[] Jk;
-    delete[] Wk;
     delete[] PBFICk;
 
     return output;

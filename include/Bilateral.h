@@ -3,6 +3,7 @@
 
 
 #include <cmath>
+#include "LUT.h"
 #include "Image_Type.h"
 #include "Type_Conv.h"
 
@@ -27,15 +28,13 @@ inline Plane Bilateral2D(const Plane & input, const Plane & ref, const double si
     const double sigmaR = Bilateral2D_Default.sigmaR, const DType PBFICnum = Bilateral2D_Default.PBFICnum)
 {
     Plane output(input, false);
-    Bilateral2D(output, input, ref, sigmaS, sigmaR, PBFICnum);
-    return output;
+    return Bilateral2D(output, input, ref, sigmaS, sigmaR, PBFICnum);
 }
 inline Plane Bilateral2D(const Plane & input, const double sigmaS = Bilateral2D_Default.sigmaS,
     const double sigmaR = Bilateral2D_Default.sigmaR, const DType PBFICnum = Bilateral2D_Default.PBFICnum)
 {
     Plane output(input, false);
-    Bilateral2D(output, input, input, sigmaS, sigmaR, PBFICnum);
-    return output;
+    return Bilateral2D(output, input, input, sigmaS, sigmaR, PBFICnum);
 }
 inline Frame_YUV Bilateral2D(const Frame_YUV & input, const Frame_YUV & ref, const double sigmaS = Bilateral2D_Default.sigmaS,
     const double sigmaR = Bilateral2D_Default.sigmaR, const DType PBFICnum = Bilateral2D_Default.PBFICnum)
@@ -75,34 +74,34 @@ inline Frame_RGB Bilateral2D(const Frame_RGB & input, const double sigmaS = Bila
 }
 
 
-void Gaussian_Distribution2D_Spatial_LUT_Generation(FLType * GS_LUT, const PCType xUpper, const PCType yUpper, const double sigmaS);
-void Gaussian_Distribution2D_Range_LUT_Generation(FLType * GR_LUT, const DType ValueRange, const double sigmaR = Bilateral2D_Default.sigmaR);
+LUT<FLType> Gaussian_Distribution2D_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS = Bilateral2D_Default.sigmaS);
+LUT<FLType> Gaussian_Distribution2D_Range_LUT_Generation(const DType ValueRange, const double sigmaR = Bilateral2D_Default.sigmaR);
 
-Plane & Bilateral2D_0(Plane & output, const Plane & input, const Plane & ref, FLType * GS_LUT, FLType * GR_LUT, const PCType radiusx, const PCType radiusy);
-Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, FLType * GR_LUT,
+Plane & Bilateral2D_0(Plane & output, const Plane & input, const Plane & ref, const LUT<FLType> & GS_LUT, const LUT<FLType> & GR_LUT, const PCType radiusx, const PCType radiusy);
+Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, const LUT<FLType> & GR_LUT,
     const double sigmaS = Bilateral2D_Default.sigmaS, const DType PBFICnum = Bilateral2D_Default.PBFICnum);
 
 
-inline double Gaussian_Distribution2D(double x, double sigma)
+inline FLType Gaussian_Distribution2D(FLType x, FLType sigma)
 {
     sigma *= sigma * 2;
 
     return exp(-x*x / sigma) / (Pi*sigma);
 }
 
-inline double Gaussian_Distribution2D_x2(double x2, double sigma)
+inline FLType Gaussian_Distribution2D_x2(FLType x2, FLType sigma)
 {
     sigma *= sigma * 2;
 
     return exp(-x2 / sigma) / (Pi*sigma);
 }
 
-inline FLType Gaussian_Distribution2D_Spatial_LUT_Lookup(const FLType * const GS_LUT, const PCType xUpper, const PCType x, const PCType y)
+inline FLType Gaussian_Distribution2D_Spatial_LUT_Lookup(const LUT<FLType> & GS_LUT, const PCType xUpper, const PCType x, const PCType y)
 {
     return GS_LUT[Abs(y)*xUpper + Abs(x)];
 }
 
-inline FLType Gaussian_Distribution2D_Range_LUT_Lookup(const FLType * const GR_LUT, const DType Value1, const DType Value2)
+inline FLType Gaussian_Distribution2D_Range_LUT_Lookup(const LUT<FLType> & GR_LUT, const DType Value1, const DType Value2)
 {
     return GR_LUT[Value1 > Value2 ? Value1 - Value2 : Value2 - Value1];
 }

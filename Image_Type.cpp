@@ -1,13 +1,16 @@
 #include <iostream>
 #include "include\Image_Type.h"
+#include "include\Type_Conv.h"
+#include "include\Specification.h"
+#include "include\LUT.h"
 
 
 // Default functions
 ResLevel ResLevel_Default(PCType Width, PCType Height)
 {
     return
-        Width>HD_Width_U || Height>HD_Height_U ? ResLevel::UHD :
-        Width>SD_Width_U || Height>SD_Height_U ? ResLevel::HD : ResLevel::SD;
+        Width > HD_Width_U || Height > HD_Height_U ? ResLevel::UHD :
+        Width > SD_Width_U || Height > SD_Height_U ? ResLevel::HD : ResLevel::SD;
 }
 
 
@@ -59,106 +62,296 @@ ColorMatrix ColorMatrix_Default(PCType Width, PCType Height)
 
 
 // Calculating functions
-STAT Quantize_Value(DType * Floor, DType * Neutral, DType * Ceil, DType * ValueRange, DType BitDepth, QuantRange QuantRange, bool Chroma)
+void Quantize_Value(DType * Floor, DType * Neutral, DType * Ceil, DType * ValueRange, DType BitDepth, QuantRange QuantRange, bool Chroma)
 {
     if (Chroma)
     {
-        *Floor      = QuantRange==QuantRange::PC ? 0 : 16<<(BitDepth-8);
-        *Neutral    = 1<<(BitDepth-1);
-        *Ceil = QuantRange == QuantRange::PC ? (1 << BitDepth) - 1 : 240 << (BitDepth - 8);
-        *ValueRange = QuantRange == QuantRange::PC ? (1 << BitDepth) - 1 : 224 << (BitDepth - 8);
+        *Floor = QuantRange == QuantRange::PC ? DType(0) : DType(16) << (BitDepth - DType(8));
+        *Ceil = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(240) << (BitDepth - DType(8));
+        *Neutral = 1 << (BitDepth - 1);
+        *ValueRange = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(224) << (BitDepth - DType(8));
     }
     else
     {
-        *Floor = QuantRange == QuantRange::PC ? 0 : 16 << (BitDepth - 8);
-        *Neutral    = 1<<(BitDepth-1);
-        *Ceil = QuantRange == QuantRange::PC ? (1 << BitDepth) - 1 : 235 << (BitDepth - 8);
-        *ValueRange = QuantRange == QuantRange::PC ? (1 << BitDepth) - 1 : 219 << (BitDepth - 8);
+        *Floor = QuantRange == QuantRange::PC ? DType(0) : DType(16) << (BitDepth - DType(8));
+        *Ceil = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(235) << (BitDepth - DType(8));
+        *Neutral = *Floor;
+        *ValueRange = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(219) << (BitDepth - DType(8));
     }
-
-    return STAT::OK;
 }
 
 
 // Functions of class Plane
-Plane::Plane(DType Value, PCType Width, PCType Height, DType BitDepth, bool InitValue)
-{
-    Width_ = Width;
-    Height_ = Height;
-    PixelCount_ = Width_ * Height_;
-    BitDepth_ = BitDepth;
-    Floor_ = 0;
-    Neutral_ = 1 << (BitDepth_ - 1);
-    Ceil_ = (1 << BitDepth_) - 1;
-    ValueRange_ = Ceil_ - Floor_;
-
-    Data_ = new DType[PixelCount_];
-
-    if (InitValue)
-    {
-        for (PCType i = 0; i < PixelCount_; i++)
-        {
-            Data_[i] = Value;
-        }
-    }
-}
-
-Plane::Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, DType ValueRange, bool InitValue)
-{
-    Width_ = Width;
-    Height_ = Height;
-    PixelCount_ = Width_ * Height_;
-    BitDepth_ = BitDepth;
-    Floor_ = Floor;
-    Neutral_ = Neutral;
-    Ceil_ = Ceil;
-    ValueRange_ = ValueRange;
-
-    Data_ = new DType[PixelCount_];
-
-    if (InitValue)
-    {
-        for (PCType i = 0; i < PixelCount_; i++)
-        {
-            Data_[i] = Value;
-        }
-    }
-}
-
 Plane::Plane(const Plane & src)
+    : Width_(src.Width_), Height_(src.Height_), PixelCount_(Width_ * Height_), BitDepth_(src.BitDepth_),
+    Floor_(src.Floor_), Neutral_(src.Neutral_), Ceil_(src.Ceil_), ValueRange_(src.ValueRange_), TransferChar_(src.TransferChar_)
 {
-    Width_ = src.Width_;
-    Height_ = src.Height_;
-    PixelCount_ = Width_ * Height_;
-    BitDepth_ = src.BitDepth_;
-    Floor_ = src.Floor_;
-    Neutral_ = src.Neutral_;
-    Ceil_ = src.Ceil_;
-    ValueRange_ = src.ValueRange_;
-
     Data_ = new DType[PixelCount_];
 
     memcpy(Data_, src.Data_, sizeof(DType) * PixelCount_);
 }
 
 Plane::Plane(const Plane & src, bool InitValue, DType Value)
+    : Width_(src.Width_), Height_(src.Height_), PixelCount_(Width_ * Height_), BitDepth_(src.BitDepth_),
+    Floor_(src.Floor_), Neutral_(src.Neutral_), Ceil_(src.Ceil_), ValueRange_(src.ValueRange_), TransferChar_(src.TransferChar_)
 {
-    Width_ = src.Width_;
-    Height_ = src.Height_;
-    PixelCount_ = Width_ * Height_;
-    BitDepth_ = src.BitDepth_;
-    Floor_ = src.Floor_;
-    Neutral_ = src.Neutral_;
-    Ceil_ = src.Ceil_;
-    ValueRange_ = src.ValueRange_;
+    Data_ = new DType[PixelCount_];
+
+    if (InitValue)
+    {
+        Value = Clip(Value, Floor_, Ceil_);
+
+        if (Value)
+        {
+            for (PCType i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = Value;
+            }
+        }
+        else
+        {
+            memset(Data_, Value, sizeof(DType)*PixelCount_);
+        }
+    }
+}
+
+Plane::Plane(Plane && src)
+    : Width_(src.Width_), Height_(src.Height_), PixelCount_(Width_ * Height_), BitDepth_(src.BitDepth_),
+    Floor_(src.Floor_), Neutral_(src.Neutral_), Ceil_(src.Ceil_), ValueRange_(src.ValueRange_), TransferChar_(src.TransferChar_)
+{
+    Data_ = src.Data_;
+
+    src.Width_ = 0;
+    src.Height_ = 0;
+    src.PixelCount_ = 0;
+    src.Data_ = nullptr;
+}
+
+Plane::Plane(const Plane_FL & src, DType BitDepth)
+    : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
+    Floor_(0), Neutral_(DType(1) << (BitDepth_ - 1)), Ceil_((DType(1) << BitDepth_) - 1), ValueRange_(Ceil_ - Floor_), TransferChar_(src.GetTransferChar())
+{
+    const char * FunctionName = "class Plane constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+
+    PCType i;
+    Data_ = new DType[PixelCount_];
+
+    if (isPCChroma())
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = GetD_PCChroma(src[i]);
+        }
+    }
+    else
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = GetD(src[i]);
+        }
+    }
+}
+
+Plane::Plane(const Plane_FL & src, bool InitValue, DType Value, DType BitDepth)
+    : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
+    Floor_(0), Neutral_(DType(1) << (BitDepth_ - 1)), Ceil_((DType(1) << BitDepth_) - 1), ValueRange_(Ceil_ - Floor_), TransferChar_(src.GetTransferChar())
+{
+    const char * FunctionName = "class Plane constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
 
     Data_ = new DType[PixelCount_];
 
     if (InitValue)
     {
-        for (PCType i = 0; i < PixelCount_; i++)
+        Value = Clip(Value, Floor_, Ceil_);
+
+        if (Value)
         {
-            Data_[i] = Value;
+            for (PCType i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = Value;
+            }
+        }
+        else
+        {
+            memset(Data_, Value, sizeof(DType)*PixelCount_);
+        }
+    }
+}
+
+Plane::Plane(const Plane_FL & src, DType BitDepth, DType Floor, DType Neutral, DType Ceil)
+    : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
+    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), ValueRange_(Ceil_ - Floor_), TransferChar_(src.GetTransferChar())
+{
+    const char * FunctionName = "class Plane constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Ceil <= Floor)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (ValueRange_ >= DType(1) << BitDepth)
+    {
+        std::cerr << FunctionName << ": \"Ceil-Floor=" << ValueRange_ << "\" exceeds \"BitDepth=" << BitDepth << "\" limit.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Neutral > Floor && Neutral != (Floor + Ceil + 1) / 2)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\", \"Neutral=" << Neutral << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+
+    PCType i;
+    Data_ = new DType[PixelCount_];
+
+    if (isPCChroma())
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = GetD_PCChroma(src[i]);
+        }
+    }
+    else
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = GetD(src[i]);
+        }
+    }
+}
+
+Plane::Plane(const Plane_FL & src, bool InitValue, DType Value, DType BitDepth, DType Floor, DType Neutral, DType Ceil)
+    : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
+    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), ValueRange_(Ceil_ - Floor_), TransferChar_(src.GetTransferChar())
+{
+    const char * FunctionName = "class Plane constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Ceil <= Floor)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (ValueRange_ >= DType(1) << BitDepth)
+    {
+        std::cerr << FunctionName << ": \"Ceil-Floor=" << ValueRange_ << "\" exceeds \"BitDepth=" << BitDepth << "\" limit.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Neutral > Floor && Neutral != (Floor + Ceil + 1) / 2)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\", \"Neutral=" << Neutral << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+
+    Data_ = new DType[PixelCount_];
+
+    if (InitValue)
+    {
+        Value = Clip(Value, Floor_, Ceil_);
+
+        if (Value)
+        {
+            for (PCType i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = Value;
+            }
+        }
+        else
+        {
+            memset(Data_, Value, sizeof(DType)*PixelCount_);
+        }
+    }
+}
+
+Plane::Plane(DType Value, PCType Width, PCType Height, DType BitDepth, bool InitValue)
+    : Width_(Width), Height_(Height), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
+    Floor_(0), Neutral_(DType(1) << (BitDepth_ - 1)), Ceil_((DType(1) << BitDepth_) - 1), ValueRange_(Ceil_ - Floor_), TransferChar_(TransferChar_Default(Width, Height, true))
+{
+    const char * FunctionName = "class Plane constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+
+    Data_ = new DType[PixelCount_];
+
+    if (InitValue)
+    {
+        Value = Clip(Value, Floor_, Ceil_);
+
+        if (Value)
+        {
+            for (PCType i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = Value;
+            }
+        }
+        else
+        {
+            memset(Data_, Value, sizeof(DType)*PixelCount_);
+        }
+    }
+}
+
+Plane::Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar TransferChar, bool InitValue)
+    : Width_(Width), Height_(Height), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
+    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), ValueRange_(Ceil_ - Floor_), TransferChar_(TransferChar)
+{
+    const char * FunctionName = "class Plane constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Ceil <= Floor)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (ValueRange_ >= DType(1) << BitDepth)
+    {
+        std::cerr << FunctionName << ": \"Ceil-Floor=" << ValueRange_ << "\" exceeds \"BitDepth=" << BitDepth << "\" limit.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Neutral > Floor && Neutral != (Floor + Ceil + 1) / 2)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\", \"Neutral=" << Neutral << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+
+    Data_ = new DType[PixelCount_];
+
+    if (InitValue)
+    {
+        Value = Clip(Value, Floor_, Ceil_);
+
+        if (Value)
+        {
+            for (PCType i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = Value;
+            }
+        }
+        else
+        {
+            memset(Data_, Value, sizeof(DType)*PixelCount_);
         }
     }
 }
@@ -192,6 +385,33 @@ Plane & Plane::operator=(const Plane & src)
     return *this;
 }
 
+Plane & Plane::operator=(Plane && src)
+{
+    if (this == &src)
+    {
+        return *this;
+    }
+
+    Width_ = src.Width_;
+    Height_ = src.Height_;
+    PixelCount_ = Width_ * Height_;
+    BitDepth_ = src.BitDepth_;
+    Floor_ = src.Floor_;
+    Neutral_ = src.Neutral_;
+    Ceil_ = src.Ceil_;
+    ValueRange_ = src.ValueRange_;
+
+    delete[] Data_;
+    Data_ = src.Data_;
+
+    src.Width_ = 0;
+    src.Height_ = 0;
+    src.PixelCount_ = 0;
+    src.Data_ = nullptr;
+
+    return *this;
+}
+
 bool Plane::operator==(const Plane & b) const
 {
     if (this == &b)
@@ -218,168 +438,964 @@ bool Plane::operator==(const Plane & b) const
 }
 
 
+Plane & Plane::ReSize(PCType Width, PCType Height)
+{
+    if (Width_ != Width || Height_ != Height)
+    {
+        if (PixelCount_ != Width*Height)
+        {
+            delete[] Data_;
+            PixelCount_ = Width*Height;
+            Data_ = new DType[PixelCount_];
+        }
+
+        Width_ = Width;
+        Height_ = Height;
+    }
+
+    return *this;
+}
+
+Plane & Plane::ReQuantize(DType BitDepth, QuantRange QuantRange, bool scale)
+{
+    const char * FunctionName = "ReQuantize";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+
+    DType Floor, Neutral, Ceil, ValueRange;
+    Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange, isChroma());
+    return ReQuantize(BitDepth, Floor, Neutral, Ceil, scale);
+}
+
+Plane & Plane::ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale)
+{
+    PCType i;
+    DType ValueRange = Ceil - Floor;
+
+    const char * FunctionName = "ReQuantize";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Ceil <= Floor)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (ValueRange >= DType(1) << BitDepth)
+    {
+        std::cerr << FunctionName << ": \"Ceil-Floor=" << ValueRange << "\" exceeds \"BitDepth=" << BitDepth << "\" limit.\n";
+        exit(EXIT_FAILURE);
+    }
+    if (Neutral > Floor && Neutral != (Floor + Ceil + 1) / 2)
+    {
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\", \"Neutral=" << Neutral << "\" and \"Ceil=" << Ceil << "\" are set.\n";
+        exit(EXIT_FAILURE);
+    }
+
+    if (scale && Data_ && (Floor_ != Floor || Neutral_ != Neutral || Ceil_ != Ceil))
+    {
+        if (isPCChroma())
+        {
+            if ((Floor + Ceil - 1) / 2 == Neutral - 1)
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
+                }
+            }
+            else
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.5));
+                }
+            }
+        }
+        else
+        {
+            if ((Floor + Ceil - 1) / 2 == Neutral - 1)
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
+                }
+            }
+            else
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.5));
+                }
+            }
+        }
+    }
+
+    BitDepth_ = BitDepth;
+    Floor_ = Floor;
+    Neutral_ = Neutral;
+    Ceil_ = Ceil;
+    ValueRange_ = ValueRange;
+
+    return *this;
+}
+
+
+Plane & Plane::From(const Plane & src)
+{
+    PCType i;
+
+    if (isChroma() != src.isChroma()) // Plane "src" and "dst" are not both luma planes or chroma planes.
+    {
+        Floor_ = src.Floor_;
+        Neutral_ = src.Neutral_;
+        Ceil_ = src.Ceil_;
+    }
+
+    ReSize(src.Width(), src.Height());
+
+    if (Floor_ == src.Floor_ && Neutral_ == src.Neutral_ && Ceil_ == src.Ceil_)
+    {
+        memcpy(Data_, src.Data_, sizeof(DType)*PixelCount_);
+    }
+    else if (src.isPCChroma())
+    {
+        if (isPCChroma())
+        {
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = GetD_PCChroma(src.GetFL_PCChroma(src[i]));
+            }
+        }
+        else
+        {
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = GetD(src.GetFL_PCChroma(src[i]));
+            }
+        }
+    }
+    else
+    {
+        if (isPCChroma())
+        {
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = GetD_PCChroma(src.GetFL(src[i]));
+            }
+        }
+        else
+        {
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = GetD(src.GetFL(src[i]));
+            }
+        }
+    }
+
+    return *this;
+}
+
+Plane & Plane::ConvertFrom(const Plane & src, TransferChar dstTransferChar)
+{
+    DType i;
+
+    FLType src_k0, src_phi, src_alpha, src_power, src_div;
+    FLType dst_k0, dst_phi, dst_alpha, dst_power, dst_div;
+
+    FLType data;
+    LUT<DType> LUT(src);
+
+    DType srcFloor = src.Floor_, srcCeil = src.Ceil_;
+    TransferChar srcTransferChar = src.TransferChar_;
+    TransferChar_ = dstTransferChar;
+
+    // Generate conversion LUT
+    if (srcTransferChar == TransferChar::linear)
+    {
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_div);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+    }
+    else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+    {
+        TransferChar_Parameter(srcTransferChar, src_k0, src_div);
+
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_div);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_div);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_div);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_div);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+    }
+    else
+    {
+        TransferChar_Parameter(srcTransferChar, src_k0, src_phi, src_alpha, src_power);
+
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_phi, src_alpha, src_power);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_phi, src_alpha, src_power);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_div);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_phi, src_alpha, src_power);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+                LUT.Set(src, i, GetD(data));
+            }
+        }
+    }
+
+    // Conversion
+    ReSize(src.Width(), src.Height());
+    LUT.Lookup(*this, src);
+
+    // Output
+    return *this;
+}
+
+Plane & Plane::YFrom(const Frame_RGB & src, ColorMatrix dstColorMatrix)
+{
+    PCType i;
+    FLType Kr, Kg, Kb;
+    FLType dataR, dataG, dataB;
+    PCType pcount = src.PixelCount();
+
+    const Plane & srcR = src.R();
+    const Plane & srcG = src.G();
+    const Plane & srcB = src.B();
+
+    ReSize(src.Width(), src.Height());
+
+    ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
+
+    for (i = 0; i < pcount; i++)
+    {
+        dataR = srcR.GetFL(srcR[i]);
+        dataG = srcG.GetFL(srcG[i]);
+        dataB = srcB.GetFL(srcB[i]);
+        Data_[i] = GetD(Kr*dataR + Kg*dataB + Kb*dataG);
+    }
+
+    return *this;
+}
+
+Plane & Plane::YFrom(const Frame_RGB & src)
+{
+    return YFrom(src, src.GetColorMatrix());
+}
+
+
+// Functions of class Plane_FL
+Plane_FL::Plane_FL(const Plane_FL & src)
+    : Width_(src.Width_), Height_(src.Height_), PixelCount_(Width_ * Height_),
+    Floor_(src.Floor_), Neutral_(src.Neutral_), Ceil_(src.Ceil_), TransferChar_(src.TransferChar_)
+{
+    Data_ = new FLType[PixelCount_];
+
+    memcpy(Data_, src.Data_, sizeof(FLType) * PixelCount_);
+}
+
+Plane_FL::Plane_FL(const Plane_FL & src, bool InitValue, FLType Value)
+    : Width_(src.Width_), Height_(src.Height_), PixelCount_(Width_ * Height_),
+    Floor_(src.Floor_), Neutral_(src.Neutral_), Ceil_(src.Ceil_), TransferChar_(src.TransferChar_)
+{
+    Data_ = new FLType[PixelCount_];
+
+    if (InitValue)
+    {
+        Value = Clip(Value, Floor_, Ceil_);
+        for (PCType i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = Value;
+        }
+    }
+}
+
+Plane_FL::Plane_FL(Plane_FL && src)
+    : Width_(src.Width_), Height_(src.Height_), PixelCount_(Width_ * Height_),
+    Floor_(src.Floor_), Neutral_(src.Neutral_), Ceil_(src.Ceil_), TransferChar_(src.TransferChar_)
+{
+    Data_ = src.Data_;
+
+    src.Width_ = 0;
+    src.Height_ = 0;
+    src.PixelCount_ = 0;
+    src.Data_ = nullptr;
+}
+
+Plane_FL::Plane_FL(const Plane & src)
+    : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), TransferChar_(src.GetTransferChar())
+{
+    PCType i;
+    Data_ = new FLType[PixelCount_];
+
+    if (!src.isChroma()) // Plane "src" is not chroma
+    {
+        Floor_ = 0;
+        Neutral_ = 0;
+        Ceil_ = 1;
+    }
+    else // Plane "src" is chroma
+    {
+        Floor_ = -0.5;
+        Neutral_ = 0;
+        Ceil_ = 0.5;
+    }
+
+    if (src.isPCChroma())
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = src.GetFL_PCChroma(src[i]);
+        }
+    }
+    else
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = src.GetFL(src[i]);
+        }
+    }
+}
+
+Plane_FL::Plane_FL(const Plane & src, bool InitValue, FLType Value)
+    : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), TransferChar_(src.GetTransferChar())
+{
+    Data_ = new FLType[PixelCount_];
+
+    if (!src.isChroma()) // Plane "src" is not chroma
+    {
+        Floor_ = 0;
+        Neutral_ = 0;
+        Ceil_ = 1;
+    }
+    else // Plane "src" is chroma
+    {
+        Floor_ = -0.5;
+        Neutral_ = 0;
+        Ceil_ = 0.5;
+    }
+
+    if (InitValue)
+    {
+        Value = Quantize(Value);
+        for (PCType i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = Value;
+        }
+    }
+}
+
+Plane_FL::Plane_FL(FLType Value, PCType Width, PCType Height, bool InitValue)
+    : Width_(Width), Height_(Height), PixelCount_(Width_ * Height_),
+    Floor_(0), Neutral_(0), Ceil_(1), TransferChar_(TransferChar_Default(Width, Height, true))
+{
+    Data_ = new FLType[PixelCount_];
+
+    if (InitValue)
+    {
+        Value = Quantize(Value);
+        for (PCType i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = Value;
+        }
+    }
+}
+
+Plane_FL::Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar TransferChar, bool InitValue)
+    : Width_(Width), Height_(Height), PixelCount_(Width_ * Height_),
+    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), TransferChar_(TransferChar)
+{
+    Data_ = new FLType[PixelCount_];
+
+    if (InitValue)
+    {
+        Value = Quantize(Value);
+        for (PCType i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = Value;
+        }
+    }
+}
+
+Plane_FL::~Plane_FL()
+{
+    delete[] Data_;
+}
+
+Plane_FL & Plane_FL::operator=(const Plane_FL & src)
+{
+    if (this == &src)
+    {
+        return *this;
+    }
+
+    Width_ = src.Width_;
+    Height_ = src.Height_;
+    PixelCount_ = Width_ * Height_;
+    Floor_ = src.Floor_;
+    Neutral_ = src.Neutral_;
+    Ceil_ = src.Ceil_;
+
+    delete[] Data_;
+    Data_ = new FLType[PixelCount_];
+
+    memcpy(Data_, src.Data_, sizeof(FLType) * PixelCount_);
+
+    return *this;
+}
+
+Plane_FL & Plane_FL::operator=(Plane_FL && src)
+{
+    if (this == &src)
+    {
+        return *this;
+    }
+
+    Width_ = src.Width_;
+    Height_ = src.Height_;
+    PixelCount_ = Width_ * Height_;
+    Floor_ = src.Floor_;
+    Neutral_ = src.Neutral_;
+    Ceil_ = src.Ceil_;
+
+    delete[] Data_;
+    Data_ = src.Data_;
+
+    src.Width_ = 0;
+    src.Height_ = 0;
+    src.PixelCount_ = 0;
+    src.Data_ = nullptr;
+
+    return *this;
+}
+
+bool Plane_FL::operator==(const Plane_FL & b) const
+{
+    if (this == &b)
+    {
+        return true;
+    }
+
+    if (Width_ != b.Width_ || Height_ != b.Height_ || PixelCount_ != b.PixelCount_ ||
+        Floor_ != b.Floor_ || Neutral_ != b.Neutral_ || Ceil_ != b.Ceil_)
+    {
+        return false;
+    }
+
+    PCType i;
+    for (i = 0; Data_[i] == b.Data_[i] && i < PixelCount_; i++);
+    if (i < PixelCount_)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+
+Plane_FL & Plane_FL::ReSize(PCType Width, PCType Height)
+{
+    if (Width_ != Width || Height_ != Height)
+    {
+        if (PixelCount_ != Width*Height)
+        {
+            delete[] Data_;
+            PixelCount_ = Width*Height;
+            Data_ = new FLType[PixelCount_];
+        }
+
+        Width_ = Width;
+        Height_ = Height;
+    }
+
+    return *this;
+}
+
+
+Plane_FL & Plane_FL::From(const Plane & src)
+{
+    PCType i;
+    
+    if (!src.isChroma()) // Plane "src" is not chroma
+    {
+        Floor_ = 0;
+        Neutral_ = 0;
+        Ceil_ = 1;
+    }
+    else // Plane "src" is chroma
+    {
+        Floor_ = -0.5;
+        Neutral_ = 0;
+        Ceil_ = 0.5;
+    }
+
+    ReSize(src.Width(), src.Height());
+
+    if (src.isPCChroma())
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = src.GetFL_PCChroma(src[i]);
+        }
+    }
+    else
+    {
+        for (i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = src.GetFL(src[i]);
+        }
+    }
+
+    return *this;
+}
+
+const Plane_FL & Plane_FL::To(Plane & dst) const
+{
+    PCType i;
+    DType oFloor = dst.Floor();
+    DType oNeutral = dst.Neutral();
+    DType oValueRange = dst.ValueRange();
+
+    dst.ReSize(Width_, Height_);
+    DType * Data = dst.Data();
+
+    if (!isChroma()) // Plane_FL "*this" is not chroma
+    {
+        if (Floor_ == 0 && Neutral_ == 0 && Ceil_ == 1)
+        {
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data[i] = dst.GetD(Data_[i]);
+            }
+        }
+        else
+        {
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data[i] = static_cast<DType>((Data_[i] - Floor_) / (Ceil_ - Floor_)*oValueRange + FLType(0.5)) + oFloor;
+            }
+        }
+    }
+    else // Plane_FL "*this" is chroma
+    {
+        if (Floor_ == -0.5 && Neutral_ == 0 && Ceil_ == 0.5)
+        {
+            if (dst.isPCChroma())
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data[i] = dst.GetD_PCChroma(Data_[i]);
+                }
+            }
+            else
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data[i] = dst.GetD(Data_[i]);
+                }
+            }
+        }
+        else
+        {
+            if (dst.isPCChroma())
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data[i] = static_cast<DType>((Data_[i] - Neutral_) / (Ceil_ - Floor_)*oValueRange + oNeutral + FLType(0.49999999));
+                }
+            }
+            else
+            {
+                for (i = 0; i < PixelCount_; i++)
+                {
+                    Data[i] = static_cast<DType>((Data_[i] - Neutral_) / (Ceil_ - Floor_)*oValueRange + oNeutral + FLType(0.5));
+                }
+            }
+        }
+    }
+
+    return *this;
+}
+
+Plane_FL & Plane_FL::ConvertFrom(const Plane & src, TransferChar dstTransferChar)
+{
+    DType i;
+
+    FLType src_k0, src_phi, src_alpha, src_power, src_div;
+    FLType dst_k0, dst_phi, dst_alpha, dst_power, dst_div;
+
+    FLType data;
+    LUT<FLType> LUT(src);
+
+    DType srcFloor = src.Floor(), srcCeil = src.Ceil();
+    TransferChar srcTransferChar = src.GetTransferChar();
+    TransferChar_ = dstTransferChar;
+
+    if (TransferChar_ == srcTransferChar)
+    {
+        From(src);
+        return *this;
+    }
+
+    // Generate conversion LUT
+    if (srcTransferChar == TransferChar::linear)
+    {
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                LUT.Set(src, i, data);
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_div);
+                LUT.Set(src, i, data);
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+                LUT.Set(src, i, data);
+            }
+        }
+    }
+    else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+    {
+        TransferChar_Parameter(srcTransferChar, src_k0, src_div);
+
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_div);
+                LUT.Set(src, i, data);
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_div);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_div);
+                LUT.Set(src, i, data);
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_div);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+                LUT.Set(src, i, data);
+            }
+        }
+    }
+    else
+    {
+        TransferChar_Parameter(srcTransferChar, src_k0, src_phi, src_alpha, src_power);
+
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_phi, src_alpha, src_power);
+                LUT.Set(src, i, data);
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_phi, src_alpha, src_power);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_div);
+                LUT.Set(src, i, data);
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = srcFloor; i <= srcCeil; i++)
+            {
+                data = src.GetFL(i);
+                data = TransferChar_gamma2linear(data, src_k0, src_phi, src_alpha, src_power);
+                data = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+                LUT.Set(src, i, data);
+            }
+        }
+    }
+
+    // Conversion
+    ReSize(src.Width(), src.Height());
+    LUT.Lookup(*this, src);
+
+    // Output
+    return *this;
+}
+
+Plane_FL & Plane_FL::ConvertFrom(const Plane_FL & src, TransferChar dstTransferChar)
+{
+    PCType i;
+    PCType pcount = src.PixelCount();
+
+    FLType src_k0, src_phi, src_alpha, src_power, src_div;
+    FLType dst_k0, dst_phi, dst_alpha, dst_power, dst_div;
+
+    FLType data;
+
+    TransferChar srcTransferChar = src.TransferChar_;
+    TransferChar_ = dstTransferChar;
+
+    if (TransferChar_ == srcTransferChar)
+    {
+        *this = src;
+        return *this;
+    }
+
+    // Conversion
+    ReSize(src.Width(), src.Height());
+
+    if (srcTransferChar == TransferChar::linear)
+    {
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = 0; i < pcount; i++)
+            {
+                Data_[i] = src.Data_[i];
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = 0; i < pcount; i++)
+            {
+                Data_[i] = TransferChar_linear2gamma(src.Data_[i], dst_k0, dst_div);
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = 0; i < pcount; i++)
+            {
+                Data_[i] = TransferChar_linear2gamma(src.Data_[i], dst_k0, dst_phi, dst_alpha, dst_power);
+            }
+        }
+    }
+    else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+    {
+        TransferChar_Parameter(srcTransferChar, src_k0, src_div);
+
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = 0; i < pcount; i++)
+            {
+                Data_[i] = TransferChar_gamma2linear(src.Data_[i], src_k0, src_div);
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = 0; i < pcount; i++)
+            {
+                data = TransferChar_gamma2linear(src.Data_[i], src_k0, src_div);
+                Data_[i] = TransferChar_linear2gamma(data, dst_k0, dst_div);
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = 0; i < pcount; i++)
+            {
+                data = TransferChar_gamma2linear(src.Data_[i], src_k0, src_div);
+                Data_[i] = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+            }
+        }
+    }
+    else
+    {
+        TransferChar_Parameter(srcTransferChar, src_k0, src_phi, src_alpha, src_power);
+
+        if (TransferChar_ == TransferChar::linear)
+        {
+            for (i = 0; i < pcount; i++)
+            {
+                Data_[i] = TransferChar_gamma2linear(src.Data_[i], src_k0, src_phi, src_alpha, src_power);
+            }
+        }
+        else if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_div);
+
+            for (i = 0; i < pcount; i++)
+            {
+                data = TransferChar_gamma2linear(src.Data_[i], src_k0, src_phi, src_alpha, src_power);
+                Data_[i] = TransferChar_linear2gamma(data, dst_k0, dst_div);
+            }
+        }
+        else
+        {
+            TransferChar_Parameter(TransferChar_, dst_k0, dst_phi, dst_alpha, dst_power);
+
+            for (i = 0; i < pcount; i++)
+            {
+                data = TransferChar_gamma2linear(src.Data_[i], src_k0, src_phi, src_alpha, src_power);
+                Data_[i] = TransferChar_linear2gamma(data, dst_k0, dst_phi, dst_alpha, dst_power);
+            }
+        }
+    }
+
+    // Output
+    return *this;
+}
+
+Plane_FL & Plane_FL::YFrom(const Frame_RGB & src, ColorMatrix dstColorMatrix)
+{
+    PCType i;
+    FLType Kr, Kg, Kb;
+    FLType dataR, dataG, dataB;
+    PCType pcount = src.PixelCount();
+
+    const Plane & srcR = src.R();
+    const Plane & srcG = src.G();
+    const Plane & srcB = src.B();
+
+    ReSize(src.Width(), src.Height());
+
+    ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
+
+    for (i = 0; i < pcount; i++)
+    {
+        dataR = srcR.GetFL(srcR[i]);
+        dataG = srcG.GetFL(srcG[i]);
+        dataB = srcB.GetFL(srcB[i]);
+        Data_[i] = Kr*dataR + Kg*dataB + Kb*dataG;
+    }
+
+    return *this;
+}
+
+Plane_FL & Plane_FL::YFrom(const Frame_RGB & src)
+{
+    return YFrom(src, src.GetColorMatrix());
+}
+
+
 // Functions of class Frame_YUV
-Frame_YUV::Frame_YUV(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement)
-{
-    DType Floor, Neutral, Ceil, ValueRange;
-
-    FrameNum_ = FrameNum;
-    PixelType_ = PixelType;
-    ChromaPlacement_ = ChromaPlacement;
-    QuantRange_ = QuantRange;
-    ColorPrim_ = ColorPrim_Default(Width, Height, false);
-    TransferChar_ = TransferChar_Default(Width, Height, false);
-    ColorMatrix_ = ColorMatrix_Default(Width, Height);
-
-    if (PixelType_ != PixelType::U && PixelType_ != PixelType::V)
-    {
-        if (PixelType_ == PixelType::YUV422 && Width % 2)
-        {
-            Width = (Width / 2 + 1) * 2;
-        }
-        else if (PixelType_ == PixelType::YUV420)
-        {
-            if (Width % 2)  Width = (Width / 2 + 1) * 2;
-            if (Height % 2) Height = (Height / 2 + 1) * 2;
-        }
-        else if (PixelType_ == PixelType::YUV411 && Width % 4)
-        {
-            Width = (Width / 4 + 1) * 4;
-        }
-
-        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
-
-        Y_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        Y_ = nullptr;
-    }
-
-    if (PixelType_ != PixelType::Y)
-    {
-        if (PixelType_ == PixelType::YUV422)
-        {
-            Width = Width / 2;
-        }
-        else if (PixelType_ == PixelType::YUV420)
-        {
-            Width = Width / 2;
-            Height = Height / 2;
-        }
-        else if (PixelType_ == PixelType::YUV411)
-        {
-            Width = Width / 4;
-        }
-
-        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, true);
-
-        if (PixelType_ != PixelType::V)
-        {
-            U_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-        }
-        else
-        {
-            U_ = nullptr;
-        }
-
-        if (PixelType_ != PixelType::U)
-        {
-            V_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-        }
-        else
-        {
-            V_ = nullptr;
-        }
-    }
-}
-
-Frame_YUV::Frame_YUV(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix)
-{
-    DType Floor, Neutral, Ceil, ValueRange;
-
-    FrameNum_ = FrameNum;
-    PixelType_ = PixelType;
-    ChromaPlacement_ = ChromaPlacement;
-    QuantRange_ = QuantRange;
-    ColorPrim_ = ColorPrim;
-    TransferChar_ = TransferChar;
-    ColorMatrix_ = ColorMatrix;
-
-    if (PixelType_ != PixelType::U && PixelType_ != PixelType::V)
-    {
-        if (PixelType_ == PixelType::YUV422 && Width % 2)
-        {
-            Width = (Width / 2 + 1) * 2;
-        }
-        else if (PixelType_ == PixelType::YUV420)
-        {
-            if (Width % 2)  Width = (Width / 2 + 1) * 2;
-            if (Height % 2) Height = (Height / 2 + 1) * 2;
-        }
-        else if (PixelType_ == PixelType::YUV411 && Width % 4)
-        {
-            Width = (Width / 4 + 1) * 4;
-        }
-
-        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
-
-        Y_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        Y_ = nullptr;
-    }
-
-    if (PixelType_ != PixelType::Y)
-    {
-        if (PixelType_ == PixelType::YUV422)
-        {
-            Width = Width / 2;
-        }
-        else if (PixelType_ == PixelType::YUV420)
-        {
-            Width = Width / 2;
-            Height = Height / 2;
-        }
-        else if (PixelType_ == PixelType::YUV411)
-        {
-            Width = Width / 4;
-        }
-
-        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, true);
-
-        if (PixelType_ != PixelType::V)
-        {
-            U_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-        }
-        else
-        {
-            U_ = nullptr;
-        }
-
-        if (PixelType_ != PixelType::U)
-        {
-            V_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-        }
-        else
-        {
-            V_ = nullptr;
-        }
-    }
-}
-
 Frame_YUV::Frame_YUV(const Frame_YUV & src, bool Copy)
+    : FrameNum_(src.FrameNum_), PixelType_(src.PixelType_), ChromaPlacement_(src.ChromaPlacement_), QuantRange_(src.QuantRange_),
+    ColorPrim_(src.ColorPrim_), TransferChar_(src.TransferChar_), ColorMatrix_(src.ColorMatrix_)
 {
     DType Floor, Neutral, Ceil, ValueRange;
-
-    FrameNum_ = src.FrameNum_;
-    PixelType_ = src.PixelType_;
-    ChromaPlacement_ = src.ChromaPlacement_;
-    QuantRange_ = src.QuantRange_;
-    ColorPrim_ = src.ColorPrim_;
-    TransferChar_ = src.TransferChar_;
-    ColorMatrix_ = src.ColorMatrix_;
 
     if (PixelType_ != PixelType::U && PixelType_ != PixelType::V)
     {
@@ -391,12 +1407,8 @@ Frame_YUV::Frame_YUV(const Frame_YUV & src, bool Copy)
         {
             Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.Y_->BitDepth(), QuantRange_, false);
 
-            Y_ = new Plane(Floor, src.Y_->Width(), src.Y_->Height(), src.Y_->BitDepth(), Floor, Neutral, Ceil, ValueRange);
+            Y_ = new Plane(Floor, src.Y_->Width(), src.Y_->Height(), src.Y_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
         }
-    }
-    else
-    {
-        Y_ = nullptr;
     }
 
     if (PixelType_ != PixelType::Y)
@@ -411,12 +1423,8 @@ Frame_YUV::Frame_YUV(const Frame_YUV & src, bool Copy)
             {
                 Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.U_->BitDepth(), QuantRange_, true);
 
-                U_ = new Plane(Neutral, src.U_->Width(), src.U_->Height(), src.U_->BitDepth(), Floor, Neutral, Ceil, ValueRange);
+                U_ = new Plane(Neutral, src.U_->Width(), src.U_->Height(), src.U_->BitDepth(), Floor, Neutral, Ceil, TransferChar::linear);
             }
-        }
-        else
-        {
-            U_ = nullptr;
         }
 
         if (PixelType_ != PixelType::U)
@@ -429,12 +1437,151 @@ Frame_YUV::Frame_YUV(const Frame_YUV & src, bool Copy)
             {
                 Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.V_->BitDepth(), QuantRange_, true);
 
-                V_ = new Plane(Neutral, src.V_->Width(), src.V_->Height(), src.V_->BitDepth(), Floor, Neutral, Ceil, ValueRange);
+                V_ = new Plane(Neutral, src.V_->Width(), src.V_->Height(), src.V_->BitDepth(), Floor, Neutral, Ceil, TransferChar::linear);
             }
         }
-        else
+    }
+}
+
+Frame_YUV::Frame_YUV(Frame_YUV && src)
+    : FrameNum_(src.FrameNum_), PixelType_(src.PixelType_), ChromaPlacement_(src.ChromaPlacement_), QuantRange_(src.QuantRange_),
+    ColorPrim_(src.ColorPrim_), TransferChar_(src.TransferChar_), ColorMatrix_(src.ColorMatrix_)
+{
+    Y_ = src.Y_;
+    U_ = src.U_;
+    V_ = src.V_;
+
+    src.Y_ = nullptr;
+    src.U_ = nullptr;
+    src.V_ = nullptr;
+}
+
+Frame_YUV::Frame_YUV(FCType FrameNum, PCType Width, PCType Height, DType BitDepth,
+    PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement)
+    : FrameNum_(FrameNum), PixelType_(PixelType), ChromaPlacement_(ChromaPlacement), QuantRange_(QuantRange),
+    ColorPrim_(ColorPrim_Default(Width, Height, false)), TransferChar_(TransferChar_Default(Width, Height, false)), ColorMatrix_(ColorMatrix_Default(Width, Height))
+{
+    const char * FunctionName = "class Frame_YUV constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+
+    DType Floor, Neutral, Ceil, ValueRange;
+
+    if (PixelType_ != PixelType::U && PixelType_ != PixelType::V)
+    {
+        if (PixelType_ == PixelType::YUV422 && Width % 2)
         {
-            V_ = nullptr;
+            Width = (Width / 2 + 1) * 2;
+        }
+        else if (PixelType_ == PixelType::YUV420)
+        {
+            if (Width % 2)  Width = (Width / 2 + 1) * 2;
+            if (Height % 2) Height = (Height / 2 + 1) * 2;
+        }
+        else if (PixelType_ == PixelType::YUV411 && Width % 4)
+        {
+            Width = (Width / 4 + 1) * 4;
+        }
+
+        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
+
+        Y_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+    }
+
+    if (PixelType_ != PixelType::Y)
+    {
+        if (PixelType_ == PixelType::YUV422)
+        {
+            Width = Width / 2;
+        }
+        else if (PixelType_ == PixelType::YUV420)
+        {
+            Width = Width / 2;
+            Height = Height / 2;
+        }
+        else if (PixelType_ == PixelType::YUV411)
+        {
+            Width = Width / 4;
+        }
+
+        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, true);
+
+        if (PixelType_ != PixelType::V)
+        {
+            U_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear);
+        }
+
+        if (PixelType_ != PixelType::U)
+        {
+            V_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear);
+        }
+    }
+}
+
+Frame_YUV::Frame_YUV(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange,
+    ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix)
+    : FrameNum_(FrameNum), PixelType_(PixelType), ChromaPlacement_(ChromaPlacement), QuantRange_(QuantRange),
+    ColorPrim_(ColorPrim), TransferChar_(TransferChar), ColorMatrix_(ColorMatrix)
+{
+    const char * FunctionName = "class Frame_YUV constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+
+    DType Floor, Neutral, Ceil, ValueRange;
+
+    if (PixelType_ != PixelType::U && PixelType_ != PixelType::V)
+    {
+        if (PixelType_ == PixelType::YUV422 && Width % 2)
+        {
+            Width = (Width / 2 + 1) * 2;
+        }
+        else if (PixelType_ == PixelType::YUV420)
+        {
+            if (Width % 2)  Width = (Width / 2 + 1) * 2;
+            if (Height % 2) Height = (Height / 2 + 1) * 2;
+        }
+        else if (PixelType_ == PixelType::YUV411 && Width % 4)
+        {
+            Width = (Width / 4 + 1) * 4;
+        }
+
+        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
+
+        Y_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+    }
+
+    if (PixelType_ != PixelType::Y)
+    {
+        if (PixelType_ == PixelType::YUV422)
+        {
+            Width = Width / 2;
+        }
+        else if (PixelType_ == PixelType::YUV420)
+        {
+            Width = Width / 2;
+            Height = Height / 2;
+        }
+        else if (PixelType_ == PixelType::YUV411)
+        {
+            Width = Width / 4;
+        }
+
+        Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, true);
+
+        if (PixelType_ != PixelType::V)
+        {
+            U_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear);
+        }
+
+        if (PixelType_ != PixelType::U)
+        {
+            V_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear);
         }
     }
 }
@@ -469,6 +1616,10 @@ Frame_YUV & Frame_YUV::operator=(const Frame_YUV & src)
     {
         Y_ = new Plane(*src.Y_);
     }
+    else
+    {
+        Y_ = nullptr;
+    }
 
     if (PixelType_ != PixelType::Y)
     {
@@ -476,12 +1627,50 @@ Frame_YUV & Frame_YUV::operator=(const Frame_YUV & src)
         {
             U_ = new Plane(*src.U_);
         }
+        else
+        {
+            U_ = nullptr;
+        }
 
         if (PixelType_ != PixelType::U)
         {
             V_ = new Plane(*src.V_);
         }
+        else
+        {
+            V_ = nullptr;
+        }
     }
+
+    return *this;
+}
+
+Frame_YUV & Frame_YUV::operator=(Frame_YUV && src)
+{
+    if (this == &src)
+    {
+        return *this;
+    }
+
+    FrameNum_ = src.FrameNum_;
+    PixelType_ = src.PixelType_;
+    ChromaPlacement_ = src.ChromaPlacement_;
+    QuantRange_ = src.QuantRange_;
+    ColorPrim_ = src.ColorPrim_;
+    TransferChar_ = src.TransferChar_;
+    ColorMatrix_ = src.ColorMatrix_;
+
+    delete Y_;
+    delete U_;
+    delete V_;
+
+    Y_ = src.Y_;
+    U_ = src.U_;
+    V_ = src.V_;
+
+    src.Y_ = nullptr;
+    src.U_ = nullptr;
+    src.V_ = nullptr;
 
     return *this;
 }
@@ -521,102 +1710,38 @@ bool Frame_YUV::operator==(const Frame_YUV & b) const
 }
 
 
+Frame_YUV & Frame_YUV::ConvertFrom(const Frame_YUV & src, TransferChar dstTransferChar)
+{
+    TransferChar_ = dstTransferChar;
+
+    if (PixelType_ != PixelType::U && PixelType_ != PixelType::V)
+    {
+        Y_->ConvertFrom(*src.Y_, TransferChar_);
+    }
+
+    if (PixelType_ != PixelType::Y)
+    {
+        if (PixelType_ != PixelType::V)
+        {
+            *U_ = *src.U_;
+        }
+
+        if (PixelType_ != PixelType::U)
+        {
+            *V_ = *src.V_;
+        }
+    }
+
+    return *this;
+}
+
+
 // Functions of class Frame_RGB
-Frame_RGB::Frame_RGB(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement)
-{
-    DType Floor, Neutral, Ceil, ValueRange;
-
-    FrameNum_ = FrameNum;
-    PixelType_ = PixelType;
-    ChromaPlacement_ = ChromaPlacement;
-    QuantRange_ = QuantRange;
-    ColorPrim_ = ColorPrim_Default(Width, Height, true);
-    TransferChar_ = TransferChar_Default(Width, Height, true);
-    ColorMatrix_ = ColorMatrix_Default(Width, Height);
-
-    Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
-
-    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::R)
-    {
-        R_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        R_ = nullptr;
-    }
-
-    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::G)
-    {
-        G_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        G_ = nullptr;
-    }
-
-    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::B)
-    {
-        B_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        B_ = nullptr;
-    }
-}
-
-Frame_RGB::Frame_RGB(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix)
-{
-    DType Floor, Neutral, Ceil, ValueRange;
-
-    FrameNum_ = FrameNum;
-    PixelType_ = PixelType;
-    ChromaPlacement_ = ChromaPlacement;
-    QuantRange_ = QuantRange;
-    ColorPrim_ = ColorPrim;
-    TransferChar_ = TransferChar;
-    ColorMatrix_ = ColorMatrix;
-
-    Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
-
-    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::R)
-    {
-        R_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        R_ = nullptr;
-    }
-
-    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::G)
-    {
-        G_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        G_ = nullptr;
-    }
-
-    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::B)
-    {
-        B_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, ValueRange);
-    }
-    else
-    {
-        B_ = nullptr;
-    }
-}
-
 Frame_RGB::Frame_RGB(const Frame_RGB & src, bool Copy)
+    : FrameNum_(src.FrameNum_), PixelType_(src.PixelType_), ChromaPlacement_(src.ChromaPlacement_), QuantRange_(src.QuantRange_),
+    ColorPrim_(src.ColorPrim_), TransferChar_(src.TransferChar_), ColorMatrix_(src.ColorMatrix_)
 {
     DType Floor, Neutral, Ceil, ValueRange;
-
-    FrameNum_ = src.FrameNum_;
-    PixelType_ = src.PixelType_;
-    ChromaPlacement_ = src.ChromaPlacement_;
-    QuantRange_ = src.QuantRange_;
-    ColorPrim_ = src.ColorPrim_;
-    TransferChar_ = src.TransferChar_;
-    ColorMatrix_ = src.ColorMatrix_;
 
     if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::R)
     {
@@ -628,12 +1753,8 @@ Frame_RGB::Frame_RGB(const Frame_RGB & src, bool Copy)
         {
             Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.R_->BitDepth(), QuantRange_, false);
 
-            R_ = new Plane(Floor, src.R_->Width(), src.R_->Height(), src.R_->BitDepth(), Floor, Neutral, Ceil, ValueRange);
+            R_ = new Plane(Floor, src.R_->Width(), src.R_->Height(), src.R_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
         }
-    }
-    else
-    {
-        R_ = nullptr;
     }
 
     if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::G)
@@ -646,12 +1767,8 @@ Frame_RGB::Frame_RGB(const Frame_RGB & src, bool Copy)
         {
             Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.G_->BitDepth(), QuantRange_, false);
 
-            G_ = new Plane(Floor, src.G_->Width(), src.G_->Height(), src.G_->BitDepth(), Floor, Neutral, Ceil, ValueRange);
+            G_ = new Plane(Floor, src.G_->Width(), src.G_->Height(), src.G_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
         }
-    }
-    else
-    {
-        G_ = nullptr;
     }
 
     if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::B)
@@ -664,12 +1781,85 @@ Frame_RGB::Frame_RGB(const Frame_RGB & src, bool Copy)
         {
             Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.B_->BitDepth(), QuantRange_, false);
 
-            B_ = new Plane(Floor, src.B_->Width(), src.B_->Height(), src.B_->BitDepth(), Floor, Neutral, Ceil, ValueRange);
+            B_ = new Plane(Floor, src.B_->Width(), src.B_->Height(), src.B_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
         }
     }
-    else
+}
+
+Frame_RGB::Frame_RGB(Frame_RGB && src)
+    : FrameNum_(src.FrameNum_), PixelType_(src.PixelType_), ChromaPlacement_(src.ChromaPlacement_), QuantRange_(src.QuantRange_),
+    ColorPrim_(src.ColorPrim_), TransferChar_(src.TransferChar_), ColorMatrix_(src.ColorMatrix_)
+{
+    R_ = src.R_;
+    G_ = src.G_;
+    B_ = src.B_;
+
+    src.R_ = nullptr;
+    src.G_ = nullptr;
+    src.B_ = nullptr;
+}
+
+Frame_RGB::Frame_RGB(FCType FrameNum, PCType Width, PCType Height, DType BitDepth,
+    PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement)
+    : FrameNum_(FrameNum), PixelType_(PixelType), ChromaPlacement_(ChromaPlacement), QuantRange_(QuantRange),
+    ColorPrim_(ColorPrim_Default(Width, Height, true)), TransferChar_(TransferChar_Default(Width, Height, true)), ColorMatrix_(ColorMatrix_Default(Width, Height))
+{
+    const char * FunctionName = "class Frame_RGB constructor";
+    if (BitDepth > MaxBitDepth)
     {
-        B_ = nullptr;
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+
+    DType Floor, Neutral, Ceil, ValueRange;
+
+    Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::R)
+    {
+        R_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+    }
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::G)
+    {
+        G_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+    }
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::B)
+    {
+        B_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+    }
+}
+
+Frame_RGB::Frame_RGB(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange,
+    ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix)
+    : FrameNum_(FrameNum), PixelType_(PixelType), ChromaPlacement_(ChromaPlacement), QuantRange_(QuantRange),
+    ColorPrim_(ColorPrim), TransferChar_(TransferChar), ColorMatrix_(ColorMatrix)
+{
+    const char * FunctionName = "class Frame_RGB constructor";
+    if (BitDepth > MaxBitDepth)
+    {
+        std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        exit(EXIT_FAILURE);
+    }
+
+    DType Floor, Neutral, Ceil, ValueRange;
+
+    Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::R)
+    {
+        R_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+    }
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::G)
+    {
+        G_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+    }
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::B)
+    {
+        B_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
     }
 }
 
@@ -729,6 +1919,36 @@ Frame_RGB & Frame_RGB::operator=(const Frame_RGB & src)
     return *this;
 }
 
+Frame_RGB & Frame_RGB::operator=(Frame_RGB && src)
+{
+    if (this == &src)
+    {
+        return *this;
+    }
+
+    FrameNum_ = src.FrameNum_;
+    PixelType_ = src.PixelType_;
+    ChromaPlacement_ = src.ChromaPlacement_;
+    QuantRange_ = src.QuantRange_;
+    ColorPrim_ = src.ColorPrim_;
+    TransferChar_ = src.TransferChar_;
+    ColorMatrix_ = src.ColorMatrix_;
+
+    delete R_;
+    delete G_;
+    delete B_;
+
+    R_ = src.R_;
+    G_ = src.G_;
+    B_ = src.B_;
+
+    src.R_ = nullptr;
+    src.G_ = nullptr;
+    src.B_ = nullptr;
+
+    return *this;
+}
+
 bool Frame_RGB::operator==(const Frame_RGB & b) const
 {
     if (this == &b)
@@ -760,3 +1980,25 @@ bool Frame_RGB::operator==(const Frame_RGB & b) const
     return true;
 }
 
+
+Frame_RGB & Frame_RGB::ConvertFrom(const Frame_RGB & src, TransferChar dstTransferChar)
+{
+    TransferChar_ = dstTransferChar;
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::R)
+    {
+        R_->ConvertFrom(*src.R_, TransferChar_);
+    }
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::G)
+    {
+        G_->ConvertFrom(*src.G_, TransferChar_);
+    }
+
+    if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::B)
+    {
+        B_->ConvertFrom(*src.B_, TransferChar_);
+    }
+
+    return *this;
+}

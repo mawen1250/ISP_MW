@@ -3,6 +3,7 @@
 
 
 #include "Type.h"
+#include "Type_Conv.h"
 
 
 typedef sint32 FCType;
@@ -11,10 +12,11 @@ typedef uint32 DType;
 typedef double FLType;
 
 
-const int HD_Width_U = 2048;
-const int HD_Height_U = 1536;
-const int SD_Width_U = 1024;
-const int SD_Height_U = 576;
+const DType MaxBitDepth = sizeof(DType) * 8 * 3 / 4;
+const PCType HD_Width_U = 2048;
+const PCType HD_Height_U = 1536;
+const PCType SD_Width_U = 1024;
+const PCType SD_Height_U = 576;
 
 
 enum class ResLevel {
@@ -97,57 +99,144 @@ TransferChar TransferChar_Default(PCType Width, PCType Height, bool RGB);
 ColorMatrix ColorMatrix_Default(PCType Width, PCType Height);
 
 
-STAT Quantize_Value(uint32 * Floor, uint32 * Neutral, uint32 * Ceil, uint32 * ValueRange, uint32 BitDepth, QuantRange QuantRange, bool Chroma);
+void Quantize_Value(uint32 * Floor, uint32 * Neutral, uint32 * Ceil, uint32 * ValueRange, uint32 BitDepth, QuantRange QuantRange, bool Chroma);
+
+
+class Plane;
+class Plane_FL;
+class Frame_YUV;
+class Frame_RGB;
 
 
 class Plane {
 private:
-    PCType Width_;
-    PCType Height_;
-    PCType PixelCount_;
+    PCType Width_ = 0;
+    PCType Height_ = 0;
+    PCType PixelCount_ = 0;
     DType BitDepth_;
     DType Floor_;
     DType Neutral_;
     DType Ceil_;
     DType ValueRange_;
-    DType * Data_;
-
+    TransferChar TransferChar_;
+    DType * Data_ = nullptr;
 public:
-    Plane(DType Value = 0, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool InitValue = true);
-    Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, DType ValueRange, bool InitValue = true);
-    Plane(const Plane & src);
+    Plane() {} // Default constructor
+    Plane(const Plane & src); // Copy constructor
     Plane(const Plane & src, bool InitValue, DType Value = 0);
-    ~Plane();
+    Plane(Plane && src); // Move constructor
+    Plane(const Plane_FL & src, DType BitDepth = 16); // Convertor/Constructor from Plane_FL
+    Plane(const Plane_FL & src, bool InitValue, DType Value = 0, DType BitDepth = 16);
+    Plane(const Plane_FL & src, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
+    Plane(const Plane_FL & src, bool InitValue, DType Value, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
+    explicit Plane(DType Value, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool InitValue = true); // Convertor/Constructor from DType
+    Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar TransferChar, bool InitValue = true);
+    ~Plane(); // Destructor
 
-    Plane & operator=(const Plane & src);
+    Plane & operator=(const Plane & src); // Copy assignment operator
+    Plane & operator=(Plane && src); // Move assignment operator
     bool operator==(const Plane & b) const;
     bool operator!=(const Plane & b) const { return !(*this == b); }
     DType & operator[](PCType i) { return Data_[i]; }
-    const DType & operator[](PCType i) const { return Data_[i]; }
+    DType operator[](PCType i) const { return Data_[i]; }
 
-    PCType Width() const { return Width_; };
-    PCType Height() const { return Height_; };
-    PCType PixelCount() const { return PixelCount_; };
-    DType BitDepth() const { return BitDepth_; };
-    DType Floor() const { return Floor_; };
-    DType Neutral() const { return Neutral_; };
-    DType Ceil() const { return Ceil_; };
-    DType ValueRange() const { return ValueRange_; };
-    DType * Data() { return Data_; };
-    DType * const Data() const { return Data_; };
+    PCType Width() const { return Width_; }
+    PCType Height() const { return Height_; }
+    PCType PixelCount() const { return PixelCount_; }
+    DType BitDepth() const { return BitDepth_; }
+    DType Floor() const { return Floor_; }
+    DType Neutral() const { return Neutral_; }
+    DType Ceil() const { return Ceil_; }
+    DType ValueRange() const { return ValueRange_; }
+    TransferChar GetTransferChar() const { return TransferChar_; }
+    DType * Data() { return Data_; }
+    const DType * Data() const { return Data_; }
+    bool isChroma() const { return Floor_ < Neutral_; }
+    bool isPCChroma() const { return (Floor_ + Ceil_ - 1) / 2 == Neutral_ - 1; }
 
-    void Width(PCType Width) { Width_ = Width; };
-    void Height(PCType Height) { Height_ = Height; };
-    void PixelCount(PCType PixelCount) { PixelCount_ = PixelCount; };
-    void BitDepth(DType BitDepth) { BitDepth_ = BitDepth; }
-    void Floor(DType Floor) { Floor_ = Floor; }
-    void Neutral(DType Neutral) { Neutral_ = Neutral; }
-    void Ceil(DType Ceil) { Ceil_ = Ceil; }
-    void ValueRange(DType ValueRange) { ValueRange_ = ValueRange; }
+    Plane & Width(PCType Width) { return ReSize(Width, Height_); }
+    Plane & Height(PCType Height) { return ReSize(Width_, Height); }
+    Plane & ReSize(PCType Width, PCType Height);
+    Plane & ReQuantize(DType BitDepth = 16, QuantRange QuantRange = QuantRange::PC, bool scale = true);
+    Plane & ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale = true);
+    Plane & SetTransferChar(TransferChar TransferChar) { TransferChar_ = TransferChar; return *this; }
 
-    template <typename T> friend DType Quantize(T input, const Plane & Plane)
+    Plane & From(const Plane & src);
+    Plane & ConvertFrom(const Plane & src, TransferChar dstTransferChar);
+    Plane & ConvertFrom(const Plane & src) { return ConvertFrom(src, TransferChar_); }
+    Plane & YFrom(const Frame_RGB & src);
+    Plane & YFrom(const Frame_RGB & src, ColorMatrix dstColorMatrix);
+
+    FLType GetFL(DType input) const { return (static_cast<FLType>(input)-Neutral_) / ValueRange_; }
+    FLType GetFL_PCChroma(DType input) const { return Clip((static_cast<FLType>(input)-Neutral_) / ValueRange_, -0.5, 0.5); }
+    DType GetD(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.5)); }
+    DType GetD_PCChroma(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.49999999)); }
+
+    template <typename T> DType Quantize(T input) const
     {
-        return input <= Plane.Floor_ ? Plane.Floor_ : input >= Plane.Ceil_ ? Plane.Ceil_ : (DType)(input + T(0.5));
+        T input_up = input + T(0.5);
+        return input <= Floor_ ? Floor_ : input_up >= Ceil_ ? Ceil_ : static_cast<DType>(input_up);
+    }
+};
+
+
+class Plane_FL {
+private:
+    PCType Width_ = 0;
+    PCType Height_ = 0;
+    PCType PixelCount_ = 0;
+    FLType Floor_;
+    FLType Neutral_;
+    FLType Ceil_;
+    TransferChar TransferChar_;
+    FLType * Data_ = nullptr;
+public:
+    Plane_FL() {} // Default constructor
+    Plane_FL(const Plane_FL & src); // Copy constructor
+    Plane_FL(const Plane_FL & src, bool InitValue, FLType Value = 0);
+    Plane_FL(Plane_FL && src); // Move constructor
+    explicit Plane_FL(const Plane & src); // Convertor/Constructor from Plane
+    Plane_FL(const Plane & src, bool InitValue, FLType Value = 0);
+    explicit Plane_FL(FLType Value, PCType Width = 1920, PCType Height = 1080, bool InitValue = true); // Convertor/Constructor from FLType
+    Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar TransferChar, bool InitValue = true);
+    ~Plane_FL(); // Destructor
+
+    Plane_FL & operator=(const Plane_FL & src); // Copy assignment operator
+    Plane_FL & operator=(Plane_FL && src); // Move assignment operator
+    bool operator==(const Plane_FL & b) const;
+    bool operator!=(const Plane_FL & b) const { return !(*this == b); }
+    FLType & operator[](PCType i) { return Data_[i]; }
+    FLType operator[](PCType i) const { return Data_[i]; }
+
+    PCType Width() const { return Width_; }
+    PCType Height() const { return Height_; }
+    PCType PixelCount() const { return PixelCount_; }
+    FLType Floor() const { return Floor_; }
+    FLType Neutral() const { return Neutral_; }
+    FLType Ceil() const { return Ceil_; }
+    TransferChar GetTransferChar() const { return TransferChar_; }
+    FLType * Data() { return Data_; }
+    const FLType * Data() const { return Data_; }
+    bool isChroma() const { return Floor_ < Neutral_; }
+
+    Plane_FL & Width(PCType Width) { return ReSize(Width, Height_); }
+    Plane_FL & Height(PCType Height) { return ReSize(Width_, Height); }
+    Plane_FL & ReSize(PCType Width, PCType Height);
+    Plane_FL & SetTransferChar(TransferChar TransferChar) { TransferChar_ = TransferChar; return *this; }
+
+    Plane_FL & From(const Plane & src);
+    const Plane_FL & To(Plane & dst) const;
+    //Plane_FL & To(Plane & dst) { return (Plane_FL &)((const Plane_FL *)this)->To(dst); }
+    Plane_FL & ConvertFrom(const Plane & src, TransferChar dstTransferChar);
+    Plane_FL & ConvertFrom(const Plane & src) { return ConvertFrom(src, TransferChar_); }
+    Plane_FL & ConvertFrom(const Plane_FL & src, TransferChar dstTransferChar);
+    Plane_FL & ConvertFrom(const Plane_FL & src) { return ConvertFrom(src, TransferChar_); }
+    Plane_FL & YFrom(const Frame_RGB & src);
+    Plane_FL & YFrom(const Frame_RGB & src, ColorMatrix dstColorMatrix);
+
+    template <typename T> FLType Quantize(T input)
+    {
+        return input <= Floor_ ? Floor_ : input >= Ceil_ ? Ceil_ : input;
     }
 };
 
@@ -161,27 +250,31 @@ private:
     ColorPrim ColorPrim_;
     TransferChar TransferChar_;
     ColorMatrix ColorMatrix_;
-    Plane * Y_;
-    Plane * U_;
-    Plane * V_;
-
+    Plane * Y_ = nullptr;
+    Plane * U_ = nullptr;
+    Plane * V_ = nullptr;
 public:
-    Frame_YUV(FCType FrameNum = 0, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, PixelType PixelType = PixelType::YUV444, QuantRange QuantRange = QuantRange::TV, ChromaPlacement ChromaPlacement = ChromaPlacement::MPEG2);
-    Frame_YUV(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix);
-    Frame_YUV(const Frame_YUV & src, bool Copy = true);
-    ~Frame_YUV();
+    Frame_YUV() {} // Default constructor
+    Frame_YUV(const Frame_YUV & src, bool Copy = true); // Copy constructor
+    Frame_YUV(Frame_YUV && src); // Move constructor
+    explicit Frame_YUV(FCType FrameNum, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16,
+        PixelType PixelType = PixelType::YUV444, QuantRange QuantRange = QuantRange::TV, ChromaPlacement ChromaPlacement = ChromaPlacement::MPEG2); // Convertor/Constructor from FCType
+    Frame_YUV(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange,
+        ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix);
+    ~Frame_YUV(); // Destructor
 
-    Frame_YUV & operator=(const Frame_YUV & src);
+    Frame_YUV & operator=(const Frame_YUV & src); // Copy assignment operator
+    Frame_YUV & operator=(Frame_YUV && src); // Move assignment operator
     bool operator==(const Frame_YUV & b) const;
     bool operator!=(const Frame_YUV & b) const { return !(*this == b); }
 
-    FCType FrameNum() const { return FrameNum_; };
-    PixelType GetPixelType() const { return PixelType_; };
-    ChromaPlacement GetChromaPlacement() const { return ChromaPlacement_; };
-    QuantRange GetQuantRange() const { return QuantRange_; };
-    ColorPrim GetColorPrim() const { return ColorPrim_; };
-    TransferChar GetTransferChar() const { return TransferChar_; };
-    ColorMatrix GetColorMatrix() const { return ColorMatrix_; };
+    FCType FrameNum() const { return FrameNum_; }
+    PixelType GetPixelType() const { return PixelType_; }
+    ChromaPlacement GetChromaPlacement() const { return ChromaPlacement_; }
+    QuantRange GetQuantRange() const { return QuantRange_; }
+    ColorPrim GetColorPrim() const { return ColorPrim_; }
+    TransferChar GetTransferChar() const { return TransferChar_; }
+    ColorMatrix GetColorMatrix() const { return ColorMatrix_; }
     Plane & Y() { return *Y_; }
     Plane & U() { return *U_; }
     Plane & V() { return *V_; }
@@ -189,9 +282,11 @@ public:
     const Plane & U() const { return *U_; }
     const Plane & V() const { return *V_; }
 
-    PCType Width() const { return Y_->Width(); };
-    PCType Height() const { return Y_->Height(); };
-    PCType PixelCount() const { return Y_->PixelCount(); };
+    PCType Width() const { return Y_->Width(); }
+    PCType Height() const { return Y_->Height(); }
+    PCType PixelCount() const { return Y_->PixelCount(); }
+
+    Frame_YUV & ConvertFrom(const Frame_YUV & src, TransferChar dstTransferChar);
 };
 
 
@@ -204,27 +299,31 @@ private:
     ColorPrim ColorPrim_;
     TransferChar TransferChar_;
     ColorMatrix ColorMatrix_;
-    Plane * R_;
-    Plane * G_;
-    Plane * B_;
-
+    Plane * R_ = nullptr;
+    Plane * G_ = nullptr;
+    Plane * B_ = nullptr;
 public:
-    Frame_RGB(FCType FrameNum = 0, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, PixelType PixelType = PixelType::RGB, QuantRange QuantRange = QuantRange::PC, ChromaPlacement ChromaPlacement = ChromaPlacement::MPEG2);
-    Frame_RGB(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange, ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix);
-    Frame_RGB(const Frame_RGB & src, bool Copy = true);
-    ~Frame_RGB();
+    Frame_RGB() {} // Default constructor
+    Frame_RGB(const Frame_RGB & src, bool Copy = true); // Copy constructor
+    Frame_RGB(Frame_RGB && src); // Move constructor
+    explicit Frame_RGB(FCType FrameNum, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16,
+        PixelType PixelType = PixelType::RGB, QuantRange QuantRange = QuantRange::PC, ChromaPlacement ChromaPlacement = ChromaPlacement::MPEG2); // Convertor/Constructor from FCType
+    Frame_RGB(FCType FrameNum, PCType Width, PCType Height, DType BitDepth, PixelType PixelType, QuantRange QuantRange,
+        ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix);
+    ~Frame_RGB(); // Destructor
 
-    Frame_RGB & operator=(const Frame_RGB & src);
+    Frame_RGB & operator=(const Frame_RGB & src); // Copy assignment operator
+    Frame_RGB & operator=(Frame_RGB && src); // Move assignment operator
     bool operator==(const Frame_RGB & b) const;
     bool operator!=(const Frame_RGB & b) const { return !(*this == b); }
 
-    FCType FrameNum() const { return FrameNum_; };
-    PixelType GetPixelType() const { return PixelType_; };
-    ChromaPlacement GetChromaPlacement() const { return ChromaPlacement_; };
-    QuantRange GetQuantRange() const { return QuantRange_; };
-    ColorPrim GetColorPrim() const { return ColorPrim_; };
-    TransferChar GetTransferChar() const { return TransferChar_; };
-    ColorMatrix GetColorMatrix() const { return ColorMatrix_; };
+    FCType FrameNum() const { return FrameNum_; }
+    PixelType GetPixelType() const { return PixelType_; }
+    ChromaPlacement GetChromaPlacement() const { return ChromaPlacement_; }
+    QuantRange GetQuantRange() const { return QuantRange_; }
+    ColorPrim GetColorPrim() const { return ColorPrim_; }
+    TransferChar GetTransferChar() const { return TransferChar_; }
+    ColorMatrix GetColorMatrix() const { return ColorMatrix_; }
     Plane & R() { return *R_; }
     Plane & G() { return *G_; }
     Plane & B() { return *B_; }
@@ -232,9 +331,11 @@ public:
     const Plane & G() const { return *G_; }
     const Plane & B() const { return *B_; }
 
-    PCType Width() const { return R_->Width(); };
-    PCType Height() const { return R_->Height(); };
-    PCType PixelCount() const { return R_->PixelCount(); };
+    PCType Width() const { return R_->Width(); }
+    PCType Height() const { return R_->Height(); }
+    PCType PixelCount() const { return R_->PixelCount(); }
+
+    Frame_RGB & ConvertFrom(const Frame_RGB & src, TransferChar dstTransferChar);
 };
 
 
