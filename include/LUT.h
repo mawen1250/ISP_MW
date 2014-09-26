@@ -23,7 +23,7 @@ public:
     LUT & operator=(const LUT & src); // Copy assignment operator
     LUT & operator=(LUT && src); // Move assignment operator
     T & operator[](LevelType i) { return Table_[i]; }
-    T operator[](LevelType i) const { return Table_[i]; }
+    const T & operator[](LevelType i) const { return Table_[i]; }
 
     LevelType Levels() const { return Levels_; }
     T * Table() { return Table_; }
@@ -35,14 +35,14 @@ public:
 
     T Lookup(const Plane & input, LevelType Value) const { return Table_[Value - input.Floor()]; }
     const LUT & Lookup(Plane & output, const Plane & input) const;
-    //LUT & Lookup(Plane & output, const Plane & input) { return (LUT &)((const LUT *)this)->Lookup(output, input); }
+    //LUT & Lookup(Plane & output, const Plane & input) { return const_cast<LUT &>(const_cast<const LUT *>(this)->Lookup(output, input)); }
     const LUT & Lookup(Plane_FL & output, const Plane & input) const;
-    //LUT & Lookup(Plane_FL & output, const Plane & input) { return (LUT &)((const LUT *)this)->Lookup(output, input); }
+    //LUT & Lookup(Plane_FL & output, const Plane & input) { return const_cast<LUT &>(const_cast<const LUT *>(this)->Lookup(output, input)); }
 
-    const LUT & Lookup_Gain(Plane & output, const Plane & input) const;
-    //LUT & Lookup_Gain(Plane & output, const Plane & input) { return (LUT_FL &)((const LUT_FL *)this)->Lookup_Gain(output, input); }
+    const LUT & Lookup_Gain(Plane & data, const Plane & ref) const;
+    //LUT & Lookup_Gain(Plane & data, const Plane & ref) { return const_cast<LUT_FL &>(const_cast<const LUT_FL *>(this)->Lookup(data, ref)); }
     const LUT & Lookup_Gain(Plane_FL & data, const Plane & ref) const;
-    //LUT & Lookup_Gain(Plane_FL & Data, const Plane & ref) { return (LUT_FL &)((const LUT_FL *)this)->Lookup_Gain(Data, ref); }
+    //LUT & Lookup_Gain(Plane_FL & data, const Plane & ref) { return const_cast<LUT_FL &>(const_cast<const LUT_FL *>(this)->Lookup(data, ref)); }
 };
 
 

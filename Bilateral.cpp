@@ -8,7 +8,7 @@
 #include "include\IO.h"
 
 
-int Bilateral2D_IO(int argc, char ** argv)
+int Bilateral2D_IO(const int argc, const std::string * args)
 {
     using namespace std;
     using namespace mw;
@@ -16,64 +16,52 @@ int Bilateral2D_IO(int argc, char ** argv)
     int i;
     int Flag = 0;
 
-    char * Drive = new char[DRIVELEN];
-    char * Dir = new char[PATHLEN];
-    char * FileName = new char[PATHLEN];
-    char * Ext = new char[EXTLEN];
+    char Drive[DRIVELEN];
+    char Dir[PATHLEN];
+    char FileName[PATHLEN];
+    char Ext[EXTLEN];
 
     // Default Parameters
-    double sigmaS = 1.0;
-    double sigmaR = 0.1;
+    string IPath;
+    double sigmaS = Bilateral2D_Default.sigmaS;
+    double sigmaR = Bilateral2D_Default.sigmaR;
     string Tag = ".Bilateral";
     string Format = ".png";
 
     // Arguments Process
-    if (argc <= 1)
-    {
-        return 0;
-    }
-
-    string * args = new string[argc];
     for (i = 0; i < argc; i++)
-    {
-        args[i] = argv[i];
-    }
-
-    for (i = 1; i < argc; i++)
     {
         if (args[i] == "-T" || args[i] == "--tag")
         {
-            Flag |= args2arg(i, argc, args, Tag);
+            Flag |= arg2para(i, argc, args, Tag);
             continue;
         }
         if (args[i] == "-F" || args[i] == "--format")
         {
-            Flag |= args2arg(i, argc, args, Format);
+            Flag |= arg2para(i, argc, args, Format);
             continue;
         }
         if (args[i] == "-S" || args[i] == "--sigmaS")
         {
-            Flag |= args2arg(i, argc, args, sigmaS);
+            Flag |= arg2para(i, argc, args, sigmaS);
             continue;
         }
         if (args[i] == "-R" || args[i] == "--sigmaR")
         {
-            Flag |= args2arg(i, argc, args, sigmaR);
+            Flag |= arg2para(i, argc, args, sigmaR);
             continue;
         }
         
-        Frame_RGB SFrame = ImageReader(args[i]);
-        Frame_RGB PFrame = Bilateral2D(SFrame, sigmaS, sigmaR);
-
-        _splitpath_s(argv[i], Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
-        string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
-
-        ImageWriter(PFrame, OPath);
+        IPath = args[i];
     }
 
-    // Clean
-    delete[] args;
-    delete[] Drive, Dir, FileName, Ext;
+    Frame SFrame = ImageReader(IPath);
+    Frame PFrame = Bilateral2D(SFrame, sigmaS, sigmaR);
+
+    _splitpath_s(IPath.c_str(), Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
+    string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
+
+    ImageWriter(PFrame, OPath);
 
     return 0;
 }
@@ -93,7 +81,7 @@ Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, cons
     const PCType xUpper = radiusx + 1, yUpper = radiusy + 1;
 
     // Generate LUT
-    LUT<FLType> GR_LUT = Gaussian_Distribution2D_Range_LUT_Generation(ref.ValueRange(), sigmaR*ref.ValueRange());
+    LUT<FLType> GR_LUT = Gaussian_Function_Range_LUT_Generation(ref.ValueRange(), sigmaR*ref.ValueRange());
     LUT<FLType> GS_LUT;
 
     // Choose the appropriate algorithm to apply bilateral filter
@@ -102,7 +90,7 @@ Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, cons
     switch (algorithm)
     {
     case 0:
-        GS_LUT = Gaussian_Distribution2D_Spatial_LUT_Generation(xUpper, yUpper, sigmaS);
+        GS_LUT = Gaussian_Function_Spatial_LUT_Generation(xUpper, yUpper, sigmaS);
         Bilateral2D_0(output, input, ref, GS_LUT, GR_LUT, radiusx, radiusy);
         break;
     case 1:
@@ -115,7 +103,7 @@ Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, cons
 }
 
 
-LUT<FLType> Gaussian_Distribution2D_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS)
+LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS)
 {
     PCType x, y;
     LUT<FLType> GS_LUT(xUpper*yUpper);
@@ -124,14 +112,14 @@ LUT<FLType> Gaussian_Distribution2D_Spatial_LUT_Generation(const PCType xUpper, 
     {
         for (x = 0; x < xUpper; x++)
         {
-            GS_LUT[y*xUpper + x] = Gaussian_Distribution2D_x2((FLType)(x*x + y*y), sigmaS);
+            GS_LUT[y*xUpper + x] = Gaussian_Function_sqr_x((FLType)(x*x + y*y), sigmaS);
         }
     }
 
     return GS_LUT;
 }
 
-LUT<FLType> Gaussian_Distribution2D_Range_LUT_Generation(const DType ValueRange, const double sigmaR)
+LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange, const double sigmaR)
 {
     DType i;
     const DType upper = Min(ValueRange, (DType)(sigmaR*sigmaRMul + 0.5));
@@ -139,7 +127,7 @@ LUT<FLType> Gaussian_Distribution2D_Range_LUT_Generation(const DType ValueRange,
 
     for (i = 0; i <= upper; i++)
     {
-        GR_LUT[i] = Gaussian_Distribution2D((FLType)i, sigmaR);
+        GR_LUT[i] = Gaussian_Function((FLType)i, sigmaR);
     }
     // For unknown reason, when more range weights equal 0, the runtime speed gets lower - mainly in function Recursive_Gaussian2D_Horizontal.
     // To avoid this problem, we set range weights whose range values are larger than sigmaR*sigmaRMul to the Gaussian distribution value at sigmaR*sigmaRMul.
@@ -237,10 +225,21 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, co
     {
         PBFIC[i] = Plane_FL(ref, false);
 
-        for (j = 0; j < pcount; j++)
+        if (input.isPCChroma())
         {
-            Wk[j] = Gaussian_Distribution2D_Range_LUT_Lookup(GR_LUT, PBFICk[i], ref[j]);
-            Jk[j] = Wk[j] * input[j];
+            for (j = 0; j < pcount; j++)
+            {
+                Wk[j] = Gaussian_Distribution2D_Range_LUT_Lookup(GR_LUT, PBFICk[i], ref[j]);
+                Jk[j] = Wk[j] * input.GetFL_PCChroma(input[j]);
+            }
+        }
+        else
+        {
+            for (j = 0; j < pcount; j++)
+            {
+                Wk[j] = Gaussian_Distribution2D_Range_LUT_Lookup(GR_LUT, PBFICk[i], ref[j]);
+                Jk[j] = Wk[j] * input.GetFL(input[j]);
+            }
         }
 
         Recursive_Gaussian2D_Horizontal(Wk, B, B1, B2, B3);
@@ -255,14 +254,29 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, co
     }
 
     // Generate filtered result from PBFICs using bilinear interpolation
-    for (j = 0; j < pcount; j++)
+    if (output.isPCChroma())
     {
-        for (i = 0; i < PBFICnum - 2; i++)
+        for (j = 0; j < pcount; j++)
         {
-            if (ref[j] < PBFICk[i + 1] && ref[j] >= PBFICk[i]) break;
-        }
+            for (i = 0; i < PBFICnum - 2; i++)
+            {
+                if (ref[j] < PBFICk[i + 1] && ref[j] >= PBFICk[i]) break;
+            }
 
-        output[j] = output.Quantize(((PBFICk[i + 1] - ref[j])*PBFIC[i][j] + (ref[j] - PBFICk[i])*PBFIC[i + 1][j]) / (PBFICk[i + 1] - PBFICk[i]));
+            output[j] = output.GetD_PCChroma(((PBFICk[i + 1] - ref[j])*PBFIC[i][j] + (ref[j] - PBFICk[i])*PBFIC[i + 1][j]) / (PBFICk[i + 1] - PBFICk[i]));
+        }
+    }
+    else
+    {
+        for (j = 0; j < pcount; j++)
+        {
+            for (i = 0; i < PBFICnum - 2; i++)
+            {
+                if (ref[j] < PBFICk[i + 1] && ref[j] >= PBFICk[i]) break;
+            }
+
+            output[j] = output.GetD(((PBFICk[i + 1] - ref[j])*PBFIC[i][j] + (ref[j] - PBFICk[i])*PBFIC[i + 1][j]) / (PBFICk[i + 1] - PBFICk[i]));
+        }
     }
 
     // Clear and output

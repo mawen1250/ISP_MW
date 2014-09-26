@@ -11,28 +11,15 @@ inline Plane & Transpose(Plane & input)
     Plane temp(input);
     return Transpose(input, temp);
 }
-inline Frame_YUV & Transpose(Frame_YUV & output, const Frame_YUV & input)
+inline Frame & Transpose(Frame & output, const Frame & input)
 {
-    Transpose(output.Y(), input.Y());
-    Transpose(output.U(), input.U());
-    Transpose(output.V(), input.V());
+    for (Frame::PlaneCountType i = 0; i < input.PlaneCount(); i++)
+        Transpose(output.P(i), input.P(i));
     return output;
 }
-inline Frame_YUV & Transpose(Frame_YUV & input)
+inline Frame & Transpose(Frame & input)
 {
-    Frame_YUV temp(input);
-    return Transpose(input, temp);
-}
-inline Frame_RGB & Transpose(Frame_RGB & output, const Frame_RGB & input)
-{
-    Transpose(output.R(), input.R());
-    Transpose(output.G(), input.G());
-    Transpose(output.B(), input.B());
-    return output;
-}
-inline Frame_RGB & Transpose(Frame_RGB & input)
-{
-    Frame_RGB temp(input);
+    Frame temp(input);
     return Transpose(input, temp);
 }
 

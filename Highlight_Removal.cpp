@@ -8,8 +8,16 @@
 
 
 // Implementation of specular highilght removal algorithm from "Qingxiong Yang, ShengnanWang, and Narendra Ahuja - Real-Time Specular Highlight Removal Using Bilateral Filtering"
-Frame_RGB & Specular_Highlight_Removal(Frame_RGB & output, const Frame_RGB & input, const double thr, const double sigmaS, const double sigmaR, const DType PBFICnum)
+Frame & Specular_Highlight_Removal(Frame & output, const Frame & input, const double thr, const double sigmaS, const double sigmaR, const DType PBFICnum)
 {
+    if (!(input.isRGB() && output.isRGB()))
+    {
+        std::cerr <<
+            "Frame & Specular_Highlight_Removal(Frame & output, const Frame & input...) :\n"
+            "    only Frame of RGB PixelType is supported.\n";
+        exit(EXIT_FAILURE);
+    }
+
     PCType i, flag = 1;
     PCType pcount = input.PixelCount();
     DType ValueRange = input.R().ValueRange();

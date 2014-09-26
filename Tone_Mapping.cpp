@@ -9,7 +9,7 @@
 #include "include\IO.h"
 
 
-int Adaptive_Global_Tone_Mapping_IO(int argc, char ** argv)
+int Adaptive_Global_Tone_Mapping_IO(const int argc, const std::string * args)
 {
     using namespace std;
     using namespace mw;
@@ -17,111 +17,98 @@ int Adaptive_Global_Tone_Mapping_IO(int argc, char ** argv)
     int i;
     int Flag = 0;
 
-    char * Drive = new char[DRIVELEN];
-    char * Dir = new char[PATHLEN];
-    char * FileName = new char[PATHLEN];
-    char * Ext = new char[EXTLEN];
+    char Drive[DRIVELEN];
+    char Dir[PATHLEN];
+    char FileName[PATHLEN];
+    char Ext[EXTLEN];
 
     // Default Parameters
-    string Tag = ".Tone_Mapping";
+    string IPath;
+    string Tag = ".AGTM";
     string Format = ".png";
 
     // Arguments Process
-    if (argc <= 1)
-    {
-        return 0;
-    }
-
-    string * args = new string[argc];
     for (i = 0; i < argc; i++)
-    {
-        args[i] = argv[i];
-    }
-
-    for (i = 1; i < argc; i++)
     {
         if (args[i] == "-T" || args[i] == "--tag")
         {
-            Flag |= args2arg(i, argc, args, Tag);
+            Flag |= arg2para(i, argc, args, Tag);
             continue;
         }
         if (args[i] == "-F" || args[i] == "--format")
         {
-            Flag |= args2arg(i, argc, args, Format);
+            Flag |= arg2para(i, argc, args, Format);
             continue;
         }
 
-        Frame_RGB SFrame = ImageReader(args[i]);
-        Frame_RGB PFrame = Adaptive_Global_Tone_Mapping(SFrame);
-
-        _splitpath_s(argv[i], Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
-        string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
-
-        ImageWriter(PFrame, OPath);
+        IPath = args[i];
     }
 
-    // Clean
-    delete[] args;
-    delete[] Drive, Dir, FileName, Ext;
+    Frame SFrame = ImageReader(IPath);
+    Frame PFrame = Adaptive_Global_Tone_Mapping(SFrame);
+
+    _splitpath_s(IPath.c_str(), Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
+    string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
+
+    ImageWriter(PFrame, OPath);
 
     return 0;
 }
 
 
-Frame_YUV & Adaptive_Global_Tone_Mapping(Frame_YUV & output, const Frame_YUV & input)
+Frame & Adaptive_Global_Tone_Mapping(Frame & output, const Frame & input)
 {
-    const Plane & inputY = input.Y();
-    const Plane & inputU = input.U();
-    const Plane & inputV = input.V();
-    Plane & outputY = output.Y();
-    Plane & outputU = output.U();
-    Plane & outputV = output.V();
+    if (input.isRGB())
+    {
+        const Plane & inputR = input.R();
+        const Plane & inputG = input.G();
+        const Plane & inputB = input.B();
+        Plane & outputR = output.R();
+        Plane & outputG = output.G();
+        Plane & outputB = output.B();
 
-    LUT<FLType> LUT_Gain = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(inputY);
+        Plane inputY(inputR, false);
+        inputY.YFrom(input);
 
-    LUT_Gain.Lookup_Gain(outputY, inputY);
+        LUT<FLType> LUT_Gain = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(inputY);
 
-    Plane_FL Data;
+        Plane_FL Data;
 
-    Data.From(inputU);
-    LUT_Gain.Lookup_Gain(Data, inputY);
-    Data.To(outputU);
+        Data.From(inputR);
+        LUT_Gain.Lookup_Gain(Data, inputY);
+        Data.To(outputR);
 
-    Data.From(inputV);
-    LUT_Gain.Lookup_Gain(Data, inputY);
-    Data.To(outputV);
+        Data.From(inputG);
+        LUT_Gain.Lookup_Gain(Data, inputY);
+        Data.To(outputG);
 
-    return output;
-}
+        Data.From(inputB);
+        LUT_Gain.Lookup_Gain(Data, inputY);
+        Data.To(outputB);
+    }
+    else if (input.isYUV())
+    {
+        const Plane & inputY = input.Y();
+        const Plane & inputU = input.U();
+        const Plane & inputV = input.V();
+        Plane & outputY = output.Y();
+        Plane & outputU = output.U();
+        Plane & outputV = output.V();
 
+        LUT<FLType> LUT_Gain = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(inputY);
 
-Frame_RGB & Adaptive_Global_Tone_Mapping(Frame_RGB & output, const Frame_RGB & input)
-{
-    const Plane & inputR = input.R();
-    const Plane & inputG = input.G();
-    const Plane & inputB = input.B();
-    Plane & outputR = output.R();
-    Plane & outputG = output.G();
-    Plane & outputB = output.B();
+        LUT_Gain.Lookup_Gain(outputY, inputY);
 
-    Plane inputY(inputR, false);
-    inputY.YFrom(input);
+        Plane_FL Data;
 
-    LUT<FLType> LUT_Gain = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(inputY);
+        Data.From(inputU);
+        LUT_Gain.Lookup_Gain(Data, inputY);
+        Data.To(outputU);
 
-    Plane_FL Data;
-
-    Data.From(inputR);
-    LUT_Gain.Lookup_Gain(Data, inputY);
-    Data.To(outputR);
-
-    Data.From(inputG);
-    LUT_Gain.Lookup_Gain(Data, inputY);
-    Data.To(outputG);
-
-    Data.From(inputB);
-    LUT_Gain.Lookup_Gain(Data, inputY);
-    Data.To(outputB);
+        Data.From(inputV);
+        LUT_Gain.Lookup_Gain(Data, inputY);
+        Data.To(outputV);
+    }
 
     return output;
 }
@@ -137,9 +124,9 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input
     ilinear.ConvertFrom(input, TransferChar::linear);
 
     // Generate histogram of linear scale
-    DType HistogramLevels = Min(input.ValueRange() + 1, static_cast<DType>(8));
+    Histogram<DType>::BinType HistogramBins = Min(static_cast<Histogram<DType>::BinType>(input.ValueRange() + 1), AGTM_Default.HistBins);
 
-    Histogram Histogram(ilinear, HistogramLevels);
+    Histogram<DType> Histogram(ilinear, HistogramBins);
 
     // Calculate parameters for sigmoidal curve
     PCType thr0l = (pcount * 20 + 32) / 64;
@@ -182,19 +169,19 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input
         if (H0 >= thr0hhh) // Dark scene 3
         {
             Alpha = 1.0;
-            Beta = -3;
+            Beta = -4.5;
             std::cout << "Mode 1-3\n";
         }
         else if (H0 >= thr0hh) // Dark scene 2
         {
             Alpha = 0.8;
-            Beta = -3;
+            Beta = -4.0;
             std::cout << "Mode 1-2\n";
         }
         else // Dark scene 1
         {
             Alpha = 0.6;
-            Beta = -3;
+            Beta = -3.5;
             std::cout << "Mode 1-1\n";
         }
     }
@@ -203,25 +190,25 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input
         if (H67 >= thr67hhh) // Bright scene 3
         {
             Alpha = 1.0;
-            Beta = 3;
+            Beta = 4.5;
             std::cout << "Mode 4-3\n";
         }
         else if (H67 >= thr67hh) // Bright scene 2
         {
             Alpha = 0.9;
-            Beta = 3;
+            Beta = 4.0;
             std::cout << "Mode 4-2\n";
         }
         else // Bright scene 1
         {
             Alpha = 0.8;
-            Beta = 3;
+            Beta = 3.5;
             std::cout << "Mode 4-1\n";
         }
     }
-    else if (H0 < thr0h && H1 < thr1h && H23 >= thr23l && H67 < thr67l) // Little bright light
+    else if (H67 < thr67l) // Little bright light
     {
-        if (H01 < thr01l && H7 < thr7l) // Normal - contrast enhancement
+        if (H01 < thr01l && H7 < thr7l) // Little dark area - contrast enhancement
         {
             Alpha = 0.4;
             Beta = 3;
@@ -230,7 +217,7 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input
         else if (H01 >= thr01h && H67 < thr67l) // Mainly dark area and no bright light
         {
             Alpha = 0.55;
-            Beta = -4;
+            Beta = -3;
             std::cout << "Mode 2-3\n";
         }
         else

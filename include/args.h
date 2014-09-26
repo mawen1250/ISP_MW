@@ -11,13 +11,13 @@
 namespace mw {
 
     template<typename T>
-    inline int args2arg(int & i, const int argc, std::string * args, T & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, T & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stoi(args[i]);
+            para = std::stoi(args[i]);
         }
         else
         {
@@ -30,13 +30,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, long & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, long & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stol(args[i]);
+            para = std::stol(args[i]);
         }
         else
         {
@@ -49,13 +49,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, unsigned long & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, unsigned long & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stoul(args[i]);
+            para = std::stoul(args[i]);
         }
         else
         {
@@ -68,13 +68,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, long long & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, long long & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stoll(args[i]);
+            para = std::stoll(args[i]);
         }
         else
         {
@@ -87,13 +87,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, unsigned long long & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, unsigned long long & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stoull(args[i]);
+            para = std::stoull(args[i]);
         }
         else
         {
@@ -106,13 +106,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, float & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, float & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stof(args[i]);
+            para = std::stof(args[i]);
         }
         else
         {
@@ -125,13 +125,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, double & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, double & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stod(args[i]);
+            para = std::stod(args[i]);
         }
         else
         {
@@ -144,13 +144,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, long double & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, long double & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = std::stold(args[i]);
+            para = std::stold(args[i]);
         }
         else
         {
@@ -163,20 +163,21 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, bool & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, bool & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            std::transform(args[i].begin(), args[i].end(), args[i].begin(), tolower);
-            if (args[i] == "true")
+            std::string arg_temp(args[i]);
+            std::transform(arg_temp.begin(), arg_temp.end(), arg_temp.begin(), tolower);
+            if (arg_temp == "true")
             {
-                arg = true;
+                para = true;
             }
-            else if (args[i] == "false")
+            else if (arg_temp == "false")
             {
-                arg = false;
+                para = false;
             }
             else
             {
@@ -196,13 +197,13 @@ namespace mw {
     }
 
     template<>
-    inline int args2arg(int & i, const int argc, std::string * args, std::string & arg)
+    inline int arg2para(int & i, const int argc, const std::string * args, std::string & para)
     {
         int Flag = 0;
 
-        if (++i<argc)
+        if (++i < argc)
         {
-            arg = args[i];
+            para = args[i];
         }
         else
         {

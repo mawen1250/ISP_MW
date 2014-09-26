@@ -6,20 +6,18 @@
 
 #include "include\Image_Type.h"
 #include "include\Type_Conv.h"
+#include "include\LUT.h"
 
 
-using namespace cv;
-
-
-Frame_RGB ImageReader(const std::string & filename, const FCType FrameNum, const DType BitDepth)
+Frame ImageReader(const std::string & filename, const FCType FrameNum, const DType BitDepth)
 {
-    Mat image = imread(filename, IMREAD_COLOR);
+    cv::Mat image = cv::imread(filename, cv::IMREAD_COLOR);
 
     if (!image.data) // Check for invalid input
     {
         std::cout << "Could not open or find the image file: " << filename << std::endl;
 
-        Frame_RGB Frame(FrameNum, 1920, 1080, BitDepth);
+        Frame Frame(FrameNum, PixelType::RGB, 1920, 1080, BitDepth);
         return Frame;
     }
 
@@ -29,7 +27,7 @@ Frame_RGB ImageReader(const std::string & filename, const FCType FrameNum, const
     PCType nCols = sw * image.channels();
     PCType nRows = sh;
 
-    Frame_RGB Frame(FrameNum, sw, sh, BitDepth);
+    Frame Frame(FrameNum, PixelType::RGB, sw, sh, BitDepth);
 
     PCType i, j;
     Plane & R = Frame.R();
@@ -39,11 +37,42 @@ Frame_RGB ImageReader(const std::string & filename, const FCType FrameNum, const
     if (image.isContinuous())
     {
         uchar * p = image.ptr<uchar>(0);
-        for (i = 0, j = 0; i < pcount; i++)
+
+        if (R.Floor() == 0 && R.Ceil() == 65535)
         {
-            B[i] = p[j++] * 257;
-            G[i] = p[j++] * 257;
-            R[i] = p[j++] * 257;
+            for (i = 0, j = 0; i < pcount; i++)
+            {
+                B[i] = static_cast<DType>(p[j++]) * DType(257);
+                G[i] = static_cast<DType>(p[j++]) * DType(257);
+                R[i] = static_cast<DType>(p[j++]) * DType(257);
+            }
+        }
+        else if (R.Floor() == 0 && R.Ceil() == 65535)
+        {
+            for (i = 0, j = 0; i < pcount; i++)
+            {
+                B[i] = static_cast<DType>(p[j++]);
+                G[i] = static_cast<DType>(p[j++]);
+                R[i] = static_cast<DType>(p[j++]);
+            }
+        }
+        else
+        {
+            LUT<DType>::LevelType k;
+            const LUT<DType>::LevelType iLevels = 256;
+            LUT<DType> ConvertLUT(iLevels);
+
+            for (k = 0; k < iLevels; k++)
+            {
+                ConvertLUT[k] = R.GetD(static_cast<FLType>(k) / 255.);
+            }
+
+            for (i = 0, j = 0; i < pcount; i++)
+            {
+                B[i] = ConvertLUT[p[j++]];
+                G[i] = ConvertLUT[p[j++]];
+                R[i] = ConvertLUT[p[j++]];
+            }
         }
     }
     else
@@ -55,22 +84,53 @@ Frame_RGB ImageReader(const std::string & filename, const FCType FrameNum, const
 }
 
 
-bool ImageWriter(const Frame_RGB & Frame, const std::string & filename, int _type)
+bool ImageWriter(const Frame & Frame, const std::string & filename, int _type)
 {
-    Mat image(Frame.Height(), Frame.Width(), _type);
+    cv::Mat image(Frame.Height(), Frame.Width(), _type);
 
     PCType i, j;
     const Plane & R = Frame.R();
     const Plane & G = Frame.G();
     const Plane & B = Frame.B();
+    PCType pcount = Frame.PixelCount();
 
     if (image.isContinuous()) {
         uchar * p = image.ptr<uchar>(0);
-        for (i = 0, j = 0 ; i < Frame.PixelCount(); i++)
+
+        if (R.Floor() == 0 && R.Ceil() == 65535)
         {
-            p[j++] = (uchar)Round_Div(B[i], (DType)257);
-            p[j++] = (uchar)Round_Div(G[i], (DType)257);
-            p[j++] = (uchar)Round_Div(R[i], (DType)257);
+            for (i = 0, j = 0; i < pcount; i++)
+            {
+                p[j++] = static_cast<uchar>(Round_Div(B[i], DType(257)));
+                p[j++] = static_cast<uchar>(Round_Div(G[i], DType(257)));
+                p[j++] = static_cast<uchar>(Round_Div(R[i], DType(257)));
+            }
+        }
+        else if (R.Floor() == 0 && R.Ceil() == 255)
+        {
+            for (i = 0, j = 0; i < pcount; i++)
+            {
+                p[j++] = static_cast<uchar>(B[i]);
+                p[j++] = static_cast<uchar>(G[i]);
+                p[j++] = static_cast<uchar>(R[i]);
+            }
+        }
+        else
+        {
+            LUT<uchar>::LevelType k;
+            LUT<uchar> ConvertLUT(R);
+
+            for (k = R.Floor(); k < R.Ceil(); k++)
+            {
+                ConvertLUT.Set(R, k, static_cast<uchar>(R.GetFL(k) * 255. + 0.5));
+            }
+
+            for (i = 0, j = 0; i < pcount; i++)
+            {
+                p[j++] = ConvertLUT.Lookup(R, B[i]);
+                p[j++] = ConvertLUT.Lookup(R, G[i]);
+                p[j++] = ConvertLUT.Lookup(R, R[i]);
+            }
         }
         
         imwrite(filename, image);

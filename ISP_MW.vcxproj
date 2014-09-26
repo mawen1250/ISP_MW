@@ -124,10 +124,10 @@
     <ClCompile Include="Format_Conversion.cpp" />
     <ClCompile Include="Gaussian.cpp" />
     <ClCompile Include="Highlight_Removal.cpp" />
-    <ClCompile Include="Histogram.cpp" />
     <ClCompile Include="ImageIO.cpp" />
     <ClCompile Include="Image_Type.cpp" />
     <ClCompile Include="ISP_MW.cpp" />
+    <ClCompile Include="Retinex.cpp" />
     <ClCompile Include="Specification.cpp" />
     <ClCompile Include="Tone_Mapping.cpp" />
     <ClCompile Include="Transform.cpp" />
@@ -146,6 +146,7 @@
     <ClInclude Include="include\IO.h" />
     <ClInclude Include="include\ISP_MW.h" />
     <ClInclude Include="include\LUT.h" />
+    <ClInclude Include="include\Retinex.h" />
     <ClInclude Include="include\Specification.h" />
     <ClInclude Include="include\Tone_Mapping.h" />
     <ClInclude Include="include\Transform.h" />

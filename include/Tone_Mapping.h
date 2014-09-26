@@ -4,22 +4,22 @@
 
 #include "Image_Type.h"
 #include "LUT.h"
+#include "Histogram.h"
 
 
-int Adaptive_Global_Tone_Mapping_IO(int argc, char ** argv);
+const struct AGTM_Default {
+    const double sigma = 100.0;
+    const Histogram<DType>::BinType HistBins = 8;
+} AGTM_Default;
 
 
-Frame_YUV & Adaptive_Global_Tone_Mapping(Frame_YUV & output, const Frame_YUV & input);
-inline Frame_YUV Adaptive_Global_Tone_Mapping(const Frame_YUV & input)
+int Adaptive_Global_Tone_Mapping_IO(const int argc, const std::string * args);
+
+
+Frame & Adaptive_Global_Tone_Mapping(Frame & output, const Frame & input);
+inline Frame Adaptive_Global_Tone_Mapping(const Frame & input)
 {
-    Frame_YUV output(input, false);
-    return Adaptive_Global_Tone_Mapping(output, input);
-}
-
-Frame_RGB & Adaptive_Global_Tone_Mapping(Frame_RGB & output, const Frame_RGB & input);
-inline Frame_RGB Adaptive_Global_Tone_Mapping(const Frame_RGB & input)
-{
-    Frame_RGB output(input, false);
+    Frame output(input, false);
     return Adaptive_Global_Tone_Mapping(output, input);
 }
 

@@ -13,12 +13,12 @@ const struct Highlight_Removal_Default {
 } Highlight_Removal_Default;
 
 
-Frame_RGB & Specular_Highlight_Removal(Frame_RGB & output, const Frame_RGB & input, const double thr = Highlight_Removal_Default.thr,
+Frame & Specular_Highlight_Removal(Frame & output, const Frame & input, const double thr = Highlight_Removal_Default.thr,
     const double sigmaS = Highlight_Removal_Default.sigmaS, const double sigmaR = Highlight_Removal_Default.sigmaR, const DType PBFICnum = Highlight_Removal_Default.PBFICnum);
-inline Frame_RGB Specular_Highlight_Removal(const Frame_RGB & input, const double thr = Highlight_Removal_Default.thr,
+inline Frame Specular_Highlight_Removal(const Frame & input, const double thr = Highlight_Removal_Default.thr,
     const double sigmaS = Highlight_Removal_Default.sigmaS, const double sigmaR = Highlight_Removal_Default.sigmaR, const DType PBFICnum = Highlight_Removal_Default.PBFICnum)
 {
-    Frame_RGB output(input, false);
+    Frame output(input, false);
     return Specular_Highlight_Removal(output, input, thr, sigmaS, sigmaR, PBFICnum);
 }
 

@@ -48,7 +48,7 @@
     <ClCompile Include="Format_Conversion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Histogram.cpp">
+    <ClCompile Include="Retinex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -105,6 +105,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\LUT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Retinex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

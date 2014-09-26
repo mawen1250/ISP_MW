@@ -5,7 +5,7 @@
 #include "include\IO.h"
 
 
-int Gaussian2D_IO(int argc, char ** argv)
+int Gaussian2D_IO(const int argc, const std::string * args)
 {
     using namespace std;
     using namespace mw;
@@ -13,43 +13,33 @@ int Gaussian2D_IO(int argc, char ** argv)
     int i;
     int Flag = 0;
 
-    char * Drive = new char[DRIVELEN];
-    char * Dir = new char[PATHLEN];
-    char * FileName = new char[PATHLEN];
-    char * Ext = new char[EXTLEN];
+    char Drive[DRIVELEN];
+    char Dir[PATHLEN];
+    char FileName[PATHLEN];
+    char Ext[EXTLEN];
 
     // Default Parameters
-    double sigma = 1.0;
+    string IPath;
+    double sigma = Gaussian2D_Default.sigma;
     string Tag = ".Gaussian";
     string Format = ".png";
 
     // Arguments Process
-    if (argc <= 1)
-    {
-        return 0;
-    }
-
-    string * args = new string[argc];
     for (i = 0; i < argc; i++)
-    {
-        args[i] = argv[i];
-    }
-
-    for (i = 1; i < argc; i++)
     {
         if (args[i] == "-T" || args[i] == "--tag")
         {
-            Flag |= args2arg(i, argc, args, Tag);
+            Flag |= arg2para(i, argc, args, Tag);
             continue;
         }
         if (args[i] == "-F" || args[i] == "--format")
         {
-            Flag |= args2arg(i, argc, args, Format);
+            Flag |= arg2para(i, argc, args, Format);
             continue;
         }
         if (args[i] == "-S" || args[i] == "--sigma")
         {
-            Flag |= args2arg(i, argc, args, sigma);
+            Flag |= arg2para(i, argc, args, sigma);
             continue;
         }
 
@@ -57,19 +47,17 @@ int Gaussian2D_IO(int argc, char ** argv)
         {
             return Flag;
         }
-        
-        Frame_RGB SFrame = ImageReader(args[i]);
-        Frame_RGB PFrame = Gaussian2D(SFrame, sigma);
 
-        _splitpath_s(argv[i], Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
-        string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
-
-        ImageWriter(PFrame, OPath);
+        IPath = args[i];
     }
 
-    // Clean
-    delete[] args;
-    delete[] Drive, Dir, FileName, Ext;
+    Frame SFrame = ImageReader(IPath);
+    Frame PFrame = Gaussian2D(SFrame, sigma);
+
+    _splitpath_s(IPath.c_str(), Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
+    string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
+
+    ImageWriter(PFrame, OPath);
 
     return 0;
 }
@@ -84,22 +72,15 @@ Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma)
         return output;
     }
 
-    PCType i;
-
     double B, B1, B2, B3;
     Recursive_Gaussian_Parameters(sigma, B, B1, B2, B3);
-
-    const PCType pcount = input.PixelCount();
 
     Plane_FL data(input);
 
     Recursive_Gaussian2D_Horizontal(data, B, B1, B2, B3);
     Recursive_Gaussian2D_Vertical(data, B, B1, B2, B3);
-
-    for (i = 0; i < pcount; i++)
-    {
-        output[i] = output.GetD(data[i]);
-    }
+    
+    data.To(output);
     
     return output;
 }
@@ -120,13 +101,13 @@ void Recursive_Gaussian_Parameters(const double sigma, double & B, double & B1, 
     B3 = b3 / b0;
 }
 
-void Recursive_Gaussian2D_Vertical(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
 {
     PCType i, j, lower, upper;
-    PCType sw = data.Width();
-    PCType sh = data.Height();
+    PCType sw = input.Width();
+    PCType sh = input.Height();
     PCType pcount = sw*sh;
-    FLType P1, P2, P3;
+    FLType P0, P1, P2, P3;
 
     for (j = 0; j < sw; j++)
     {
@@ -134,35 +115,37 @@ void Recursive_Gaussian2D_Vertical(Plane_FL & data, const FLType B, const FLType
         upper = pcount;
 
         i = lower;
-        P3 = P2 = P1 = data[i];
+        output[i] = P3 = P2 = P1 = input[i];
 
         for (i += sw; i < upper; i += sw)
         {
-            data[i] = B*data[i] + B1*P1 + B2*P2 + B3*P3;
+            P0 = B*input[i] + B1*P1 + B2*P2 + B3*P3;
             P3 = P2;
             P2 = P1;
-            P1 = data[i];
+            P1 = P0;
+            output[i] = P0;
         }
 
         i -= sw;
-        P3 = P2 = P1 = data[i];
+        P3 = P2 = P1 = output[i];
 
         for (i -= sw; i >= lower; i -= sw)
         {
-            data[i] = B*data[i] + B1*P1 + B2*P2 + B3*P3;
+            P0 = B*output[i] + B1*P1 + B2*P2 + B3*P3;
             P3 = P2;
             P2 = P1;
-            P1 = data[i];
+            P1 = P0;
+            output[i] = P0;
         }
     }
 }
 
-void Recursive_Gaussian2D_Horizontal(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
 {
     PCType i, j, lower, upper;
-    PCType sw = data.Width();
-    PCType sh = data.Height();
-    FLType P1, P2, P3;
+    PCType sw = input.Width();
+    PCType sh = input.Height();
+    FLType P0, P1, P2, P3;
 
     for (j = 0; j < sh; j++)
     {
@@ -170,25 +153,27 @@ void Recursive_Gaussian2D_Horizontal(Plane_FL & data, const FLType B, const FLTy
         upper = lower + sw;
 
         i = lower;
-        P3 = P2 = P1 = data[i];
+        output[i] = P3 = P2 = P1 = input[i];
 
         for (i++; i < upper; i++)
         {
-            data[i] = B*data[i] + B1*P1 + B2*P2 + B3*P3;
+            P0 = B*input[i] + B1*P1 + B2*P2 + B3*P3;
             P3 = P2;
             P2 = P1;
-            P1 = data[i];
+            P1 = P0;
+            output[i] = P0;
         }
 
         i--;
-        P3 = P2 = P1 = data[i];
+        P3 = P2 = P1 = output[i];
 
         for (i--; i >= lower; i--)
         {
-            data[i] = B*data[i] + B1*P1 + B2*P2 + B3*P3;
+            P0 = B*output[i] + B1*P1 + B2*P2 + B3*P3;
             P3 = P2;
             P2 = P1;
-            P1 = data[i];
+            P1 = P0;
+            output[i] = P0;
         }
     }
 }

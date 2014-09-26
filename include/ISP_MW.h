@@ -17,6 +17,10 @@
 #include "Bilateral.h"
 #include "Highlight_Removal.h"
 #include "Tone_Mapping.h"
+#include "Retinex.h"
+
+
+int Filtering(const int argc, char ** argv);
 
 
 #endif

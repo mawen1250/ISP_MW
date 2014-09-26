@@ -8,7 +8,6 @@
 #include "Type_Conv.h"
 
 
-const double Pi = 3.1415926535897932384626433832795;
 const double sigmaSMul = 2.;
 const double sigmaRMul = 30.;
 
@@ -19,7 +18,7 @@ const struct Bilateral2D_Default {
 } Bilateral2D_Default;
 
 
-int Bilateral2D_IO(int argc, char ** argv);
+int Bilateral2D_IO(const int argc, const std::string * args);
 
 
 Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, const double sigmaS = Bilateral2D_Default.sigmaS,
@@ -36,65 +35,31 @@ inline Plane Bilateral2D(const Plane & input, const double sigmaS = Bilateral2D_
     Plane output(input, false);
     return Bilateral2D(output, input, input, sigmaS, sigmaR, PBFICnum);
 }
-inline Frame_YUV Bilateral2D(const Frame_YUV & input, const Frame_YUV & ref, const double sigmaS = Bilateral2D_Default.sigmaS,
+inline Frame Bilateral2D(const Frame & input, const Frame & ref, const double sigmaS = Bilateral2D_Default.sigmaS,
     const double sigmaR = Bilateral2D_Default.sigmaR, const DType PBFICnum = Bilateral2D_Default.PBFICnum)
 {
-    Frame_YUV output(input, false);
-    Bilateral2D(output.Y(), input.Y(), ref.Y(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.U(), input.U(), ref.U(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.V(), input.V(), ref.V(), sigmaS, sigmaR, PBFICnum);
+    Frame output(input, false);
+    for (Frame::PlaneCountType i = 0; i < input.PlaneCount(); i++)
+        Bilateral2D(output.P(i), input.P(i), ref.P(i), sigmaS, sigmaR, PBFICnum);
     return output;
 }
-inline Frame_YUV Bilateral2D(const Frame_YUV & input, const double sigmaS = Bilateral2D_Default.sigmaS,
+inline Frame Bilateral2D(const Frame & input, const double sigmaS = Bilateral2D_Default.sigmaS,
     const double sigmaR = Bilateral2D_Default.sigmaR, const DType PBFICnum = Bilateral2D_Default.PBFICnum)
 {
-    Frame_YUV output(input, false);
-    Bilateral2D(output.Y(), input.Y(), input.Y(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.U(), input.U(), input.U(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.V(), input.V(), input.V(), sigmaS, sigmaR, PBFICnum);
-    return output;
-}
-inline Frame_RGB Bilateral2D(const Frame_RGB & input, const Frame_RGB & ref, const double sigmaS = Bilateral2D_Default.sigmaS,
-    const double sigmaR = Bilateral2D_Default.sigmaR, const DType PBFICnum = Bilateral2D_Default.PBFICnum)
-{
-    Frame_RGB output(input, false);
-    Bilateral2D(output.R(), input.R(), ref.R(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.G(), input.G(), ref.G(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.B(), input.B(), ref.B(), sigmaS, sigmaR, PBFICnum);
-    return output;
-}
-inline Frame_RGB Bilateral2D(const Frame_RGB & input, const double sigmaS = Bilateral2D_Default.sigmaS,
-    const double sigmaR = Bilateral2D_Default.sigmaR, const DType PBFICnum = Bilateral2D_Default.PBFICnum)
-{
-    Frame_RGB output(input, false);
-    Bilateral2D(output.R(), input.R(), input.R(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.G(), input.G(), input.G(), sigmaS, sigmaR, PBFICnum);
-    Bilateral2D(output.B(), input.B(), input.B(), sigmaS, sigmaR, PBFICnum);
+    Frame output(input, false);
+    for (Frame::PlaneCountType i = 0; i < input.PlaneCount(); i++)
+        Bilateral2D(output.P(i), input.P(i), input.P(i), sigmaS, sigmaR, PBFICnum);
     return output;
 }
 
-
-LUT<FLType> Gaussian_Distribution2D_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS = Bilateral2D_Default.sigmaS);
-LUT<FLType> Gaussian_Distribution2D_Range_LUT_Generation(const DType ValueRange, const double sigmaR = Bilateral2D_Default.sigmaR);
 
 Plane & Bilateral2D_0(Plane & output, const Plane & input, const Plane & ref, const LUT<FLType> & GS_LUT, const LUT<FLType> & GR_LUT, const PCType radiusx, const PCType radiusy);
 Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, const LUT<FLType> & GR_LUT,
     const double sigmaS = Bilateral2D_Default.sigmaS, const DType PBFICnum = Bilateral2D_Default.PBFICnum);
 
 
-inline FLType Gaussian_Distribution2D(FLType x, FLType sigma)
-{
-    sigma *= sigma * 2;
-
-    return exp(-x*x / sigma) / (Pi*sigma);
-}
-
-inline FLType Gaussian_Distribution2D_x2(FLType x2, FLType sigma)
-{
-    sigma *= sigma * 2;
-
-    return exp(-x2 / sigma) / (Pi*sigma);
-}
+LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS = Bilateral2D_Default.sigmaS);
+LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange, const double sigmaR = Bilateral2D_Default.sigmaR);
 
 inline FLType Gaussian_Distribution2D_Spatial_LUT_Lookup(const LUT<FLType> & GS_LUT, const PCType xUpper, const PCType x, const PCType y)
 {
