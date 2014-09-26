@@ -968,7 +968,7 @@ FLType Plane_FL::Min() const
 
 FLType Plane_FL::Max() const
 {
-    FLType max = FLT_MIN;
+    FLType max = -FLT_MAX;
 
     for (PCType i = 0; i < PixelCount_; i++)
     {
@@ -981,7 +981,7 @@ FLType Plane_FL::Max() const
 const Plane_FL & Plane_FL::MinMax(FLType & min, FLType & max) const
 {
     min = FLT_MAX;
-    max = FLT_MIN;
+    max = -FLT_MAX;
 
     for (PCType i = 0; i < PixelCount_; i++)
     {

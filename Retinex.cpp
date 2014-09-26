@@ -95,7 +95,7 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
     double B, B1, B2, B3;
     Recursive_Gaussian_Parameters(sigma, B, B1, B2, B3);
 
-    Plane_FL data(input, TransferChar::linear);
+    Plane_FL data(input);
     Plane_FL gauss(data, false);
 
     Recursive_Gaussian2D_Horizontal(gauss, data, B, B1, B2, B3);
@@ -103,7 +103,7 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
 
     for (i = 0; i < pcount; i++)
     {
-        data[i] = data[i] / gauss[i];
+        data[i] = gauss[i] < DBL_MIN ? 0 : data[i] / gauss[i];
     }
     
     FLType min, max;
@@ -122,8 +122,6 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
         output[i] = static_cast<DType>(data.Quantize(data[i]) * gain + offset);
     }
     
-    output.ConvertFrom(output, input.GetTransferChar());
-
     return output;
 }
 
@@ -145,7 +143,7 @@ Plane & Retinex_MSR(Plane & output, const Plane & input, const std::vector<doubl
     PCType i;
     PCType pcount = input.PixelCount();
 
-    Plane_FL idata(input, TransferChar::linear);
+    Plane_FL idata(input);
     Plane_FL odata(idata, true, 0);
     Plane_FL gauss(idata, false);
 
@@ -161,7 +159,7 @@ Plane & Retinex_MSR(Plane & output, const Plane & input, const std::vector<doubl
 
             for (i = 0; i < pcount; i++)
             {
-                odata[i] += idata[i] / gauss[i];
+                odata[i] += gauss[i] < DBL_MIN ? 0 : idata[i] / gauss[i];
             }
         }
         else
@@ -193,8 +191,6 @@ Plane & Retinex_MSR(Plane & output, const Plane & input, const std::vector<doubl
     {
         output[i] = static_cast<DType>(odata.Quantize(odata[i]) * gain + offset);
     }
-
-    output.ConvertFrom(output, input.GetTransferChar());
 
     return output;
 }

@@ -122,20 +122,22 @@ LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const 
 LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange, const double sigmaR)
 {
     DType i;
-    const DType upper = Min(ValueRange, (DType)(sigmaR*sigmaRMul + 0.5));
+    const DType upper = ValueRange;
+    //const DType upper = Min(ValueRange, (DType)(sigmaR*sigmaRMul + 0.5));
     LUT<FLType> GR_LUT(ValueRange + 1);
 
     for (i = 0; i <= upper; i++)
     {
         GR_LUT[i] = Gaussian_Function((FLType)i, sigmaR);
+        if (GR_LUT[i] < DBL_MIN) GR_LUT[i] = DBL_MIN;
     }
     // For unknown reason, when more range weights equal 0, the runtime speed gets lower - mainly in function Recursive_Gaussian2D_Horizontal.
     // To avoid this problem, we set range weights whose range values are larger than sigmaR*sigmaRMul to the Gaussian distribution value at sigmaR*sigmaRMul.
-    const FLType upperLUTvalue = GR_LUT[upper];
+    /*const FLType upperLUTvalue = GR_LUT[upper];
     for (; i < ValueRange; i++)
     {
         GR_LUT[i] = upperLUTvalue;
-    }
+    }*/
 
     return GR_LUT;
 }

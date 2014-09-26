@@ -128,14 +128,15 @@ void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, co
 
         i -= sw;
         P3 = P2 = P1 = output[i];
-
+        output[i] = output.Quantize(output[i]);
+        
         for (i -= sw; i >= lower; i -= sw)
         {
             P0 = B*output[i] + B1*P1 + B2*P2 + B3*P3;
             P3 = P2;
             P2 = P1;
             P1 = P0;
-            output[i] = P0;
+            output[i] = output.Quantize(P0);
         }
     }
 }
@@ -166,6 +167,7 @@ void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, 
 
         i--;
         P3 = P2 = P1 = output[i];
+        output[i] = output.Quantize(output[i]);
 
         for (i--; i >= lower; i--)
         {
@@ -173,8 +175,7 @@ void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, 
             P3 = P2;
             P2 = P1;
             P1 = P0;
-            output[i] = P0;
+            output[i] = output.Quantize(P0);
         }
     }
 }
-
