@@ -48,23 +48,23 @@ inline void Recursive_Gaussian2D_Horizontal(Plane_FL & data, const FLType B, con
 inline FLType Gaussian_Function(FLType x, FLType sigma)
 {
     x /= sigma;
-    return exp(x*x / -2);
+    return std::exp(x*x / -2);
 }
 
 inline FLType Gaussian_Function_sqr_x(FLType sqr_x, FLType sigma)
 {
-    return exp(sqr_x / (sigma*sigma*-2));
+    return std::exp(sqr_x / (sigma*sigma*-2));
 }
 
 inline FLType Normalized_Gaussian_Function(FLType x, FLType sigma)
 {
     x /= sigma;
-    return exp(x*x / -2) / (sqrt_2Pi*sigma);
+    return std::exp(x*x / -2) / (sqrt_2Pi*sigma);
 }
 
 inline FLType Normalized_Gaussian_Function_sqr_x(FLType sqr_x, FLType sigma)
 {
-    return exp(sqr_x / (sigma*sigma*-2)) / (sqrt_2Pi*sigma);
+    return std::exp(sqr_x / (sigma*sigma*-2)) / (sqrt_2Pi*sigma);
 }
 
 

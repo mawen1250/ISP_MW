@@ -112,7 +112,7 @@ LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const 
     {
         for (x = 0; x < xUpper; x++)
         {
-            GS_LUT[y*xUpper + x] = Gaussian_Function_sqr_x((FLType)(x*x + y*y), sigmaS);
+            GS_LUT[y*xUpper + x] = Gaussian_Function_sqr_x(static_cast<FLType>(x*x + y*y), sigmaS);
         }
     }
 
@@ -122,22 +122,24 @@ LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const 
 LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange, const double sigmaR)
 {
     DType i;
-    const DType upper = ValueRange;
-    //const DType upper = Min(ValueRange, (DType)(sigmaR*sigmaRMul + 0.5));
-    LUT<FLType> GR_LUT(ValueRange + 1);
+    DType Levels = ValueRange + 1;
+    const DType upper = Min(ValueRange, static_cast<DType>(sigmaR*sigmaRMul + 0.5));
+    LUT<FLType> GR_LUT(Levels);
 
     for (i = 0; i <= upper; i++)
     {
-        GR_LUT[i] = Gaussian_Function((FLType)i, sigmaR);
-        if (GR_LUT[i] < DBL_MIN) GR_LUT[i] = DBL_MIN;
+        GR_LUT[i] = Normalized_Gaussian_Function(static_cast<FLType>(i), sigmaR);
     }
     // For unknown reason, when more range weights equal 0, the runtime speed gets lower - mainly in function Recursive_Gaussian2D_Horizontal.
-    // To avoid this problem, we set range weights whose range values are larger than sigmaR*sigmaRMul to the Gaussian distribution value at sigmaR*sigmaRMul.
-    /*const FLType upperLUTvalue = GR_LUT[upper];
-    for (; i < ValueRange; i++)
+    // To avoid this problem, we set range weights whose range values are larger than sigmaR*sigmaRMul to the Gaussian function value at sigmaR*sigmaRMul.
+    if (i < Levels)
     {
-        GR_LUT[i] = upperLUTvalue;
-    }*/
+        const FLType upperLUTvalue = GR_LUT[upper];
+        for (; i < Levels; i++)
+        {
+            GR_LUT[i] = upperLUTvalue;
+        }
+    }
 
     return GR_LUT;
 }
@@ -197,13 +199,31 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, co
     PCType pcount = ref.PixelCount();
     
     // Get the minimum and maximum pixel value of Plane "ref"
-    DType rLower = ref.Ceil(), rUpper = ref.Floor(), rRange; // First set rLower to the highest number and rUpper to the lowest number
+    DType rLower, rUpper, rRange;
 
+    /*// First set rLower to the highest number and rUpper to the lowest number
+    rLower = ref.Ceil();
+    rUpper = ref.Floor();
     for (j = 0; j < pcount; j++)
     {
         if (rLower > ref[j]) rLower = ref[j];
         if (rUpper < ref[j]) rUpper = ref[j];
     }
+    rRange = rUpper - rLower;
+    if (rRange < PBFICnum - 1)
+    {
+        rRange = PBFICnum - 1;
+        if (rUpper < rRange)
+        {
+            rLower = 0;
+            rUpper = rRange;
+        }
+        else
+            rLower = rUpper - rRange;
+    }*/
+
+    rLower = ref.Floor();
+    rUpper = ref.Ceil();
     rRange = rUpper - rLower;
 
     // Generate quantized PBFICs' parameters
@@ -255,7 +275,7 @@ Plane & Bilateral2D_1(Plane & output, const Plane & input, const Plane & ref, co
         }
     }
 
-    // Generate filtered result from PBFICs using bilinear interpolation
+    // Generate filtered result from PBFICs using linear interpolation
     if (output.isPCChroma())
     {
         for (j = 0; j < pcount; j++)

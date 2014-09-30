@@ -12,9 +12,21 @@ const double sigmaSMul = 2.;
 const double sigmaRMul = 30.;
 
 const struct Bilateral2D_Default {
-    const double sigmaS = 2.0;
-    const double sigmaR = 0.1;
-    const DType PBFICnum = 8;
+    const double sigmaS = 5.0;
+    const double sigmaR = 0.04;
+    DType PBFICnum;
+
+    Bilateral2D_Default()
+    {
+        if (sigmaR >= 0.08)
+        {
+            PBFICnum = 4;
+        }
+        else
+        {
+            PBFICnum = static_cast<DType>(4 * 0.08 / sigmaR + 0.5);
+        }
+    }
 } Bilateral2D_Default;
 
 

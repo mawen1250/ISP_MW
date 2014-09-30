@@ -440,7 +440,7 @@ Plane & Plane::ReSize(PCType Width, PCType Height)
     return *this;
 }
 
-Plane & Plane::ReQuantize(DType BitDepth, QuantRange QuantRange, bool scale)
+Plane & Plane::ReQuantize(DType BitDepth, QuantRange QuantRange, bool scale, bool clip)
 {
     const char * FunctionName = "Plane::ReQuantize";
     if (BitDepth > MaxBitDepth)
@@ -451,10 +451,10 @@ Plane & Plane::ReQuantize(DType BitDepth, QuantRange QuantRange, bool scale)
 
     DType Floor, Neutral, Ceil, ValueRange;
     Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange, isChroma());
-    return ReQuantize(BitDepth, Floor, Neutral, Ceil, scale);
+    return ReQuantize(BitDepth, Floor, Neutral, Ceil, scale, clip);
 }
 
-Plane & Plane::ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale)
+Plane & Plane::ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale, bool clip)
 {
     PCType i;
     DType ValueRange = Ceil - Floor;
@@ -483,37 +483,79 @@ Plane & Plane::ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil
 
     if (scale && Data_ && (Floor_ != Floor || Neutral_ != Neutral || Ceil_ != Ceil))
     {
-        if (isPCChroma())
+        FLType FloorFL = static_cast<FLType>(Floor);
+        FLType CeilFL = static_cast<FLType>(Ceil);
+        if (isPCChroma()) // original Plane is chroma of PC range
         {
-            if ((Floor + Ceil - 1) / 2 == Neutral - 1)
+            if ((Floor + Ceil - 1) / 2 == Neutral - 1) // target Plane is chroma of PC range
             {
-                for (i = 0; i < PixelCount_; i++)
+                if (clip)
                 {
-                    Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(Clip(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.49999999), FloorFL, CeilFL));
+                    }
+                }
+                else
+                {
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
+                    }
                 }
             }
-            else
+            else // target Plane is not chroma of PC range
             {
-                for (i = 0; i < PixelCount_; i++)
+                if (clip)
                 {
-                    Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.5));
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(Clip(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.5), FloorFL, CeilFL));
+                    }
+                }
+                else
+                {
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.5));
+                    }
                 }
             }
         }
-        else
+        else // original Plane is not chroma of PC range
         {
-            if ((Floor + Ceil - 1) / 2 == Neutral - 1)
+            if ((Floor + Ceil - 1) / 2 == Neutral - 1) // target Plane is chroma of PC range
             {
-                for (i = 0; i < PixelCount_; i++)
+                if (clip)
                 {
-                    Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(Clip(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.49999999), FloorFL, CeilFL));
+                    }
+                }
+                else
+                {
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
+                    }
                 }
             }
-            else
+            else // target Plane is not chroma of PC range
             {
-                for (i = 0; i < PixelCount_; i++)
+                if (clip)
                 {
-                    Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.5));
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(Clip(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.5), FloorFL, CeilFL));
+                    }
+                }
+                else
+                {
+                    for (i = 0; i < PixelCount_; i++)
+                    {
+                        Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.5));
+                    }
                 }
             }
         }
@@ -1011,7 +1053,7 @@ Plane_FL & Plane_FL::ReSize(PCType Width, PCType Height)
     return *this;
 }
 
-Plane_FL & Plane_FL::ReQuantize(FLType Floor, FLType Neutral, FLType Ceil, bool scale)
+Plane_FL & Plane_FL::ReQuantize(FLType Floor, FLType Neutral, FLType Ceil, bool scale, bool clip)
 {
     PCType i;
 
@@ -1032,9 +1074,19 @@ Plane_FL & Plane_FL::ReQuantize(FLType Floor, FLType Neutral, FLType Ceil, bool 
         FLType gain = (Ceil - Floor) / (Ceil_ - Floor_);
         FLType offset = Neutral - Neutral_*gain;
 
-        for (i = 0; i < PixelCount_; i++)
+        if (clip)
         {
-            Data_[i] = Data_[i] * gain + offset;
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = Clip(Data_[i] * gain + offset, Floor, Ceil);
+            }
+        }
+        else
+        {
+            for (i = 0; i < PixelCount_; i++)
+            {
+                Data_[i] = Data_[i] * gain + offset;
+            }
         }
     }
 

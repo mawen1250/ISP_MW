@@ -163,8 +163,8 @@ public:
     Plane & Width(PCType Width) { return ReSize(Width, Height_); }
     Plane & Height(PCType Height) { return ReSize(Width_, Height); }
     Plane & ReSize(PCType Width, PCType Height);
-    Plane & ReQuantize(DType BitDepth = 16, QuantRange QuantRange = QuantRange::PC, bool scale = true);
-    Plane & ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale = true);
+    Plane & ReQuantize(DType BitDepth = 16, QuantRange QuantRange = QuantRange::PC, bool scale = true, bool clip = false);
+    Plane & ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale = true, bool clip = false);
     Plane & SetTransferChar(TransferChar TransferChar) { TransferChar_ = TransferChar; return *this; }
 
     Plane & From(const Plane & src);
@@ -240,7 +240,7 @@ public:
     Plane_FL & Width(PCType Width) { return ReSize(Width, Height_); }
     Plane_FL & Height(PCType Height) { return ReSize(Width_, Height); }
     Plane_FL & ReSize(PCType Width, PCType Height);
-    Plane_FL & ReQuantize(FLType Floor, FLType Neutral, FLType Ceil, bool scale = true);
+    Plane_FL & ReQuantize(FLType Floor, FLType Neutral, FLType Ceil, bool scale = true, bool clip = false);
     Plane_FL & SetTransferChar(TransferChar TransferChar) { TransferChar_ = TransferChar; return *this; }
 
     Plane_FL & From(const Plane & src);
