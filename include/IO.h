@@ -3,8 +3,9 @@
 
 
 #include <iostream>
-#include <string>
 #include <cstdlib>
+#include <string>
+#include <vector>
 
 #include "args.h"
 #include "ImageIO.h"

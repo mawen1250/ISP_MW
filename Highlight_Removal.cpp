@@ -66,7 +66,8 @@ Frame & Specular_Highlight_Removal(Frame & output, const Frame & input, const do
     while (flag)
     {
         // Apply joint bilateral filter to image σmax using λ_max as the guidance image, store the filtered image as σF σ_maxF
-        Bilateral2D(PsigmaMaxF, PsigmaMax, PlambdaMax, sigmaS, sigmaR, PBFICnum);
+        Bilateral2D_Data bldata(PlambdaMax, sigmaS, sigmaR);
+        Bilateral2D(PsigmaMaxF, PsigmaMax, PlambdaMax, bldata);
 
         // For each pixel p, σ_max(p) = max(σ_max(p), σ_maxF(p))
         for (i = 0, flag = 0; i < pcount; i++)

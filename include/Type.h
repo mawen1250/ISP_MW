@@ -11,9 +11,20 @@ typedef   signed short sint16;
 typedef   signed long  sint32;
 typedef   signed long long sint64;
 
+
 typedef bool  Bool;
 #define True  true;
 #define False false;
+
+
+typedef sint32 FCType;
+typedef sint32 PCType;
+typedef uint32 DType;
+typedef double FLType;
+
+
+const FLType FLType_MAX = sizeof(FLType) < 8 ? FLT_MAX : DBL_MAX;
+const FLType FLType_MIN = sizeof(FLType) < 8 ? FLT_MIN : DBL_MIN;
 
 
 enum class STAT {

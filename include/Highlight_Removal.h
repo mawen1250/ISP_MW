@@ -5,11 +5,11 @@
 #include "Image_Type.h"
 
 
-const struct Highlight_Removal_Default {
-    const double thr = 0.03;
-    const double sigmaS = 3.0;
-    const double sigmaR = 0.1;
-    const DType PBFICnum = 8;
+const struct Highlight_Removal_Para {
+    double thr = 0.03;
+    double sigmaS = 3.0;
+    double sigmaR = 0.1;
+    DType PBFICnum = 0;
 } Highlight_Removal_Default;
 
 

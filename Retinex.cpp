@@ -1,15 +1,12 @@
 #include <iostream>
 #include <cmath>
-#include <vector>
 #include "include\Retinex.h"
 #include "include\Gaussian.h"
 #include "include\Histogram.h"
 #include "include\Specification.h"
-#include "include\Image_Type.h"
-#include "include\IO.h"
 
 
-int Retinex_MSR_IO(const int argc, const std::string * args)
+int Retinex_MSRCP_IO(const int argc, const std::vector<std::string> &args)
 {
     using namespace std;
     using namespace mw;
@@ -28,7 +25,7 @@ int Retinex_MSR_IO(const int argc, const std::string * args)
     std::vector<double> sigmaVector;
     double lower_thr = Retinex_Default.lower_thr;
     double upper_thr = Retinex_Default.upper_thr;
-    string Tag = ".Retinex_MSR";
+    string Tag = ".Retinex_MSRCP";
     string Format = ".png";
 
     // Arguments Process
@@ -70,7 +67,7 @@ int Retinex_MSR_IO(const int argc, const std::string * args)
     }
 
     Frame SFrame = ImageReader(IPath);
-    Frame PFrame = Retinex_MSR(SFrame, sigmaVector, lower_thr, upper_thr);
+    Frame PFrame = Retinex_MSRCP(SFrame, sigmaVector, lower_thr, upper_thr);
 
     _splitpath_s(IPath.c_str(), Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
     string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
@@ -92,7 +89,7 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
     PCType i;
     PCType pcount = input.PixelCount();
 
-    double B, B1, B2, B3;
+    FLType B, B1, B2, B3;
     Recursive_Gaussian_Parameters(sigma, B, B1, B2, B3);
 
     Plane_FL data(input);
@@ -103,15 +100,26 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
 
     for (i = 0; i < pcount; i++)
     {
-        data[i] = gauss[i] < DBL_MIN ? 0 : data[i] / gauss[i];
+        data[i] = gauss[i] <= 0 ? 0 : std::log(data[i] / gauss[i] + 1);
     }
     
     FLType min, max;
     data.MinMax(min, max);
-    data.ReQuantize(min, min, max, false);
-    Histogram<FLType> Histogram(data, Retinex_Default.HistBins);
-    min = Histogram.Min(lower_thr);
-    max = Histogram.Max(upper_thr);
+
+    if (max <= min)
+    {
+        output = input;
+        return output;
+    }
+
+    if (lower_thr> 0 || upper_thr > 0)
+    {
+        data.ReQuantize(min, min, max, false);
+        Histogram<FLType> Histogram(data, Retinex_Default.HistBins);
+        min = Histogram.Min(lower_thr);
+        max = Histogram.Max(upper_thr);
+    }
+
     data.ReQuantize(min, min, max, false);
 
     FLType gain = output.ValueRange() / (max - min);
@@ -143,10 +151,10 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
     PCType i;
     PCType pcount = idata.PixelCount();
 
-    Plane_FL odata(idata, true, 0);
+    Plane_FL odata(idata, true, 1);
     Plane_FL gauss(idata, false);
 
-    double B, B1, B2, B3;
+    FLType B, B1, B2, B3;
 
     for (s = 0; s < scount; s++)
     {
@@ -158,31 +166,41 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
 
             for (i = 0; i < pcount; i++)
             {
-                odata[i] += gauss[i] <= 0 ? 0 : idata[i] / gauss[i];
+                odata[i] *= gauss[i] <= 0 ? 1 : idata[i] / gauss[i] + 1;
             }
         }
         else
         {
             for (i = 0; i < pcount; i++)
             {
-                odata[i] += 1;
+                odata[i] *= FLType(2);
             }
         }
     }
 
     for (i = 0; i < pcount; i++)
     {
-        odata[i] /= FLType(scount);
+        odata[i] = std::log(odata[i]) / static_cast<FLType>(scount);
     }
 
     FLType min, max;
     odata.MinMax(min, max);
-    odata.ReQuantize(min, min, max, false);
-    Histogram<FLType> Histogram(odata, Retinex_Default.HistBins);
-    min = Histogram.Min(lower_thr);
-    max = Histogram.Max(upper_thr);
-    odata.ReQuantize(min, min, max, false);
 
+    if (max <= min)
+    {
+        odata = idata;
+        return odata;
+    }
+
+    if (lower_thr> 0 || upper_thr > 0)
+    {
+        odata.ReQuantize(min, min, max, false);
+        Histogram<FLType> Histogram(odata, Retinex_Default.HistBins);
+        min = Histogram.Min(lower_thr);
+        max = Histogram.Max(upper_thr);
+    }
+
+    odata.ReQuantize(min, min, max, false);
     odata.ReQuantize(idata.Floor(), idata.Neutral(), idata.Ceil(), true, true);
 
     return odata;
@@ -210,7 +228,7 @@ Plane & Retinex_MSR(Plane & output, const Plane & input, const std::vector<doubl
     return output;
 }
 
-Frame & Retinex_MSR(Frame & output, const Frame & input, const std::vector<double> & sigmaVector, const double lower_thr, const double upper_thr)
+Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<double> & sigmaVector, const double lower_thr, const double upper_thr)
 {
     size_t s, scount = sigmaVector.size();
 
@@ -247,7 +265,7 @@ Frame & Retinex_MSR(Frame & output, const Frame & input, const std::vector<doubl
         {
             for (i = 0; i < pcount; i++)
             {
-                gain = odata[i] / idata[i];
+                gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
                 outputU[i] = outputU.GetD_PCChroma(Clip(inputU.GetFL(inputU[i])*gain, FLType(-0.5), FLType(0.5)));
                 outputV[i] = outputV.GetD_PCChroma(Clip(inputV.GetFL(inputV[i])*gain, FLType(-0.5), FLType(0.5)));
             }
@@ -256,7 +274,7 @@ Frame & Retinex_MSR(Frame & output, const Frame & input, const std::vector<doubl
         {
             for (i = 0; i < pcount; i++)
             {
-                gain = odata[i] / idata[i];
+                gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
                 outputU[i] = outputU.GetD(Clip(inputU.GetFL(inputU[i])*gain, FLType(-0.5), FLType(0.5)));
                 outputV[i] = outputV.GetD(Clip(inputV.GetFL(inputV[i])*gain, FLType(-0.5), FLType(0.5)));
             }
@@ -279,7 +297,7 @@ Frame & Retinex_MSR(Frame & output, const Frame & input, const std::vector<doubl
 
         for (i = 0; i < pcount; i++)
         {
-            gain = odata[i] / idata[i];
+            gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
             outputR[i] = outputR.GetD(Clip(inputR.GetFL(inputR[i])*gain, FLType(0), FLType(1)));
             outputG[i] = outputG.GetD(Clip(inputG.GetFL(inputG[i])*gain, FLType(0), FLType(1)));
             outputB[i] = outputB.GetD(Clip(inputB.GetFL(inputB[i])*gain, FLType(0), FLType(1)));

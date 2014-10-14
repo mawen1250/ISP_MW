@@ -24,9 +24,6 @@
     <ClCompile Include="ISP_MW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Specification.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Transform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

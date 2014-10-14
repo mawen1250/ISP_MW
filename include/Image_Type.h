@@ -4,68 +4,11 @@
 
 #include "Type.h"
 #include "Type_Conv.h"
-
-
-typedef sint32 FCType;
-typedef sint32 PCType;
-typedef uint32 DType;
-typedef double FLType;
+#include "Specification.h"
 
 
 const DType MaxBitDepth = sizeof(DType) * 8 * 3 / 4;
-const PCType HD_Width_U = 2048;
-const PCType HD_Height_U = 1536;
-const PCType SD_Width_U = 1024;
-const PCType SD_Height_U = 576;
 
-
-enum class ResLevel {
-    SD = 0,
-    HD = 1,
-    UHD = 2,
-    Unknown = 3
-};
-
-enum class ColorPrim {
-    bt709 = 1,
-    Unspecified = 2,
-    bt470m = 4,
-    bt470bg = 5,
-    smpte170m = 6,
-    smpte240m = 7,
-    film = 8,
-    bt2020 = 9
-};
-
-enum class TransferChar {
-    bt709 = 1,
-    Unspecified = 2,
-    bt470m = 4,
-    bt470bg = 5,
-    smpte170m = 6,
-    smpte240m = 7,
-    linear = 8,
-    log100 = 9,
-    log316 = 10,
-    iec61966_2_4 = 11,
-    bt1361e = 12,
-    iec61966_2_1 = 13,
-    bt2020_10 = 14,
-    bt2020_12 = 15
-};
-
-enum class ColorMatrix {
-    GBR = 0,
-    bt709 = 1,
-    Unspecified = 2,
-    fcc = 4,
-    bt470bg = 5,
-    smpte170m = 6,
-    smpte240m = 7,
-    YCgCo = 8,
-    bt2020nc = 9,
-    bt2020c = 10
-};
 
 enum class PixelType {
     Y = 0,
@@ -91,12 +34,6 @@ enum class QuantRange {
     TV = 0,
     PC = 1
 };
-
-
-ResLevel ResLevel_Default(PCType Width, PCType Height);
-ColorPrim ColorPrim_Default(PCType Width, PCType Height, bool RGB);
-TransferChar TransferChar_Default(PCType Width, PCType Height, bool RGB);
-ColorMatrix ColorMatrix_Default(PCType Width, PCType Height);
 
 
 void Quantize_Value(uint32 * Floor, uint32 * Neutral, uint32 * Ceil, uint32 * ValueRange, uint32 BitDepth, QuantRange QuantRange, bool Chroma);
@@ -253,7 +190,7 @@ public:
     Plane_FL & YFrom(const Frame & src);
     Plane_FL & YFrom(const Frame & src, ColorMatrix dstColorMatrix);
 
-    template <typename T> FLType Quantize(T input)
+    template <typename T> FLType Quantize(T input) const
     {
         return input <= Floor_ ? Floor_ : input >= Ceil_ ? Ceil_ : input;
     }

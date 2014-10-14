@@ -1,64 +1,6 @@
 #include <iostream>
 #include "include\Image_Type.h"
-#include "include\Type_Conv.h"
-#include "include\Specification.h"
 #include "include\LUT.h"
-
-
-// Default functions
-ResLevel ResLevel_Default(PCType Width, PCType Height)
-{
-    return
-        Width > HD_Width_U || Height > HD_Height_U ? ResLevel::UHD :
-        Width > SD_Width_U || Height > SD_Height_U ? ResLevel::HD : ResLevel::SD;
-}
-
-
-ColorPrim ColorPrim_Default(PCType Width, PCType Height, bool RGB)
-{
-    ResLevel Res_Level = ResLevel_Default(Width, Height);
-
-    if (RGB)
-    {
-        return ColorPrim::bt709;
-    }
-    else
-    {
-        return
-            Res_Level == ResLevel::UHD ? ColorPrim::bt2020 :
-            Res_Level == ResLevel::HD ? ColorPrim::bt709 :
-            Res_Level == ResLevel::SD ? ColorPrim::smpte170m : ColorPrim::bt709;
-    }
-}
-
-
-TransferChar TransferChar_Default(PCType Width, PCType Height, bool RGB)
-{
-    ResLevel Res_Level = ResLevel_Default(Width, Height);
-
-    if (RGB)
-    {
-        return TransferChar::iec61966_2_1;
-    }
-    else
-    {
-        return
-            Res_Level == ResLevel::UHD ? TransferChar::bt2020_12 :
-            Res_Level == ResLevel::HD ? TransferChar::bt709 :
-            Res_Level == ResLevel::SD ? TransferChar::smpte170m : TransferChar::bt709;
-    }
-}
-
-
-ColorMatrix ColorMatrix_Default(PCType Width, PCType Height)
-{
-    ResLevel Res_Level = ResLevel_Default(Width, Height);
-
-    return
-        Res_Level == ResLevel::UHD ? ColorMatrix::bt2020nc :
-        Res_Level == ResLevel::HD ? ColorMatrix::bt709 :
-        Res_Level == ResLevel::SD ? ColorMatrix::smpte170m : ColorMatrix::bt709;
-}
 
 
 // Calculating functions
@@ -998,7 +940,7 @@ bool Plane_FL::operator==(const Plane_FL & b) const
 
 FLType Plane_FL::Min() const
 {
-    FLType min = FLT_MAX;
+    FLType min = FLType_MAX;
 
     for (PCType i = 0; i < PixelCount_; i++)
     {
@@ -1010,7 +952,7 @@ FLType Plane_FL::Min() const
 
 FLType Plane_FL::Max() const
 {
-    FLType max = -FLT_MAX;
+    FLType max = -FLType_MAX;
 
     for (PCType i = 0; i < PixelCount_; i++)
     {
@@ -1022,8 +964,8 @@ FLType Plane_FL::Max() const
 
 const Plane_FL & Plane_FL::MinMax(FLType & min, FLType & max) const
 {
-    min = FLT_MAX;
-    max = -FLT_MAX;
+    min = FLType_MAX;
+    max = -FLType_MAX;
 
     for (PCType i = 0; i < PixelCount_; i++)
     {
@@ -1198,7 +1140,7 @@ const Plane_FL & Plane_FL::To(Plane & dst) const
         {
             for (i = 0; i < PixelCount_; i++)
             {
-                Data[i] = dst.GetD(Data_[i]);
+                Data[i] = dst.GetD(Quantize(Data_[i]));
             }
         }
         else
@@ -1208,7 +1150,7 @@ const Plane_FL & Plane_FL::To(Plane & dst) const
 
             for (i = 0; i < PixelCount_; i++)
             {
-                Data[i] = static_cast<DType>(Data_[i] * gain + offset);
+                Data[i] = static_cast<DType>(Quantize(Data_[i]) * gain + offset);
             }
         }
     }
@@ -1220,14 +1162,14 @@ const Plane_FL & Plane_FL::To(Plane & dst) const
             {
                 for (i = 0; i < PixelCount_; i++)
                 {
-                    Data[i] = dst.GetD_PCChroma(Data_[i]);
+                    Data[i] = dst.GetD_PCChroma(Quantize(Data_[i]));
                 }
             }
             else
             {
                 for (i = 0; i < PixelCount_; i++)
                 {
-                    Data[i] = dst.GetD(Data_[i]);
+                    Data[i] = dst.GetD(Quantize(Data_[i]));
                 }
             }
         }
@@ -1240,7 +1182,7 @@ const Plane_FL & Plane_FL::To(Plane & dst) const
 
                 for (i = 0; i < PixelCount_; i++)
                 {
-                    Data[i] = static_cast<DType>(Data_[i] * gain + offset);
+                    Data[i] = static_cast<DType>(Quantize(Data_[i]) * gain + offset);
                 }
             }
             else
@@ -1250,7 +1192,7 @@ const Plane_FL & Plane_FL::To(Plane & dst) const
 
                 for (i = 0; i < PixelCount_; i++)
                 {
-                    Data[i] = static_cast<DType>(Data_[i] * gain + offset);
+                    Data[i] = static_cast<DType>(Quantize(Data_[i]) * gain + offset);
                 }
             }
         }

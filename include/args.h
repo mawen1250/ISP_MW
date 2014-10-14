@@ -11,7 +11,7 @@
 namespace mw {
 
     template<typename T>
-    inline int arg2para(int & i, const int argc, const std::string * args, T & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, T & para)
     {
         int Flag = 0;
 
@@ -30,7 +30,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, long & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, long & para)
     {
         int Flag = 0;
 
@@ -49,7 +49,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, unsigned long & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, unsigned long & para)
     {
         int Flag = 0;
 
@@ -68,7 +68,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, long long & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, long long & para)
     {
         int Flag = 0;
 
@@ -87,7 +87,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, unsigned long long & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, unsigned long long & para)
     {
         int Flag = 0;
 
@@ -106,7 +106,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, float & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, float & para)
     {
         int Flag = 0;
 
@@ -125,7 +125,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, double & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, double & para)
     {
         int Flag = 0;
 
@@ -144,7 +144,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, long double & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, long double & para)
     {
         int Flag = 0;
 
@@ -163,7 +163,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, bool & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, bool & para)
     {
         int Flag = 0;
 
@@ -197,7 +197,7 @@ namespace mw {
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::string * args, std::string & para)
+    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, std::string & para)
     {
         int Flag = 0;
 

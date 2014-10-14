@@ -5,6 +5,7 @@
 #include "Type.h"
 #include "Type_Conv.h"
 #include "Calculation.h"
+#include "IO.h"
 #include "Image_Type.h"
 #include "Specification.h"
 #include "LUT.h"

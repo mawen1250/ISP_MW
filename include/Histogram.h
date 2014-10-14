@@ -256,6 +256,7 @@ T Histogram<T>::Min(FLType ratio) const
     if (ratio < 0 || ratio >= 1)
     {
         std::cerr << FunctionName << ": invalid value of \"ratio=" << ratio << "\" is set, should be within [0, 1).\n";
+        exit(EXIT_FAILURE);
     }
 
     BinType i;
@@ -278,6 +279,7 @@ T Histogram<T>::Max(FLType ratio) const
     if (ratio < 0 || ratio >= 1)
     {
         std::cerr << FunctionName << ": invalid value of \"ratio=" << ratio << "\" is set, should be within [0, 1).\n";
+        exit(EXIT_FAILURE);
     }
 
     BinType i;

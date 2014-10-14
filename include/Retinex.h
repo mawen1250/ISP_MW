@@ -3,22 +3,23 @@
 
 
 #include <vector>
+#include "IO.h"
 #include "Image_Type.h"
 #include "Histogram.h"
 
 
-const struct Retinex_Default {
-    const double sigma = 100.0;
-    const std::vector<double> sigmaVector;
-    const double lower_thr = 0.0;
-    const double upper_thr = 0.01;
-    const Histogram<FLType>::BinType HistBins = 4096;
+const struct Retinex_Para {
+    double sigma = 100.0;
+    std::vector<double> sigmaVector;
+    double lower_thr = 0.0;
+    double upper_thr = 0.0;
+    Histogram<FLType>::BinType HistBins = 4096;
 
-    Retinex_Default() : sigmaVector({ 15.0, 80.0, 250.0 }) {};
+    Retinex_Para() : sigmaVector({ 25.0, 80.0, 250.0 }) {};
 } Retinex_Default;
 
 
-int Retinex_MSR_IO(const int argc, const std::string * args);
+int Retinex_MSRCP_IO(const int argc, const std::vector<std::string> &args);
 
 
 Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma = Retinex_Default.sigma,
@@ -44,7 +45,7 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
     const double lower_thr = Retinex_Default.lower_thr, const double upper_thr = Retinex_Default.upper_thr);
 Plane & Retinex_MSR(Plane & output, const Plane & input, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
     const double lower_thr = Retinex_Default.lower_thr, const double upper_thr = Retinex_Default.upper_thr);
-Frame & Retinex_MSR(Frame & output, const Frame & input, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
     const double lower_thr = Retinex_Default.lower_thr, const double upper_thr = Retinex_Default.upper_thr);
 
 inline Plane Retinex_MSR(const Plane & input, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
@@ -53,11 +54,11 @@ inline Plane Retinex_MSR(const Plane & input, const std::vector<double> & sigmaV
     Plane output(input, false);
     return Retinex_MSR(output, input, sigmaVector, lower_thr, upper_thr);
 }
-inline Frame Retinex_MSR(const Frame & input, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+inline Frame Retinex_MSRCP(const Frame & input, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
     const double lower_thr = Retinex_Default.lower_thr, const double upper_thr = Retinex_Default.upper_thr)
 {
     Frame output(input, false);
-    return Retinex_MSR(output, input, sigmaVector, lower_thr, upper_thr);
+    return Retinex_MSRCP(output, input, sigmaVector, lower_thr, upper_thr);
 }
 
 

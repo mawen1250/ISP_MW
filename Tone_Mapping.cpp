@@ -4,12 +4,10 @@
 #include "include\Histogram.h"
 #include "include\LUT.h"
 #include "include\Specification.h"
-#include "include\Image_Type.h"
 #include "include\Type_Conv.h"
-#include "include\IO.h"
 
 
-int Adaptive_Global_Tone_Mapping_IO(const int argc, const std::string * args)
+int Adaptive_Global_Tone_Mapping_IO(const int argc, const std::vector<std::string> &args)
 {
     using namespace std;
     using namespace mw;
