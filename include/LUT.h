@@ -38,6 +38,7 @@ public:
     //LUT & Lookup(Plane & output, const Plane & input) { return const_cast<LUT &>(const_cast<const LUT *>(this)->Lookup(output, input)); }
     const LUT & Lookup(Plane_FL & output, const Plane & input) const;
     //LUT & Lookup(Plane_FL & output, const Plane & input) { return const_cast<LUT &>(const_cast<const LUT *>(this)->Lookup(output, input)); }
+    const LUT & Lookup(Plane_FL & output, const Plane_FL & input) const;
 
     const LUT & Lookup_Gain(Plane & data, const Plane & ref) const;
     //LUT & Lookup_Gain(Plane & data, const Plane & ref) { return const_cast<LUT_FL &>(const_cast<const LUT_FL *>(this)->Lookup(data, ref)); }
@@ -134,9 +135,9 @@ LUT<T> & LUT<T>::Set(const Plane & input, LevelType i, T o)
 template < typename T >
 LUT<T> & LUT<T>::SetRange(const Plane & input, T o, LevelType start, LevelType end)
 {
-    sint64 length = (sint64)end - (sint64)start + 1;
-    start = Max((LevelType)0, start - input.Floor());
-    end = start + (LevelType)length - 1;
+    sint64 length = static_cast<sint64>(end) - static_cast<sint64>(start) + 1;
+    start = Max(LevelType(0), start - input.Floor());
+    end = start + static_cast<LevelType>(length) - 1;
 
     if (length >= 1 && end < Levels_)
     {
@@ -144,35 +145,6 @@ LUT<T> & LUT<T>::SetRange(const Plane & input, T o, LevelType start, LevelType e
         {
             Table_[i] = o;
         }
-    }
-
-    return *this;
-}
-
-
-inline const LUT<DType> & LUT<DType>::Lookup(Plane & output, const Plane & input) const
-{
-    PCType i;
-    PCType pcount = output.PixelCount();
-    DType iFloor = input.Floor();
-
-    for (i = 0; i < pcount; i++)
-    {
-        output[i] = Table_[input[i] - iFloor];
-    }
-
-    return *this;
-}
-
-inline const LUT<FLType> & LUT<FLType>::Lookup(Plane_FL & output, const Plane & input) const
-{
-    PCType i;
-    PCType pcount = output.PixelCount();
-    DType iFloor = input.Floor();
-
-    for (i = 0; i < pcount; i++)
-    {
-        output[i] = Table_[input[i] - iFloor];
     }
 
     return *this;
@@ -205,6 +177,61 @@ const LUT<T> & LUT<T>::Lookup_Gain(Plane_FL & data, const Plane & ref) const
     for (i = 0; i < pcount; i++)
     {
         data[i] = data.Quantize(data[i] * Table_[ref[i] - rFloor]);
+    }
+
+    return *this;
+}
+
+
+// Functions of template class LUT instantiation
+inline const LUT<DType> & LUT<DType>::Lookup(Plane & output, const Plane & input) const
+{
+    PCType i;
+    PCType pcount = output.PixelCount();
+    DType iFloor = input.Floor();
+
+    for (i = 0; i < pcount; i++)
+    {
+        output[i] = Table_[input[i] - iFloor];
+    }
+
+    return *this;
+}
+
+inline const LUT<FLType> & LUT<FLType>::Lookup(Plane_FL & output, const Plane & input) const
+{
+    PCType i;
+    PCType pcount = output.PixelCount();
+    DType iFloor = input.Floor();
+
+    for (i = 0; i < pcount; i++)
+    {
+        output[i] = Table_[input[i] - iFloor];
+    }
+
+    return *this;
+}
+
+inline const LUT<FLType> & LUT<FLType>::Lookup(Plane_FL & output, const Plane_FL & input) const
+{
+    PCType i;
+    PCType pcount = output.PixelCount();
+    FLType iFloor = input.Floor();
+    FLType iValueRange = input.ValueRange();
+
+    LevelType lower, upper;
+    LevelType LevelRange = Levels_ - 1;
+    FLType value;
+    FLType scale;
+
+    scale = static_cast<FLType>(LevelRange) / iValueRange;
+    for (i = 0; i < pcount; i++)
+    {
+        value = (input[i] - iFloor) * scale;
+        lower = static_cast<LevelType>(value);
+        if (lower >= LevelRange) lower = LevelRange - 1;
+        upper = lower + 1;
+        output[i] = Table_[lower] * (upper - value) + Table_[upper] * (value - lower);
     }
 
     return *this;

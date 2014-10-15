@@ -4,21 +4,21 @@
 
 
 // Calculating functions
-void Quantize_Value(DType * Floor, DType * Neutral, DType * Ceil, DType * ValueRange, DType BitDepth, QuantRange QuantRange, bool Chroma)
+void Quantize_Value(DType * Floor, DType * Neutral, DType * Ceil, DType * ValueRange, DType BitDepth, QuantRange _QuantRange, bool Chroma)
 {
     if (Chroma)
     {
-        *Floor = QuantRange == QuantRange::PC ? DType(0) : DType(16) << (BitDepth - DType(8));
-        *Ceil = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(240) << (BitDepth - DType(8));
+        *Floor = _QuantRange == QuantRange::PC ? DType(0) : DType(16) << (BitDepth - DType(8));
+        *Ceil = _QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(240) << (BitDepth - DType(8));
         *Neutral = 1 << (BitDepth - 1);
-        *ValueRange = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(224) << (BitDepth - DType(8));
+        *ValueRange = _QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(224) << (BitDepth - DType(8));
     }
     else
     {
-        *Floor = QuantRange == QuantRange::PC ? DType(0) : DType(16) << (BitDepth - DType(8));
-        *Ceil = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(235) << (BitDepth - DType(8));
+        *Floor = _QuantRange == QuantRange::PC ? DType(0) : DType(16) << (BitDepth - DType(8));
+        *Ceil = _QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(235) << (BitDepth - DType(8));
         *Neutral = *Floor;
-        *ValueRange = QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(219) << (BitDepth - DType(8));
+        *ValueRange = _QuantRange == QuantRange::PC ? (DType(1) << BitDepth) - DType(1) : DType(219) << (BitDepth - DType(8));
     }
 }
 
@@ -226,9 +226,9 @@ Plane::Plane(DType Value, PCType Width, PCType Height, DType BitDepth, bool Init
     InitValue(Value, Init);
 }
 
-Plane::Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar TransferChar, bool Init)
+Plane::Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar _TransferChar, bool Init)
     : Width_(Width), Height_(Height), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
-    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), ValueRange_(Ceil_ - Floor_), TransferChar_(TransferChar)
+    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), ValueRange_(Ceil_ - Floor_), TransferChar_(_TransferChar)
 {
     const char * FunctionName = "class Plane constructor";
     if (BitDepth > MaxBitDepth)
@@ -382,7 +382,7 @@ Plane & Plane::ReSize(PCType Width, PCType Height)
     return *this;
 }
 
-Plane & Plane::ReQuantize(DType BitDepth, QuantRange QuantRange, bool scale, bool clip)
+Plane & Plane::ReQuantize(DType BitDepth, QuantRange _QuantRange, bool scale, bool clip)
 {
     const char * FunctionName = "Plane::ReQuantize";
     if (BitDepth > MaxBitDepth)
@@ -392,7 +392,7 @@ Plane & Plane::ReQuantize(DType BitDepth, QuantRange QuantRange, bool scale, boo
     }
 
     DType Floor, Neutral, Ceil, ValueRange;
-    Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange, isChroma());
+    Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, _QuantRange, isChroma());
     return ReQuantize(BitDepth, Floor, Neutral, Ceil, scale, clip);
 }
 
@@ -861,9 +861,9 @@ Plane_FL::Plane_FL(FLType Value, PCType Width, PCType Height, bool RGB, bool Chr
     InitValue(Value, Init);
 }
 
-Plane_FL::Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar TransferChar, bool Init)
+Plane_FL::Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar _TransferChar, bool Init)
     : Width_(Width), Height_(Height), PixelCount_(Width_ * Height_),
-    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), TransferChar_(TransferChar)
+    Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), TransferChar_(_TransferChar)
 {
     Data_ = new FLType[PixelCount_];
 
@@ -1738,8 +1738,8 @@ Frame::Frame(Frame && src)
     src.A_ = nullptr;
 }
 
-Frame::Frame(FCType FrameNum, PixelType PixelType, PCType Width, PCType Height, DType BitDepth)
-    : FrameNum_(FrameNum), PixelType_(PixelType), QuantRange_(isYUV() ? QuantRange::TV : QuantRange::PC), ChromaPlacement_(ChromaPlacement::MPEG2),
+Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth)
+    : FrameNum_(FrameNum), PixelType_(_PixelType), QuantRange_(isYUV() ? QuantRange::TV : QuantRange::PC), ChromaPlacement_(ChromaPlacement::MPEG2),
     ColorPrim_(ColorPrim_Default(Width, Height, isRGB())), TransferChar_(TransferChar_Default(Width, Height, isRGB())), ColorMatrix_(ColorMatrix_Default(Width, Height))
 {
     const char * FunctionName = "class Frame constructor";
@@ -1752,9 +1752,9 @@ Frame::Frame(FCType FrameNum, PixelType PixelType, PCType Width, PCType Height, 
     InitPlanes(Width, Height, BitDepth);
 }
 
-Frame::Frame(FCType FrameNum, PixelType PixelType, PCType Width, PCType Height, DType BitDepth,
-    QuantRange QuantRange, ChromaPlacement ChromaPlacement)
-    : FrameNum_(FrameNum), PixelType_(PixelType), QuantRange_(QuantRange), ChromaPlacement_(ChromaPlacement),
+Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth,
+    QuantRange _QuantRange, ChromaPlacement _ChromaPlacement)
+    : FrameNum_(FrameNum), PixelType_(_PixelType), QuantRange_(_QuantRange), ChromaPlacement_(_ChromaPlacement),
     ColorPrim_(ColorPrim_Default(Width, Height, isRGB())), TransferChar_(TransferChar_Default(Width, Height, isRGB())), ColorMatrix_(ColorMatrix_Default(Width, Height))
 {
     const char * FunctionName = "class Frame constructor";
@@ -1767,10 +1767,10 @@ Frame::Frame(FCType FrameNum, PixelType PixelType, PCType Width, PCType Height, 
     InitPlanes(Width, Height, BitDepth);
 }
 
-Frame::Frame(FCType FrameNum, PixelType PixelType, PCType Width, PCType Height, DType BitDepth, QuantRange QuantRange,
-    ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix)
-    : FrameNum_(FrameNum), PixelType_(PixelType), QuantRange_(QuantRange), ChromaPlacement_(ChromaPlacement),
-    ColorPrim_(ColorPrim), TransferChar_(TransferChar), ColorMatrix_(ColorMatrix)
+Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth, QuantRange _QuantRange,
+    ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix)
+    : FrameNum_(FrameNum), PixelType_(_PixelType), QuantRange_(_QuantRange), ChromaPlacement_(_ChromaPlacement),
+    ColorPrim_(_ColorPrim), TransferChar_(_TransferChar), ColorMatrix_(_ColorMatrix)
 {
     const char * FunctionName = "class Frame constructor";
     if (BitDepth > MaxBitDepth)

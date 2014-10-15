@@ -36,7 +36,7 @@ enum class QuantRange {
 };
 
 
-void Quantize_Value(uint32 * Floor, uint32 * Neutral, uint32 * Ceil, uint32 * ValueRange, uint32 BitDepth, QuantRange QuantRange, bool Chroma);
+void Quantize_Value(uint32 * Floor, uint32 * Neutral, uint32 * Ceil, uint32 * ValueRange, uint32 BitDepth, QuantRange _QuantRange, bool Chroma);
 
 
 class Plane;
@@ -69,7 +69,7 @@ public:
     Plane(const Plane_FL & src, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
     Plane(const Plane_FL & src, bool Init, DType Value, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
     explicit Plane(DType Value, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool Init = true); // Convertor/Constructor from DType
-    Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar TransferChar, bool Init = true);
+    Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar _TransferChar, bool Init = true);
     ~Plane(); // Destructor
 
     Plane & operator=(const Plane & src); // Copy assignment operator
@@ -100,9 +100,9 @@ public:
     Plane & Width(PCType Width) { return ReSize(Width, Height_); }
     Plane & Height(PCType Height) { return ReSize(Width_, Height); }
     Plane & ReSize(PCType Width, PCType Height);
-    Plane & ReQuantize(DType BitDepth = 16, QuantRange QuantRange = QuantRange::PC, bool scale = true, bool clip = false);
+    Plane & ReQuantize(DType BitDepth = 16, QuantRange _QuantRange = QuantRange::PC, bool scale = true, bool clip = false);
     Plane & ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale = true, bool clip = false);
-    Plane & SetTransferChar(TransferChar TransferChar) { TransferChar_ = TransferChar; return *this; }
+    Plane & SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
     Plane & From(const Plane & src);
     Plane & ConvertFrom(const Plane & src, TransferChar dstTransferChar);
@@ -147,7 +147,7 @@ public:
     Plane_FL(const Plane_FL & src, TransferChar dstTransferChar);
     Plane_FL(const Plane & src, TransferChar dstTransferChar);
     explicit Plane_FL(FLType Value, PCType Width = 1920, PCType Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Convertor/Constructor from FLType
-    Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar TransferChar, bool Init = true);
+    Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar _TransferChar, bool Init = true);
     ~Plane_FL(); // Destructor
 
     Plane_FL & operator=(const Plane_FL & src); // Copy assignment operator
@@ -178,7 +178,7 @@ public:
     Plane_FL & Height(PCType Height) { return ReSize(Width_, Height); }
     Plane_FL & ReSize(PCType Width, PCType Height);
     Plane_FL & ReQuantize(FLType Floor, FLType Neutral, FLType Ceil, bool scale = true, bool clip = false);
-    Plane_FL & SetTransferChar(TransferChar TransferChar) { TransferChar_ = TransferChar; return *this; }
+    Plane_FL & SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
     Plane_FL & From(const Plane & src);
     const Plane_FL & To(Plane & dst) const;
@@ -225,11 +225,11 @@ public:
     Frame() {} // Default constructor
     Frame(const Frame & src, bool Copy = true); // Copy constructor
     Frame(Frame && src); // Move constructor
-    explicit Frame(FCType FrameNum, PixelType PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16); // Convertor/Constructor from FCType
-    Frame(FCType FrameNum, PixelType PixelType, PCType Width, PCType Height, DType BitDepth,
-        QuantRange QuantRange, ChromaPlacement ChromaPlacement = ChromaPlacement::MPEG2);
-    Frame(FCType FrameNum, PixelType PixelType, PCType Width, PCType Height, DType BitDepth, QuantRange QuantRange,
-        ChromaPlacement ChromaPlacement, ColorPrim ColorPrim, TransferChar TransferChar, ColorMatrix ColorMatrix);
+    explicit Frame(FCType FrameNum, PixelType _PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16); // Convertor/Constructor from FCType
+    Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth,
+        QuantRange _QuantRange, ChromaPlacement _ChromaPlacement = ChromaPlacement::MPEG2);
+    Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth, QuantRange _QuantRange,
+        ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix);
     ~Frame(); // Destructor
 
     Frame & operator=(const Frame & src); // Copy assignment operator

@@ -49,14 +49,14 @@ int main(int argc, char ** argv)
     system("pause");
 #else // Test_Write
     PCType i;
-    const int Loop = 20;
+    const int Loop = 50;
 
     for (i = 0; i < Loop; i++)
     {
 #if defined(Gaussian)
         Gaussian2D(IFrame, 5.0);
 #elif defined(Bilateral)
-        Bilateral2D_Data bldata(IFrame, 3.0, 0.02, 0);
+        Bilateral2D_Data bldata(IFrame, 3.0, 0.08, 1);
         Bilateral2D(IFrame, bldata);
 #elif defined(Transpose_)
         Transpose(IFrame);

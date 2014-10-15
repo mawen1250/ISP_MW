@@ -100,7 +100,7 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
 
     for (i = 0; i < pcount; i++)
     {
-        data[i] = gauss[i] <= 0 ? 0 : std::log(data[i] / gauss[i] + 1);
+        data[i] = gauss[i] <= 0 ? 0 : log(data[i] / gauss[i] + 1);
     }
     
     FLType min, max;
@@ -180,7 +180,7 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
 
     for (i = 0; i < pcount; i++)
     {
-        odata[i] = std::log(odata[i]) / static_cast<FLType>(scount);
+        odata[i] = log(odata[i]) / static_cast<FLType>(scount);
     }
 
     FLType min, max;
@@ -201,7 +201,7 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
     }
 
     odata.ReQuantize(min, min, max, false);
-    odata.ReQuantize(idata.Floor(), idata.Neutral(), idata.Ceil(), true, true);
+    odata.ReQuantize(idata.Floor(), idata.Neutral(), idata.Ceil(), true, lower_thr> 0 || upper_thr > 0);
 
     return odata;
 }
@@ -254,6 +254,9 @@ Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<dou
         Plane & outputU = output.U();
         Plane & outputV = output.V();
 
+        sint64 iNeutral = inputU.Neutral();
+        FLType iRangeC2FL = static_cast<FLType>(inputU.ValueRange()) / 2.;
+
         Plane_FL idata(inputY);
         Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
 
@@ -265,18 +268,18 @@ Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<dou
         {
             for (i = 0; i < pcount; i++)
             {
-                gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
-                outputU[i] = outputU.GetD_PCChroma(Clip(inputU.GetFL(inputU[i])*gain, FLType(-0.5), FLType(0.5)));
-                outputV[i] = outputV.GetD_PCChroma(Clip(inputV.GetFL(inputV[i])*gain, FLType(-0.5), FLType(0.5)));
+                gain = Min(iRangeC2FL / Max(Abs(inputU[i] - iNeutral), Abs(inputV[i] - iNeutral)), idata[i] <= 0 ? 1 : odata[i] / idata[i]);
+                outputU[i] = outputU.GetD_PCChroma(inputU.GetFL(inputU[i])*gain);
+                outputV[i] = outputV.GetD_PCChroma(inputV.GetFL(inputV[i])*gain);
             }
         }
         else
         {
             for (i = 0; i < pcount; i++)
             {
-                gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
-                outputU[i] = outputU.GetD(Clip(inputU.GetFL(inputU[i])*gain, FLType(-0.5), FLType(0.5)));
-                outputV[i] = outputV.GetD(Clip(inputV.GetFL(inputV[i])*gain, FLType(-0.5), FLType(0.5)));
+                gain = Min(iRangeC2FL / Max(Abs(inputU[i] - iNeutral), Abs(inputV[i] - iNeutral)), idata[i] <= 0 ? 1 : odata[i] / idata[i]);
+                outputU[i] = outputU.GetD(inputU.GetFL(inputU[i])*gain);
+                outputV[i] = outputV.GetD(inputV.GetFL(inputV[i])*gain);
             }
         }
     }
@@ -289,6 +292,9 @@ Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<dou
         Plane & outputG = output.G();
         Plane & outputB = output.B();
 
+        DType iRange = inputR.ValueRange();
+        FLType iRangeFL = static_cast<FLType>(iRange);
+
         Plane_FL idata(inputR, false);
         idata.YFrom(input);
         Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
@@ -297,10 +303,10 @@ Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<dou
 
         for (i = 0; i < pcount; i++)
         {
-            gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
-            outputR[i] = outputR.GetD(Clip(inputR.GetFL(inputR[i])*gain, FLType(0), FLType(1)));
-            outputG[i] = outputG.GetD(Clip(inputG.GetFL(inputG[i])*gain, FLType(0), FLType(1)));
-            outputB[i] = outputB.GetD(Clip(inputB.GetFL(inputB[i])*gain, FLType(0), FLType(1)));
+            gain = Min(iRangeFL / Max(inputR[i], Max(inputG[i], inputB[i])), idata[i] <= 0 ? 1 : odata[i] / idata[i]);
+            outputR[i] = outputR.GetD(inputR.GetFL(inputR[i])*gain);
+            outputG[i] = outputG.GetD(inputG.GetFL(inputG[i])*gain);
+            outputB[i] = outputB.GetD(inputB.GetFL(inputB[i])*gain);
         }
     }
 
