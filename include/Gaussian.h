@@ -16,11 +16,8 @@ const double sigmaRMul = sizeof(FLType) < 8 ? 8. : 32.; // 8. when FLType is flo
 
 
 const struct Gaussian2D_Para {
-    double sigma = 2.0;
+    double sigma = 3.0;
 } Gaussian2D_Default;
-
-
-int Gaussian2D_IO(const int argc, const std::vector<std::string> &args);
 
 
 Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma = Gaussian2D_Default.sigma);
@@ -36,6 +33,48 @@ inline Frame Gaussian2D(const Frame & input, const double sigma = Gaussian2D_Def
         Gaussian2D(output.P(i), input.P(i), sigma);
     return output;
 }
+
+
+class Gaussian2D_IO
+    : public FilterIO
+{
+protected:
+    double sigma = Gaussian2D_Default.sigma;
+
+    virtual void arguments_process()
+    {
+        FilterIO::arguments_process();
+
+        Args ArgsObj(argc, args);
+
+        for (int i = 0; i < argc; i++)
+        {
+            if (args[i] == "-S" || args[i] == "--sigma")
+            {
+                ArgsObj.GetPara(i, sigma);
+                continue;
+            }
+            if (args[i][0] == '-')
+            {
+                i++;
+                continue;
+            }
+        }
+
+        ArgsObj.Check();
+    }
+
+    virtual Frame processFrame(const Frame &src)
+    {
+        return Gaussian2D(src, sigma);
+    }
+
+public:
+    Gaussian2D_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".Gaussian")
+        : FilterIO(_argc, _args, _Tag) {}
+
+    ~Gaussian2D_IO() {}
+};
 
 
 void Recursive_Gaussian_Parameters(const double sigma, double & B, double & B1, double & B2, double & B3);

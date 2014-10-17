@@ -4,17 +4,38 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 #include <algorithm>
 #include <cctype>
 
 
-namespace mw {
+class Args
+{
+private:
+    static const int OK = 0;
+    static const int Lack = 1;
+    static const int Invalid = 2;
+
+private:
+    const int argc = 0;
+    const std::vector<std::string> &args;
+
+    int Flag = OK;
+
+public:
+    Args(const int _argc, const std::vector<std::string> &_args)
+        : argc(_argc), args(_args) {}
+
+    ~Args() {}
+
+    void Check() const
+    {
+        if (Flag > 0) exit(EXIT_FAILURE);
+    }
 
     template<typename T>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, T & para)
+    void GetPara(int &i, T &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stoi(args[i]);
@@ -23,17 +44,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, long & para)
+    void GetPara(int &i, long &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stol(args[i]);
@@ -42,17 +59,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, unsigned long & para)
+    void GetPara(int &i, unsigned long &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stoul(args[i]);
@@ -61,17 +74,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, long long & para)
+    void GetPara(int &i, long long &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stoll(args[i]);
@@ -80,17 +89,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, unsigned long long & para)
+    void GetPara(int &i, unsigned long long &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stoull(args[i]);
@@ -99,17 +104,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, float & para)
+    void GetPara(int &i, float &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stof(args[i]);
@@ -118,17 +119,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, double & para)
+    void GetPara(int &i, double &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stod(args[i]);
@@ -137,17 +134,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, long double & para)
+    void GetPara(int &i, long double &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = std::stold(args[i]);
@@ -156,17 +149,13 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, bool & para)
+    void GetPara(int &i, bool &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             std::string arg_temp(args[i]);
@@ -183,24 +172,20 @@ namespace mw {
             {
                 std::cout << "Invalid argument specified for option " << args[i - 1] << ", must be \"true\" or \"false\"!\n";
 
-                Flag = 1;
+                Flag |= Invalid;
             }
         }
         else
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
 
     template<>
-    inline int arg2para(int & i, const int argc, const std::vector<std::string> &args, std::string & para)
+    void GetPara(int &i, std::string &para)
     {
-        int Flag = 0;
-
         if (++i < argc)
         {
             para = args[i];
@@ -209,13 +194,10 @@ namespace mw {
         {
             std::cout << "No argument specified for option " << args[i - 1] << "!\n";
 
-            Flag = 1;
+            Flag |= Lack;
         }
-
-        return Flag;
     }
-
-} // namespace mw
+};
 
 
 #endif

@@ -97,21 +97,33 @@ int Filtering(const int argc, char ** argv)
         args[i] = argv[i + 2];
     }
 
+    FilterIO *FilterObj = nullptr;
+
     if (FilterName == "--gaussian")
     {
-        return Gaussian2D_IO(argc2, args);
+        FilterObj = new Gaussian2D_IO(argc2, args);
     }
-    if (FilterName == "--bilateral")
+    else if (FilterName == "--bilateral")
     {
-        return Bilateral2D_IO(argc2, args);
+        FilterObj = new Bilateral2D_IO(argc2, args);
     }
-    if (FilterName == "--agtm" || FilterName == "--adaptiveglobaltonemapping" || FilterName == "--adaptive_global_tone_mapping")
+    else if (FilterName == "--agtm" || FilterName == "--adaptiveglobaltonemapping" || FilterName == "--adaptive_global_tone_mapping")
     {
-        return Adaptive_Global_Tone_Mapping_IO(argc2, args);
+        FilterObj = new Adaptive_Global_Tone_Mapping_IO(argc2, args);
     }
-    if (FilterName == "--retinex" || FilterName == "--retinex_msr" || FilterName == "--msr")
+    else if (FilterName == "--retinex_msrcp" || FilterName == "--msrcp" || FilterName == "--retinex_msr" || FilterName == "--msr" || FilterName == "--retinex")
     {
-        return Retinex_MSRCP_IO(argc2, args);
+        FilterObj = new Retinex_MSRCP_IO(argc2, args);
+    }
+    else
+    {
+        return 1;
+    }
+
+    if (FilterObj)
+    {
+        FilterObj->process();
+        delete FilterObj;
     }
 
     return 0;

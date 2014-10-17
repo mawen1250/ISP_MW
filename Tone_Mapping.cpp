@@ -7,53 +7,6 @@
 #include "include\Type_Conv.h"
 
 
-int Adaptive_Global_Tone_Mapping_IO(const int argc, const std::vector<std::string> &args)
-{
-    using namespace std;
-    using namespace mw;
-
-    int i;
-    int Flag = 0;
-
-    char Drive[DRIVELEN];
-    char Dir[PATHLEN];
-    char FileName[PATHLEN];
-    char Ext[EXTLEN];
-
-    // Default Parameters
-    string IPath;
-    string Tag = ".AGTM";
-    string Format = ".png";
-
-    // Arguments Process
-    for (i = 0; i < argc; i++)
-    {
-        if (args[i] == "-T" || args[i] == "--tag")
-        {
-            Flag |= arg2para(i, argc, args, Tag);
-            continue;
-        }
-        if (args[i] == "-F" || args[i] == "--format")
-        {
-            Flag |= arg2para(i, argc, args, Format);
-            continue;
-        }
-
-        IPath = args[i];
-    }
-
-    Frame SFrame = ImageReader(IPath);
-    Frame PFrame = Adaptive_Global_Tone_Mapping(SFrame);
-
-    _splitpath_s(IPath.c_str(), Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
-    string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
-
-    ImageWriter(PFrame, OPath);
-
-    return 0;
-}
-
-
 Frame & Adaptive_Global_Tone_Mapping(Frame & output, const Frame & input)
 {
     if (input.isRGB())

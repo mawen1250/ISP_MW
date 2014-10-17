@@ -9,12 +9,8 @@
 
 
 const struct AGTM_Para {
-    const double sigma = 100.0;
     const Histogram<DType>::BinType HistBins = 8;
 } AGTM_Default;
-
-
-int Adaptive_Global_Tone_Mapping_IO(const int argc, const std::vector<std::string> &args);
 
 
 Frame & Adaptive_Global_Tone_Mapping(Frame & output, const Frame & input);
@@ -23,6 +19,28 @@ inline Frame Adaptive_Global_Tone_Mapping(const Frame & input)
     Frame output(input, false);
     return Adaptive_Global_Tone_Mapping(output, input);
 }
+
+
+class Adaptive_Global_Tone_Mapping_IO
+    : public FilterIO
+{
+protected:
+    virtual void arguments_process()
+    {
+        FilterIO::arguments_process();
+    }
+
+    virtual Frame processFrame(const Frame &src)
+    {
+        return Adaptive_Global_Tone_Mapping(src);
+    }
+
+public:
+    Adaptive_Global_Tone_Mapping_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".AGTM")
+        : FilterIO(_argc, _args, _Tag) {}
+
+    ~Adaptive_Global_Tone_Mapping_IO() {}
+};
 
 
 LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input);

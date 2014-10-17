@@ -100,7 +100,7 @@ public:
         {
             if (process[i])
             {
-                radius0[i] = Max(static_cast<int>(sigmaS[i]*sigmaSMul + 0.5), 1);
+                radius0[i] = Max(static_cast<int>(sigmaS[i] * sigmaSMul + 0.5), 1);
             }
         }
 
@@ -126,7 +126,7 @@ public:
                     PBFICnum[i] = Min(32, static_cast<int>(16 * 0.015 / sigmaR[i] + 0.5));
                 }
 
-                if (i > 0 && (isChroma || isYUV) && PBFICnum[i] % 2 == 0 && PBFICnum[i] < 256) // Set odd PBFIC number to chroma planes by default
+                if ((isChroma || i > 0 && isYUV) && PBFICnum[i] % 2 == 0 && PBFICnum[i] < 256) // Set odd PBFIC number to chroma planes by default
                     PBFICnum[i]++;
             }
         }
@@ -223,9 +223,6 @@ public:
 };
 
 
-int Bilateral2D_IO(const int argc, const std::vector<std::string> &args);
-
-
 Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, const Bilateral2D_Data &d, int plane = 0);
 Plane & Bilateral2D_0(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane = 0);
 Plane & Bilateral2D_1(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane = 0);
@@ -270,6 +267,76 @@ inline Frame Bilateral2D(const Frame & input, const Bilateral2D_Data &d)
 
     return output;
 }
+
+
+class Bilateral2D_IO
+    : public FilterIO
+{
+protected:
+    std::string RPath;
+    double sigmaS = Bilateral2D_Default.sigmaS;
+    double sigmaR = Bilateral2D_Default.sigmaR;
+    int algorithm = Bilateral2D_Default.algorithm;
+
+    virtual void arguments_process()
+    {
+        FilterIO::arguments_process();
+
+        Args ArgsObj(argc, args);
+
+        for (int i = 0; i < argc; i++)
+        {
+            if (args[i] == "--ref")
+            {
+                ArgsObj.GetPara(i, RPath);
+                continue;
+            }
+            if (args[i] == "-S" || args[i] == "--sigmaS")
+            {
+                ArgsObj.GetPara(i, sigmaS);
+                continue;
+            }
+            if (args[i] == "-R" || args[i] == "--sigmaR")
+            {
+                ArgsObj.GetPara(i, sigmaR);
+                continue;
+            }
+            if (args[i] == "-A" || args[i] == "--algorithm")
+            {
+                ArgsObj.GetPara(i, algorithm);
+                continue;
+            }
+            if (args[i][0] == '-')
+            {
+                i++;
+                continue;
+            }
+        }
+
+        ArgsObj.Check();
+    }
+
+    virtual Frame processFrame(const Frame &src)
+    {
+        if (RPath.size() == 0)
+        {
+            Bilateral2D_Data data(src, sigmaS, sigmaR, algorithm);
+            return Bilateral2D(src, data);
+        }
+        else
+        {
+            const Frame ref = ImageReader(RPath);
+            Bilateral2D_Data data(ref, sigmaS, sigmaR, algorithm);
+            return Bilateral2D(src, ref, data);
+        }
+    }
+
+public:
+    Bilateral2D_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".Bilateral")
+        : FilterIO(_argc, _args, _Tag) {}
+
+    ~Bilateral2D_IO() {}
+};
 
 
 #endif

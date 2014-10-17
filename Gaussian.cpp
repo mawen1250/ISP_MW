@@ -3,64 +3,6 @@
 #include "include\Gaussian.h"
 
 
-int Gaussian2D_IO(const int argc, const std::vector<std::string> &args)
-{
-    using namespace std;
-    using namespace mw;
-
-    int i;
-    int Flag = 0;
-
-    char Drive[DRIVELEN];
-    char Dir[PATHLEN];
-    char FileName[PATHLEN];
-    char Ext[EXTLEN];
-
-    // Default Parameters
-    string IPath;
-    double sigma = Gaussian2D_Default.sigma;
-    string Tag = ".Gaussian";
-    string Format = ".png";
-
-    // Arguments Process
-    for (i = 0; i < argc; i++)
-    {
-        if (args[i] == "-T" || args[i] == "--tag")
-        {
-            Flag |= arg2para(i, argc, args, Tag);
-            continue;
-        }
-        if (args[i] == "-F" || args[i] == "--format")
-        {
-            Flag |= arg2para(i, argc, args, Format);
-            continue;
-        }
-        if (args[i] == "-S" || args[i] == "--sigma")
-        {
-            Flag |= arg2para(i, argc, args, sigma);
-            continue;
-        }
-
-        if (Flag)
-        {
-            return Flag;
-        }
-
-        IPath = args[i];
-    }
-
-    Frame SFrame = ImageReader(IPath);
-    Frame PFrame = Gaussian2D(SFrame, sigma);
-
-    _splitpath_s(IPath.c_str(), Drive, PATHLEN, Dir, PATHLEN, FileName, PATHLEN, Ext, PATHLEN);
-    string OPath = string(Drive) + string(Dir) + string(FileName) + Tag + Format;
-
-    ImageWriter(PFrame, OPath);
-
-    return 0;
-}
-
-
 // Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
 Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma)
 {
