@@ -2,6 +2,9 @@
 #define TYPE_H_
 
 
+#include <cfloat>
+
+
 typedef unsigned char  uint8;
 typedef unsigned short uint16;
 typedef unsigned long  uint32;
@@ -10,11 +13,6 @@ typedef   signed char  sint8;
 typedef   signed short sint16;
 typedef   signed long  sint32;
 typedef   signed long long sint64;
-
-
-typedef bool  Bool;
-#define True  true;
-#define False false;
 
 
 typedef sint32 FCType;

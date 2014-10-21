@@ -1,7 +1,4 @@
-#include <iostream>
-
-#include "include\Transform.h"
-#include "include\Image_Type.h"
+#include "Transform.h"
 
 
 Plane & Transpose(Plane & output, const Plane & input)

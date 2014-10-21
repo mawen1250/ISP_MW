@@ -3,6 +3,7 @@
 
 
 #include "Image_Type.h"
+#include "LUT.h"
 
 
 template < typename T = DType >
@@ -26,11 +27,11 @@ public:
     Histogram() {} // Default constructor
     Histogram(const Histogram & src); // Copy constructor
     Histogram(Histogram && src); // Move constructor
-    explicit Histogram(const Plane & input); // Convertor/Constructor from Plane
-    Histogram(const Plane & input, BinType Bins);
-    explicit Histogram(const Plane_FL & input, BinType Bins = 256);
-    Histogram(const T * input, CountType size, T Lower, T Upper); // Template constructor from array
-    Histogram(const T * input, CountType size, T Lower, T Upper, BinType Bins); // Template constructor from array
+    explicit Histogram(const Plane & src); // Convertor/Constructor from Plane
+    Histogram(const Plane & src, BinType Bins);
+    explicit Histogram(const Plane_FL & src, BinType Bins = 256);
+    Histogram(const T * src, CountType size, T Lower, T Upper); // Template constructor from array
+    Histogram(const T * src, CountType size, T Lower, T Upper, BinType Bins); // Template constructor from array
     ~Histogram(); // Destructor
 
     Histogram & operator=(const Histogram & src); // Copy assignment operator
@@ -52,6 +53,9 @@ public:
     T Min(FLType ratio = 0) const;
     T Max(FLType ratio = 0) const;
     CountType Lookup(const T input) const { return Data_[Clip(static_cast<BinType>((input - Lower_)*Scale_), 0, Bins_ - 1)]; }
+
+    LUT<DType> Equalization_LUT(const Plane & dst) const;
+    LUT<FLType> Equalization_LUT_Gain(const Plane & dst) const;
 };
 
 
@@ -80,8 +84,8 @@ Histogram<T>::Histogram(Histogram<T> && src)
 }
 
 template < typename T >
-Histogram<T>::Histogram(const Plane & input)
-    : Lower_(input.Floor()), Upper_(input.Ceil()), Bins_(Upper_ - Lower_ + 1), Scale_(1), Count_(input.PixelCount())
+Histogram<T>::Histogram(const Plane & src)
+    : Lower_(src.Floor()), Upper_(src.Ceil()), Bins_(Upper_ - Lower_ + 1), Scale_(1), Count_(src.PixelCount())
 {
     CountType i;
 
@@ -90,13 +94,13 @@ Histogram<T>::Histogram(const Plane & input)
 
     for (i = 0; i < Count_; i++)
     {
-        Data_[ToBinType(input[i] - Lower_)]++;
+        Data_[ToBinType(src[i] - Lower_)]++;
     }
 }
 
 template < typename T >
-Histogram<T>::Histogram(const Plane & input, BinType Bins)
-    : Lower_(input.Floor()), Upper_(input.Ceil()), Bins_(Bins), Scale_((Bins_ - 1) / static_cast<FLType>(Upper_ - Lower_)), Count_(input.PixelCount())
+Histogram<T>::Histogram(const Plane & src, BinType Bins)
+    : Lower_(src.Floor()), Upper_(src.Ceil()), Bins_(Bins), Scale_((Bins_ - 1) / static_cast<FLType>(Upper_ - Lower_)), Count_(src.PixelCount())
 {
     CountType i;
 
@@ -113,21 +117,21 @@ Histogram<T>::Histogram(const Plane & input, BinType Bins)
     {
         for (i = 0; i < Count_; i++)
         {
-            Data_[ToBinType(input[i] - Lower_)]++;
+            Data_[ToBinType(src[i] - Lower_)]++;
         }
     }
     else
     {
         for (i = 0; i < Count_; i++)
         {
-            Data_[ToBinType((input[i] - Lower_)*Scale_)]++;
+            Data_[ToBinType((src[i] - Lower_)*Scale_)]++;
         }
     }
 }
 
 template < typename T >
-Histogram<T>::Histogram(const Plane_FL & input, BinType Bins)
-    : Lower_(input.Floor()), Upper_(input.Ceil()), Bins_(Bins), Scale_((Bins_ - 1) / static_cast<FLType>(Upper_ - Lower_)), Count_(input.PixelCount())
+Histogram<T>::Histogram(const Plane_FL & src, BinType Bins)
+    : Lower_(src.Floor()), Upper_(src.Ceil()), Bins_(Bins), Scale_((Bins_ - 1) / static_cast<FLType>(Upper_ - Lower_)), Count_(src.PixelCount())
 {
     CountType i;
 
@@ -138,20 +142,20 @@ Histogram<T>::Histogram(const Plane_FL & input, BinType Bins)
     {
         for (i = 0; i < Count_; i++)
         {
-            Data_[ToBinType(input[i] - Lower_)]++;
+            Data_[ToBinType(src[i] - Lower_)]++;
         }
     }
     else
     {
         for (i = 0; i < Count_; i++)
         {
-            Data_[ToBinType((input[i] - Lower_)*Scale_)]++;
+            Data_[ToBinType((src[i] - Lower_)*Scale_)]++;
         }
     }
 }
 
 template < typename T >
-Histogram<T>::Histogram(const T * input, CountType size, T Lower, T Upper)
+Histogram<T>::Histogram(const T * src, CountType size, T Lower, T Upper)
     : Lower_(Lower), Upper_(Upper), Bins_(Upper_ - Lower_ + 1), Scale_(1), Count_(size)
 {
     CountType i;
@@ -162,12 +166,12 @@ Histogram<T>::Histogram(const T * input, CountType size, T Lower, T Upper)
     BinType BinUpper = Bins_ - 1;
     for (i = 0; i < Count_; i++)
     {
-        Data_[Clip(ToBinType(input[i] - Lower_), 0, BinUpper)]++;
+        Data_[Clip(ToBinType(src[i] - Lower_), 0, BinUpper)]++;
     }
 }
 
 template < typename T >
-Histogram<T>::Histogram(const T * input, CountType size, T Lower, T Upper, BinType Bins)
+Histogram<T>::Histogram(const T * src, CountType size, T Lower, T Upper, BinType Bins)
     : Lower_(Lower), Upper_(Upper), Bins_(Bins), Scale_((Bins_ - 1) / static_cast<FLType>(Upper_ - Lower_)), Count_(size)
 {
     CountType i;
@@ -180,14 +184,14 @@ Histogram<T>::Histogram(const T * input, CountType size, T Lower, T Upper, BinTy
     {
         for (i = 0; i < Count_; i++)
         {
-            Data_[Clip(ToBinType(input[i] - Lower_), 0, BinUpper)]++;
+            Data_[Clip(ToBinType(src[i] - Lower_), 0, BinUpper)]++;
         }
     }
     else
     {
         for (i = 0; i < Count_; i++)
         {
-            Data_[Clip(ToBinType((input[i] - Lower_)*Scale_), 0, BinUpper)]++;
+            Data_[Clip(ToBinType((src[i] - Lower_)*Scale_), 0, BinUpper)]++;
         }
     }
 }
@@ -293,6 +297,108 @@ T Histogram<T>::Max(FLType ratio) const
     }
 
     return BinToValue<T>(i);
+}
+
+inline LUT<DType> Histogram<DType>::Equalization_LUT(const Plane & dst) const
+{
+    DType dFloor = dst.Floor();
+    DType dRange = dst.ValueRange();
+    LUT<DType>::LevelType LUT_Levels = dRange + 1;
+
+    LUT<DType> _LUT(LUT_Levels);
+
+    if (Bins_ == LUT_Levels)
+    {
+        CountType Sum = 0;
+        FLType scale = static_cast<FLType>(dRange) / Count_;
+        FLType offset = static_cast<FLType>(dFloor)+FLType(0.5);
+
+        for (BinType i = 0; i < Bins_; i++)
+        {
+            Sum += Data_[i];
+            _LUT[i] = static_cast<DType>(Sum * scale + offset);
+        }
+    }
+    else
+    {
+        FLType *temp = new FLType[Bins_ + 1];
+
+        CountType Sum = 0;
+        FLType scale = static_cast<FLType>(dRange) / Count_;
+        FLType offset = static_cast<FLType>(dFloor);
+
+        temp[0] = offset;
+        for (BinType i = 0; i < Bins_; i++)
+        {
+            Sum += Data_[i];
+            temp[i + 1] = Sum * scale + offset;
+        }
+
+        FLType val;
+        DType val_lower, val_upper;
+        DType val_lower_upper = Bins_ - 1;
+        FLType scale1 = static_cast<FLType>(Bins_) / dRange;
+
+        for (LUT<DType>::LevelType i = 0; i < LUT_Levels; i++)
+        {
+            val = i * scale1;
+            val_lower = ::Min(static_cast<DType>(val), val_lower_upper);
+            val_upper = val_lower + 1;
+            _LUT[i] = static_cast<DType>(temp[val_lower] * (val_upper - val) + temp[val_upper] * (val - val_lower));
+        }
+    }
+
+    return _LUT;
+}
+
+inline LUT<FLType> Histogram<DType>::Equalization_LUT_Gain(const Plane & dst) const
+{
+    DType dFloor = dst.Floor();
+    DType dRange = dst.ValueRange();
+    LUT<FLType>::LevelType LUT_Levels = dRange + 1;
+
+    LUT<FLType> _LUT(LUT_Levels);
+
+    if (Bins_ == LUT_Levels)
+    {
+        CountType Sum = 0;
+        FLType scale = static_cast<FLType>(dRange) / Count_;
+
+        for (BinType i = 0; i < Bins_; i++)
+        {
+            Sum += Data_[i];
+            _LUT[i] = Sum * scale / i;
+        }
+    }
+    else
+    {
+        FLType *temp = new FLType[Bins_ + 1];
+
+        CountType Sum = 0;
+        FLType scale = static_cast<FLType>(dRange) / Count_;
+
+        temp[0] = 0;
+        for (BinType i = 0; i < Bins_; i++)
+        {
+            Sum += Data_[i];
+            temp[i + 1] = Sum * scale;
+        }
+
+        FLType val;
+        DType val_lower, val_upper;
+        DType val_lower_upper = Bins_ - 1;
+        FLType scale1 = static_cast<FLType>(Bins_) / dRange;
+
+        for (LUT<DType>::LevelType i = 0; i < LUT_Levels; i++)
+        {
+            val = i * scale1;
+            val_lower = ::Min(static_cast<DType>(val), val_lower_upper);
+            val_upper = val_lower + 1;
+            _LUT[i] = (temp[val_lower] * (val_upper - val) + temp[val_upper] * (val - val_lower)) / i;
+        }
+    }
+
+    return _LUT;
 }
 
 

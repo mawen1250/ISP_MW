@@ -1,34 +1,38 @@
-#include <iostream>
 #include <cmath>
-#include "include\Retinex.h"
-#include "include\Gaussian.h"
-#include "include\Histogram.h"
-#include "include\Specification.h"
+#include "Retinex.h"
+#include "Specification.h"
+#include "Gaussian.h"
 
 
-Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, const double lower_thr, const double upper_thr)
+Plane & Retinex_SSR(Plane & dst, const Plane & src, double sigma, double lower_thr, double upper_thr)
 {
     if (sigma <= 0)
     {
-        output = input;
-        return output;
+        dst = src;
+        return dst;
     }
 
-    PCType i;
-    PCType pcount = input.PixelCount();
+    PCType i, j, upper;
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Width();
 
     FLType B, B1, B2, B3;
     Recursive_Gaussian_Parameters(sigma, B, B1, B2, B3);
 
-    Plane_FL data(input);
+    Plane_FL data(src);
     Plane_FL gauss(data, false);
 
     Recursive_Gaussian2D_Horizontal(gauss, data, B, B1, B2, B3);
     Recursive_Gaussian2D_Vertical(gauss, B, B1, B2, B3);
 
-    for (i = 0; i < pcount; i++)
+    for (j = 0; j < height; j++)
     {
-        data[i] = gauss[i] <= 0 ? 0 : log(data[i] / gauss[i] + 1);
+        i = stride * j;
+        for (upper = i + width; i < upper; i++)
+        {
+            data[i] = gauss[i] <= 0 ? 0 : log(data[i] / gauss[i] + 1);
+        }
     }
     
     FLType min, max;
@@ -36,8 +40,8 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
 
     if (max <= min)
     {
-        output = input;
-        return output;
+        dst = src;
+        return dst;
     }
 
     if (lower_thr> 0 || upper_thr > 0)
@@ -50,19 +54,23 @@ Plane & Retinex_SSR(Plane & output, const Plane & input, const double sigma, con
 
     data.ReQuantize(min, min, max, false);
 
-    FLType gain = output.ValueRange() / (max - min);
-    FLType offset = output.Floor() - min*gain + FLType(0.5);
+    FLType gain = dst.ValueRange() / (max - min);
+    FLType offset = dst.Floor() - min*gain + FLType(0.5);
 
-    for (i = 0; i < pcount; i++)
+    for (j = 0; j < height; j++)
     {
-        output[i] = static_cast<DType>(data.Quantize(data[i]) * gain + offset);
+        i = stride * j;
+        for (upper = i + width; i < upper; i++)
+        {
+            dst[i] = static_cast<DType>(data.Quantize(data[i]) * gain + offset);
+        }
     }
     
-    return output;
+    return dst;
 }
 
 
-Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVector, const double lower_thr, const double upper_thr)
+Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVector, double lower_thr, double upper_thr)
 {
     size_t s, scount = sigmaVector.size();
 
@@ -76,8 +84,10 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
         return odata;
     }
 
-    PCType i;
-    PCType pcount = idata.PixelCount();
+    PCType i, j, upper;
+    PCType height = idata.Height();
+    PCType width = idata.Width();
+    PCType stride = idata.Width();
 
     Plane_FL odata(idata, true, 1);
     Plane_FL gauss(idata, false);
@@ -92,23 +102,35 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
             Recursive_Gaussian2D_Horizontal(gauss, idata, B, B1, B2, B3);
             Recursive_Gaussian2D_Vertical(gauss, B, B1, B2, B3);
 
-            for (i = 0; i < pcount; i++)
+            for (j = 0; j < height; j++)
             {
-                odata[i] *= gauss[i] <= 0 ? 1 : idata[i] / gauss[i] + 1;
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    odata[i] *= gauss[i] <= 0 ? 1 : idata[i] / gauss[i] + 1;
+                }
             }
         }
         else
         {
-            for (i = 0; i < pcount; i++)
+            for (j = 0; j < height; j++)
             {
-                odata[i] *= FLType(2);
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    odata[i] *= FLType(2);
+                }
             }
         }
     }
 
-    for (i = 0; i < pcount; i++)
+    for (j = 0; j < height; j++)
     {
-        odata[i] = log(odata[i]) / static_cast<FLType>(scount);
+        i = stride * j;
+        for (upper = i + width; i < upper; i++)
+        {
+            odata[i] = log(odata[i]) / static_cast<FLType>(scount);
+        }
     }
 
     FLType min, max;
@@ -134,7 +156,7 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
     return odata;
 }
 
-Plane & Retinex_MSR(Plane & output, const Plane & input, const std::vector<double> & sigmaVector, const double lower_thr, const double upper_thr)
+Plane & Retinex_MSR(Plane & dst, const Plane & src, const std::vector<double> & sigmaVector, double lower_thr, double upper_thr)
 {
     size_t s, scount = sigmaVector.size();
 
@@ -144,19 +166,19 @@ Plane & Retinex_MSR(Plane & output, const Plane & input, const std::vector<doubl
     }
     if (s >= scount)
     {
-        output = input;
-        return output;
+        dst = src;
+        return dst;
     }
 
-    Plane_FL idata(input);
+    Plane_FL idata(src);
     Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
 
-    odata.To(output);
+    odata.To(dst);
 
-    return output;
+    return dst;
 }
 
-Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<double> & sigmaVector, const double lower_thr, const double upper_thr)
+Frame & Retinex_MSRCP(Frame & dst, const Frame & src, const std::vector<double> & sigmaVector, double lower_thr, double upper_thr, double chroma_protect)
 {
     size_t s, scount = sigmaVector.size();
 
@@ -166,77 +188,104 @@ Frame & Retinex_MSRCP(Frame & output, const Frame & input, const std::vector<dou
     }
     if (s >= scount)
     {
-        output = input;
-        return output;
+        dst = src;
+        return dst;
     }
 
-    PCType i;
-    PCType pcount = input.PixelCount();
+    PCType i, j, upper;
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Width();
 
-    if (input.isYUV())
+    FLType gain, offset;
+
+    if (src.isYUV())
     {
-        const Plane & inputY = input.Y();
-        const Plane & inputU = input.U();
-        const Plane & inputV = input.V();
-        Plane & outputY = output.Y();
-        Plane & outputU = output.U();
-        Plane & outputV = output.V();
+        const Plane & srcY = src.Y();
+        const Plane & srcU = src.U();
+        const Plane & srcV = src.V();
+        Plane & dstY = dst.Y();
+        Plane & dstU = dst.U();
+        Plane & dstV = dst.V();
 
-        sint64 iNeutral = inputU.Neutral();
-        FLType iRangeC2FL = static_cast<FLType>(inputU.ValueRange()) / 2.;
+        sint32 sNeutral = srcU.Neutral();
+        FLType sRangeC2FL = static_cast<FLType>(srcU.ValueRange()) / 2.;
 
-        Plane_FL idata(inputY);
+        Plane_FL idata(srcY);
         Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
 
-        odata.To(outputY);
+        odata.To(dstY);
 
-        FLType gain;
+        FLType chroma_protect_mul1 = static_cast<FLType>(chroma_protect - 1);
+        FLType chroma_protect_mul2 = static_cast<FLType>(1 / log(chroma_protect));
 
-        if (outputU.isPCChroma())
-        {
-            for (i = 0; i < pcount; i++)
-            {
-                gain = Min(iRangeC2FL / Max(Abs(inputU[i] - iNeutral), Abs(inputV[i] - iNeutral)), idata[i] <= 0 ? 1 : odata[i] / idata[i]);
-                outputU[i] = outputU.GetD_PCChroma(inputU.GetFL(inputU[i])*gain);
-                outputV[i] = outputV.GetD_PCChroma(inputV.GetFL(inputV[i])*gain);
-            }
-        }
+        sint32 Uval, Vval;
+        if (dstU.isPCChroma())
+            offset = dstU.Neutral() + FLType(0.499999);
         else
+            offset = dstU.Neutral() + FLType(0.5);
+
+        for (j = 0; j < height; j++)
         {
-            for (i = 0; i < pcount; i++)
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
             {
-                gain = Min(iRangeC2FL / Max(Abs(inputU[i] - iNeutral), Abs(inputV[i] - iNeutral)), idata[i] <= 0 ? 1 : odata[i] / idata[i]);
-                outputU[i] = outputU.GetD(inputU.GetFL(inputU[i])*gain);
-                outputV[i] = outputV.GetD(inputV.GetFL(inputV[i])*gain);
+                if (chroma_protect > 1)
+                    gain = idata[i] <= 0 ? 1 : log(odata[i] / idata[i] * chroma_protect_mul1 + 1) * chroma_protect_mul2;
+                else
+                    gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
+                Uval = srcU[i] - sNeutral;
+                Vval = srcV[i] - sNeutral;
+                gain = Min(sRangeC2FL / Max(Abs(Uval), Abs(Vval)), gain);
+                dstU[i] = static_cast<DType>(Uval * gain + offset);
+                dstV[i] = static_cast<DType>(Vval * gain + offset);
             }
         }
     }
-    else if (input.isRGB())
+    else if (src.isRGB())
     {
-        const Plane & inputR = input.R();
-        const Plane & inputG = input.G();
-        const Plane & inputB = input.B();
-        Plane & outputR = output.R();
-        Plane & outputG = output.G();
-        Plane & outputB = output.B();
+        const Plane & srcR = src.R();
+        const Plane & srcG = src.G();
+        const Plane & srcB = src.B();
+        Plane & dstR = dst.R();
+        Plane & dstG = dst.G();
+        Plane & dstB = dst.B();
 
-        DType iRange = inputR.ValueRange();
-        FLType iRangeFL = static_cast<FLType>(iRange);
+        DType sRange = srcR.ValueRange();
+        FLType sRangeFL = static_cast<FLType>(sRange);
 
-        Plane_FL idata(inputR, false);
-        idata.YFrom(input);
+        Plane_FL idata(srcR, false);
+
+        offset = static_cast<FLType>(srcR.Floor() * -3);
+        gain = FLType(1) / (srcR.ValueRange() * 3);
+
+        for (j = 0; j < height; j++)
+        {
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
+            {
+                idata[i] = (srcR[i] + srcG[i] + srcB[i] + offset) * gain;
+            }
+        }
+
         Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
 
-        FLType gain;
+        DType sFloor = srcR.Floor();
+        offset = dstR.Floor() + FLType(0.5);
 
-        for (i = 0; i < pcount; i++)
+        for (j = 0; j < height; j++)
         {
-            gain = Min(iRangeFL / Max(inputR[i], Max(inputG[i], inputB[i])), idata[i] <= 0 ? 1 : odata[i] / idata[i]);
-            outputR[i] = outputR.GetD(inputR.GetFL(inputR[i])*gain);
-            outputG[i] = outputG.GetD(inputG.GetFL(inputG[i])*gain);
-            outputB[i] = outputB.GetD(inputB.GetFL(inputB[i])*gain);
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
+            {
+                gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
+                gain = Min(sRangeFL / Max(srcR[i], Max(srcG[i], srcB[i])), gain);
+                dstR[i] = static_cast<DType>((srcR[i] - sFloor) * gain + offset);
+                dstG[i] = static_cast<DType>((srcG[i] - sFloor) * gain + offset);
+                dstB[i] = static_cast<DType>((srcB[i] - sFloor) * gain + offset);
+            }
         }
     }
 
-    return output;
+    return dst;
 }

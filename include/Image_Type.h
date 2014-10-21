@@ -3,7 +3,7 @@
 
 
 #include "Type.h"
-#include "Type_Conv.h"
+#include "Helper.h"
 #include "Specification.h"
 
 
@@ -113,7 +113,7 @@ public:
     FLType GetFL(DType input) const { return static_cast<FLType>(input - Neutral_) / ValueRange_; }
     FLType GetFL_PCChroma(DType input) const { return Clip(static_cast<FLType>(input - Neutral_) / ValueRange_, -0.5, 0.5); }
     DType GetD(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.5)); }
-    DType GetD_PCChroma(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.49999999)); }
+    DType GetD_PCChroma(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.499999)); }
 
     template <typename T> DType Quantize(T input) const
     {

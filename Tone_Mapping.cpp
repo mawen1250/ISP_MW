@@ -1,81 +1,44 @@
-#include <iostream>
 #include <cmath>
-#include "include\Tone_Mapping.h"
-#include "include\Histogram.h"
-#include "include\LUT.h"
-#include "include\Specification.h"
-#include "include\Type_Conv.h"
+#include "Tone_Mapping.h"
+#include "Helper.h"
+#include "Specification.h"
 
 
-Frame & Adaptive_Global_Tone_Mapping(Frame & output, const Frame & input)
+Frame & Adaptive_Global_Tone_Mapping(Frame & dst, const Frame & src)
 {
-    if (input.isRGB())
+    if (src.isYUV())
     {
-        const Plane & inputR = input.R();
-        const Plane & inputG = input.G();
-        const Plane & inputB = input.B();
-        Plane & outputR = output.R();
-        Plane & outputG = output.G();
-        Plane & outputB = output.B();
+        const Plane & srcY = src.Y();
 
-        Plane inputY(inputR, false);
-        inputY.YFrom(input);
+        LUT<FLType> _LUT = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(srcY);
 
-        LUT<FLType> LUT_Gain = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(inputY);
-
-        Plane_FL Data;
-
-        Data.From(inputR);
-        LUT_Gain.Lookup_Gain(Data, inputY);
-        Data.To(outputR);
-
-        Data.From(inputG);
-        LUT_Gain.Lookup_Gain(Data, inputY);
-        Data.To(outputG);
-
-        Data.From(inputB);
-        LUT_Gain.Lookup_Gain(Data, inputY);
-        Data.To(outputB);
+        _LUT.Lookup_Gain(dst, src, srcY);
     }
-    else if (input.isYUV())
+    else if (src.isRGB())
     {
-        const Plane & inputY = input.Y();
-        const Plane & inputU = input.U();
-        const Plane & inputV = input.V();
-        Plane & outputY = output.Y();
-        Plane & outputU = output.U();
-        Plane & outputV = output.V();
+        Plane srcY(src.R(), false);
+        srcY.YFrom(src);
 
-        LUT<FLType> LUT_Gain = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(inputY);
+        LUT<FLType> _LUT = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(srcY);
 
-        LUT_Gain.Lookup_Gain(outputY, inputY);
-
-        Plane_FL Data;
-
-        Data.From(inputU);
-        LUT_Gain.Lookup_Gain(Data, inputY);
-        Data.To(outputU);
-
-        Data.From(inputV);
-        LUT_Gain.Lookup_Gain(Data, inputY);
-        Data.To(outputV);
+        _LUT.Lookup_Gain(dst, src, srcY);
     }
 
-    return output;
+    return dst;
 }
 
 
-LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input)
+LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & src)
 {
-    PCType pcount = input.PixelCount();
+    PCType pcount = src.PixelCount();
 
-    // Convert input plane to linear scale
-    Plane ilinear(input, false);
+    // Convert src plane to linear scale
+    Plane ilinear(src, false);
 
-    ilinear.ConvertFrom(input, TransferChar::linear);
+    ilinear.ConvertFrom(src, TransferChar::linear);
 
     // Generate histogram of linear scale
-    Histogram<DType>::BinType HistogramBins = Min(static_cast<Histogram<DType>::BinType>(input.ValueRange() + 1), AGTM_Default.HistBins);
+    Histogram<DType>::BinType HistogramBins = Min(static_cast<Histogram<DType>::BinType>(src.ValueRange() + 1), AGTM_Default.HistBins);
 
     Histogram<DType> Histogram(ilinear, HistogramBins);
 
@@ -223,8 +186,8 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input
     FLType data, idata;
     FLType k0, phi, alpha, power, div;
     FLType Const1, Const2;
-    TransferChar srcTransferChar = input.GetTransferChar();
-    LUT<FLType> LUT_Gain(input);
+    TransferChar srcTransferChar = src.GetTransferChar();
+    LUT<FLType> LUT_Gain(src);
     
     if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
     {
@@ -237,16 +200,16 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input
 
     if (Beta == 0)
     {
-        LUT_Gain.SetRange(input, 1);
+        LUT_Gain.SetRange(src, 1);
     }
     else
     {
         Const1 = 1 / (1 + exp(Beta*Alpha));
         Const2 = 1 / (1 + exp(Beta*(Alpha - 1))) - Const1;
         
-        for (i = input.Floor(); i <= input.Ceil(); i++)
+        for (i = src.Floor(); i <= src.Ceil(); i++)
         {
-            data = idata = input.GetFL(i);
+            data = idata = src.GetFL(i);
 
             if (srcTransferChar == TransferChar::log100 || srcTransferChar == TransferChar::log316)
             {
@@ -271,7 +234,7 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input
                 data = TransferChar_linear2gamma(data, k0, phi, alpha, power);
             }
 
-            LUT_Gain.Set(input, i, idata == 0 ? 1 : data / idata);
+            LUT_Gain.Set(src, i, idata == 0 ? 1 : data / idata);
         }
     }
 

@@ -13,11 +13,11 @@ const struct AGTM_Para {
 } AGTM_Default;
 
 
-Frame & Adaptive_Global_Tone_Mapping(Frame & output, const Frame & input);
-inline Frame Adaptive_Global_Tone_Mapping(const Frame & input)
+Frame & Adaptive_Global_Tone_Mapping(Frame & dst, const Frame & src);
+inline Frame Adaptive_Global_Tone_Mapping(const Frame & src)
 {
-    Frame output(input, false);
-    return Adaptive_Global_Tone_Mapping(output, input);
+    Frame dst(src, false);
+    return Adaptive_Global_Tone_Mapping(dst, src);
 }
 
 
@@ -43,7 +43,7 @@ public:
 };
 
 
-LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & input);
+LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & src);
 
 
 #endif

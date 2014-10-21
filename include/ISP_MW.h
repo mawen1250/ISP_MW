@@ -3,8 +3,7 @@
 
 
 #include "Type.h"
-#include "Type_Conv.h"
-#include "Calculation.h"
+#include "Helper.h"
 #include "IO.h"
 #include "Image_Type.h"
 #include "Specification.h"
@@ -19,6 +18,7 @@
 #include "Highlight_Removal.h"
 #include "Tone_Mapping.h"
 #include "Retinex.h"
+#include "Histogram_Equalization.h"
 
 
 int Filtering(const int argc, char ** argv);

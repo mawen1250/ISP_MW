@@ -1,6 +1,6 @@
 #include <iostream>
-#include "include\Image_Type.h"
-#include "include\LUT.h"
+#include "Image_Type.h"
+#include "LUT.h"
 
 
 // Calculating functions
@@ -707,7 +707,6 @@ Plane & Plane::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
     {
         PCType i;
         FLType Kr, Kg, Kb;
-        FLType dataR, dataG, dataB;
         PCType pcount = src.PixelCount();
 
         const Plane & srcR = src.R();
@@ -718,12 +717,12 @@ Plane & Plane::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
 
         ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
 
+        FLType FloorFL = static_cast<FLType>(srcR.Floor());
+        FLType gain = FLType(1) / srcR.ValueRange();
+
         for (i = 0; i < pcount; i++)
         {
-            dataR = srcR.GetFL(srcR[i]);
-            dataG = srcG.GetFL(srcG[i]);
-            dataB = srcB.GetFL(srcB[i]);
-            Data_[i] = GetD(Kr*dataR + Kg*dataB + Kb*dataG);
+            Data_[i] = GetD((Kr*srcR[i] + Kg*srcG[i] + Kb*srcB[i] - FloorFL) * gain);
         }
     }
     else if (src.isYUV())
@@ -1467,7 +1466,6 @@ Plane_FL & Plane_FL::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
     {
         PCType i;
         FLType Kr, Kg, Kb;
-        FLType dataR, dataG, dataB;
         PCType pcount = src.PixelCount();
 
         const Plane & srcR = src.R();
@@ -1479,12 +1477,12 @@ Plane_FL & Plane_FL::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
 
         ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
 
+        FLType sFloorFL = static_cast<FLType>(srcR.Floor());
+        FLType gain = FLType(1) / srcR.ValueRange();
+
         for (i = 0; i < pcount; i++)
         {
-            dataR = srcR.GetFL(srcR[i]);
-            dataG = srcG.GetFL(srcG[i]);
-            dataB = srcB.GetFL(srcB[i]);
-            Data_[i] = Kr*dataR + Kg*dataB + Kb*dataG;
+            Data_[i] = (Kr*srcR[i] + Kg*srcG[i] + Kb*srcB[i] - sFloorFL) * gain;
         }
     }
     else if (src.isYUV())

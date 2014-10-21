@@ -1,12 +1,6 @@
-#include <iostream>
-#include <string>
-
-#include <opencv2\core\core.hpp>
-#include <opencv2\highgui\highgui.hpp>
-
-#include "include\Image_Type.h"
-#include "include\Type_Conv.h"
-#include "include\LUT.h"
+#include "ImageIO.h"
+#include "Helper.h"
+#include "LUT.h"
 
 
 Frame ImageReader(const std::string & filename, const FCType FrameNum, const DType BitDepth)

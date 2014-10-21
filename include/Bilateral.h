@@ -4,7 +4,7 @@
 
 #include "IO.h"
 #include "Image_Type.h"
-#include "Type_Conv.h"
+#include "Helper.h"
 #include "LUT.h"
 #include "Gaussian.h"
 
