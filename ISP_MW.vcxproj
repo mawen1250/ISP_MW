@@ -98,8 +98,9 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
-      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -115,8 +116,9 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
-      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -130,6 +132,7 @@
     <ClCompile Include="Format_Conversion.cpp" />
     <ClCompile Include="Gaussian.cpp" />
     <ClCompile Include="Highlight_Removal.cpp" />
+    <ClCompile Include="Histogram_Equalization.cpp" />
     <ClCompile Include="ImageIO.cpp" />
     <ClCompile Include="Image_Type.cpp" />
     <ClCompile Include="ISP_MW.cpp" />
@@ -140,10 +143,10 @@
   <ItemGroup>
     <ClInclude Include="include\Args.h" />
     <ClInclude Include="include\Bilateral.h" />
-    <ClInclude Include="include\Calculation.h" />
     <ClInclude Include="include\Convolution.h" />
     <ClInclude Include="include\Format_Conversion.h" />
     <ClInclude Include="include\Gaussian.h" />
+    <ClInclude Include="include\Histogram_Equalization.h" />
     <ClInclude Include="include\Highlight_Removal.h" />
     <ClInclude Include="include\Histogram.h" />
     <ClInclude Include="include\ImageIO.h" />
@@ -156,7 +159,7 @@
     <ClInclude Include="include\Tone_Mapping.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Type.h" />
-    <ClInclude Include="include\Type_Conv.h" />
+    <ClInclude Include="include\Helper.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

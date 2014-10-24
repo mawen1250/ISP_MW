@@ -1,10 +1,7 @@
-﻿#include <iostream>
-#include <cmath>
-#include "include\Highlight_Removal.h"
-#include "include\Bilateral.h"
-#include "include\Type_Conv.h"
-#include "include\Image_Type.h"
-#include "include\IO.h"
+﻿#include <cmath>
+#include "Highlight_Removal.h"
+#include "Helper.h"
+#include "Bilateral.h"
 
 
 // Implementation of specular highilght removal algorithm from "Qingxiong Yang, ShengnanWang, and Narendra Ahuja - Real-Time Specular Highlight Removal Using Bilateral Filtering"

@@ -214,6 +214,8 @@ const LUT<T> & LUT<T>::Lookup_Gain(Frame & dst, const Frame & src, const Plane &
     PCType stride = ref.Width();
     DType rFloor = ref.Floor();
 
+    FLType gain, offset;
+
     if (src.isYUV())
     {
         const Plane &srcY = src.Y();
@@ -223,20 +225,32 @@ const LUT<T> & LUT<T>::Lookup_Gain(Frame & dst, const Frame & src, const Plane &
         Plane &dstU = dst.U();
         Plane &dstV = dst.V();
 
-        sint64 sNeutral = srcU.Neutral();
+        DType sFloor = srcY.Floor();
+        sint32 sNeutral = srcU.Neutral();
+        FLType sRangeFL = static_cast<FLType>(srcY.ValueRange());
         FLType sRangeC2FL = static_cast<FLType>(srcU.ValueRange()) / 2.;
 
-        FLType gain;
+        DType Yval;
+        sint32 Uval, Vval;
+        if (dstU.isPCChroma())
+            offset = dstU.Neutral() + FLType(0.499999);
+        else
+            offset = dstU.Neutral() + FLType(0.5);
+        FLType offsetY = dstY.Floor() + FLType(0.5);
 
         for (j = 0; j < height; j++)
         {
             i = stride * j;
             for (upper = i + width; i < upper; i++)
             {
-                gain = Min(sRangeC2FL / Max(Abs(srcU[i] - sNeutral), Abs(srcV[i] - sNeutral)), Table_[ref[i] - rFloor]);
-                dstY[i] = dstY.GetD(srcY.GetFL(srcY[i])*gain);
-                dstU[i] = dstU.GetD(srcU.GetFL(srcU[i])*gain);
-                dstV[i] = dstV.GetD(srcV.GetFL(srcV[i])*gain);
+                Yval = srcY[i] - sFloor;
+                Uval = srcU[i] - sNeutral;
+                Vval = srcV[i] - sNeutral;
+                gain = Table_[ref[i] - rFloor];
+                gain = Min(sRangeFL / Yval, Min(sRangeC2FL / Max(Abs(Uval), Abs(Vval)), gain));
+                dstY[i] = static_cast<DType>(Yval * gain + offsetY);
+                dstU[i] = static_cast<DType>(Uval * gain + offset);
+                dstV[i] = static_cast<DType>(Vval * gain + offset);
             }
         }
     }
@@ -249,20 +263,25 @@ const LUT<T> & LUT<T>::Lookup_Gain(Frame & dst, const Frame & src, const Plane &
         Plane & dstG = dst.G();
         Plane & dstB = dst.B();
 
-        DType sRange = srcR.ValueRange();
-        FLType sRangeFL = static_cast<FLType>(sRange);
+        DType sFloor = srcR.Floor();
+        FLType sRangeFL = static_cast<FLType>(srcR.ValueRange());
 
-        FLType gain;
+        DType Rval, Gval, Bval;
+        offset = dstR.Floor() + FLType(0.5);
 
         for (j = 0; j < height; j++)
         {
             i = stride * j;
             for (upper = i + width; i < upper; i++)
             {
-                gain = Min(sRangeFL / Max(srcR[i], Max(srcG[i], srcB[i])), Table_[ref[i] - rFloor]);
-                dstR[i] = dstR.GetD(srcR.GetFL(srcR[i])*gain);
-                dstG[i] = dstG.GetD(srcG.GetFL(srcG[i])*gain);
-                dstB[i] = dstB.GetD(srcB.GetFL(srcB[i])*gain);
+                Rval = srcR[i] - sFloor;
+                Gval = srcG[i] - sFloor;
+                Bval = srcB[i] - sFloor;
+                gain = Table_[ref[i] - rFloor];
+                gain = Min(sRangeFL / Max(Rval, Max(Gval, Bval)), gain);
+                dstR[i] = static_cast<DType>(Rval * gain + offset);
+                dstG[i] = static_cast<DType>(Gval * gain + offset);
+                dstB[i] = static_cast<DType>(Bval * gain + offset);
             }
         }
     }

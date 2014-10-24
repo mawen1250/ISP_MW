@@ -8,22 +8,23 @@
 
 
 const struct HE_Para {
+    FLType strength = 1.0;
     bool separate = false;
 } HE_Default;
 
 
-Plane & Histogram_Equalization(Plane &dst, const Plane &src);
-Frame & Histogram_Equalization(Frame &dst, const Frame &src, bool separate = HE_Default.separate);
+Plane & Histogram_Equalization(Plane &dst, const Plane &src, FLType strength = HE_Default.strength);
+Frame & Histogram_Equalization(Frame &dst, const Frame &src, FLType strength = HE_Default.strength, bool separate = HE_Default.separate);
 
-inline Plane Histogram_Equalization(const Plane &src)
+inline Plane Histogram_Equalization(const Plane &src, FLType strength = HE_Default.strength)
 {
     Plane dst(src, false);
-    return Histogram_Equalization(dst, src);
+    return Histogram_Equalization(dst, src, strength);
 }
-inline Frame Histogram_Equalization(const Frame &src, bool separate = HE_Default.separate)
+inline Frame Histogram_Equalization(const Frame &src, FLType strength = HE_Default.strength, bool separate = HE_Default.separate)
 {
     Frame dst(src, false);
-    return Histogram_Equalization(dst, src, separate);
+    return Histogram_Equalization(dst, src, strength, separate);
 }
 
 
@@ -31,6 +32,7 @@ class Histogram_Equalization_IO
     : public FilterIO
 {
 protected:
+    FLType strength = HE_Default.strength;
     bool separate = HE_Default.separate;
 
     virtual void arguments_process()
@@ -41,7 +43,12 @@ protected:
 
         for (int i = 0; i < argc; i++)
         {
-            if (args[i] == "-S" || args[i] == "--separate")
+            if (args[i] == "-STR" || args[i] == "--strength")
+            {
+                ArgsObj.GetPara(i, strength);
+                continue;
+            }
+            if (args[i] == "-SEP" || args[i] == "--separate")
             {
                 ArgsObj.GetPara(i, separate);
                 continue;
@@ -58,7 +65,7 @@ protected:
 
     virtual Frame processFrame(const Frame &src)
     {
-        return Histogram_Equalization(src, separate);
+        return Histogram_Equalization(src, strength, separate);
     }
 
 public:

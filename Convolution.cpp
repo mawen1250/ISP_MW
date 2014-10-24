@@ -1,6 +1,5 @@
-#include <iostream>
-#include "include\Convolution.h"
-#include "include\Image_Type.h"
+#include <cstring>
+#include "Convolution.h"
 
  
 Plane & Convolution3V(Plane & Plane, bool norm, FLType K0, FLType K1, FLType K2)

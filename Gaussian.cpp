@@ -1,6 +1,4 @@
-#include <iostream>
-#include <cmath>
-#include "include\Gaussian.h"
+#include "Gaussian.h"
 
 
 // Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"

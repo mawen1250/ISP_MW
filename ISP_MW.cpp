@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <cctype>
-#include "include\ISP_MW.h"
+#include "ISP_MW.h"
 
 
 //#define Test
@@ -14,7 +14,10 @@
 //#define Transpose_
 //#define Specular_Highlight_Removal_
 //#define Tone_Mapping
-#define Retinex
+#define Retinex_MSRCP_
+//#define Retinex_MSRCR_
+//#define Retinex_MSRCR_GIMP_
+//#define Histogram_Equalization_
 
 
 int main(int argc, char ** argv)
@@ -42,8 +45,12 @@ int main(int argc, char ** argv)
     PFrame = Specular_Highlight_Removal(IFrame);
 #elif defined(Tone_Mapping)
     PFrame = Adaptive_Global_Tone_Mapping(IFrame);
-#elif defined(Retinex)
+#elif defined(Retinex_MSRCP_)
     PFrame = Retinex_MSRCP(IFrame);
+#elif defined(Retinex_MSRCR_)
+    PFrame = Retinex_MSRCR(IFrame);
+#elif defined(Retinex_MSRCR_GIMP_)
+    PFrame = Retinex_MSRCR_GIMP(IFrame);
 #endif
     ImageWriter(PFrame, "D:\\Test Images\\01.Test.png");
     system("pause");
@@ -62,8 +69,14 @@ int main(int argc, char ** argv)
         Transpose(IFrame);
 #elif defined(Specular_Highlight_Removal_)
         Specular_Highlight_Removal(IFrame);
-#elif defined(Retinex)
+#elif defined(Retinex_MSRCP_)
         Retinex_MSRCP(IFrame);
+#elif defined(Retinex_MSRCR_)
+        Retinex_MSRCR(IFrame);
+#elif defined(Retinex_MSRCR_GIMP_)
+        Retinex_MSRCR_GIMP(IFrame);
+#elif defined(Histogram_Equalization_)
+        Histogram_Equalization(IFrame, 1.0, false);
 #endif
     }
 #endif // Test_Write
@@ -107,13 +120,25 @@ int Filtering(const int argc, char ** argv)
     {
         FilterObj = new Bilateral2D_IO(argc2, args);
     }
-    else if (FilterName == "--agtm" || FilterName == "--adaptiveglobaltonemapping" || FilterName == "--adaptive_global_tone_mapping")
+    else if (FilterName == "--agtm" || FilterName == "--adaptive_global_tone_mapping")
     {
         FilterObj = new Adaptive_Global_Tone_Mapping_IO(argc2, args);
     }
     else if (FilterName == "--retinex_msrcp" || FilterName == "--msrcp" || FilterName == "--retinex_msr" || FilterName == "--msr" || FilterName == "--retinex")
     {
         FilterObj = new Retinex_MSRCP_IO(argc2, args);
+    }
+    else if (FilterName == "--retinex_msrcr" || FilterName == "--msrcr")
+    {
+        FilterObj = new Retinex_MSRCR_IO(argc2, args);
+    }
+    else if (FilterName == "--retinex_msrcr_gimp" || FilterName == "--msrcr_gimp")
+    {
+        FilterObj = new Retinex_MSRCR_GIMP_IO(argc2, args);
+    }
+    else if (FilterName == "--he" || FilterName == "--histogram_equalization")
+    {
+        FilterObj = new Histogram_Equalization_IO(argc2, args);
     }
     else
     {

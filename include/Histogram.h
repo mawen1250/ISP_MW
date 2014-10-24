@@ -54,8 +54,10 @@ public:
     T Max(FLType ratio = 0) const;
     CountType Lookup(const T input) const { return Data_[Clip(static_cast<BinType>((input - Lower_)*Scale_), 0, Bins_ - 1)]; }
 
-    LUT<DType> Equalization_LUT(const Plane & dst) const;
-    LUT<FLType> Equalization_LUT_Gain(const Plane & dst) const;
+    LUT<DType> Equalization_LUT(const Plane & dst, const Plane & src, FLType strength = 1.0) const;
+    LUT<DType> Equalization_LUT(const Plane & src, FLType strength = 1.0) const { return Equalization_LUT(src, src, strength); }
+    LUT<FLType> Equalization_LUT_Gain(const Plane & dst, const Plane & src, FLType strength = 1.0) const;
+    LUT<FLType> Equalization_LUT_Gain(const Plane & src, FLType strength = 1.0) const { return Equalization_LUT_Gain(src, src, strength); }
 };
 
 
@@ -299,95 +301,111 @@ T Histogram<T>::Max(FLType ratio) const
     return BinToValue<T>(i);
 }
 
-inline LUT<DType> Histogram<DType>::Equalization_LUT(const Plane & dst) const
+inline LUT<DType> Histogram<DType>::Equalization_LUT(const Plane & dst, const Plane & src, FLType strength) const
 {
+    DType sRange = src.ValueRange();
     DType dFloor = dst.Floor();
     DType dRange = dst.ValueRange();
-    LUT<DType>::LevelType LUT_Levels = dRange + 1;
+    LUT<DType>::LevelType LUT_Levels = sRange + 1;
 
     LUT<DType> _LUT(LUT_Levels);
 
+    FLType weight1 = strength;
+    FLType weight2 = 1 - strength;
+
+    CountType Sum;
+    FLType scale1, scale2, offset;
+
     if (Bins_ == LUT_Levels)
     {
-        CountType Sum = 0;
-        FLType scale = static_cast<FLType>(dRange) / Count_;
-        FLType offset = static_cast<FLType>(dFloor)+FLType(0.5);
+        Sum = 0;
+        scale1 = static_cast<FLType>(dRange) / Count_ * weight1;
+        scale2 = static_cast<FLType>(dRange) / sRange * weight2;
+        offset = static_cast<FLType>(dFloor)+FLType(0.5);
 
         for (BinType i = 0; i < Bins_; i++)
         {
             Sum += Data_[i];
-            _LUT[i] = static_cast<DType>(Sum * scale + offset);
+            _LUT[i] = static_cast<DType>(Sum * scale1 + i * scale2 + offset);
         }
     }
     else
     {
-        FLType *temp = new FLType[Bins_ + 1];
+        FLType *temp = new FLType[Bins_];
 
-        CountType Sum = 0;
-        FLType scale = static_cast<FLType>(dRange) / Count_;
-        FLType offset = static_cast<FLType>(dFloor);
+        Sum = 0;
+        scale1 = static_cast<FLType>(dRange) / Count_ * weight1;
+        scale2 = static_cast<FLType>(dRange) / (Bins_ - 1) * weight2;
+        offset = static_cast<FLType>(dFloor);
 
-        temp[0] = offset;
         for (BinType i = 0; i < Bins_; i++)
         {
             Sum += Data_[i];
-            temp[i + 1] = Sum * scale + offset;
+            temp[i] = Sum * scale1 + i * scale2 + offset;
         }
 
         FLType val;
         DType val_lower, val_upper;
-        DType val_lower_upper = Bins_ - 1;
-        FLType scale1 = static_cast<FLType>(Bins_) / dRange;
+        DType val_lower_upper = Bins_ - 2;
+        scale1 = static_cast<FLType>(Bins_ - 1) / sRange;
 
         for (LUT<DType>::LevelType i = 0; i < LUT_Levels; i++)
         {
             val = i * scale1;
             val_lower = ::Min(static_cast<DType>(val), val_lower_upper);
             val_upper = val_lower + 1;
-            _LUT[i] = static_cast<DType>(temp[val_lower] * (val_upper - val) + temp[val_upper] * (val - val_lower));
+            _LUT[i] = static_cast<DType>(temp[val_lower] * (val_upper - val) + temp[val_upper] * (val - val_lower) + FLType(0.5));
         }
     }
 
     return _LUT;
 }
 
-inline LUT<FLType> Histogram<DType>::Equalization_LUT_Gain(const Plane & dst) const
+inline LUT<FLType> Histogram<DType>::Equalization_LUT_Gain(const Plane & dst, const Plane & src, FLType strength) const
 {
+    DType sRange = src.ValueRange();
     DType dFloor = dst.Floor();
     DType dRange = dst.ValueRange();
-    LUT<FLType>::LevelType LUT_Levels = dRange + 1;
+    LUT<FLType>::LevelType LUT_Levels = sRange + 1;
 
     LUT<FLType> _LUT(LUT_Levels);
 
+    FLType weight1 = strength;
+    FLType weight2 = 1 - strength;
+
+    CountType Sum;
+    FLType scale1, scale2;
+
     if (Bins_ == LUT_Levels)
     {
-        CountType Sum = 0;
-        FLType scale = static_cast<FLType>(dRange) / Count_;
+        Sum = 0;
+        scale1 = static_cast<FLType>(dRange) / Count_ * weight1;
+        scale2 = static_cast<FLType>(dRange) / sRange * weight2;
 
         for (BinType i = 0; i < Bins_; i++)
         {
             Sum += Data_[i];
-            _LUT[i] = Sum * scale / i;
+            _LUT[i] = Sum * scale1 / i + scale2;
         }
     }
     else
     {
-        FLType *temp = new FLType[Bins_ + 1];
+        FLType *temp = new FLType[Bins_];
 
-        CountType Sum = 0;
-        FLType scale = static_cast<FLType>(dRange) / Count_;
+        Sum = 0;
+        scale1 = static_cast<FLType>(dRange) / Count_ * weight1;
+        scale2 = static_cast<FLType>(dRange) / (Bins_ - 1) * weight2;
 
-        temp[0] = 0;
         for (BinType i = 0; i < Bins_; i++)
         {
             Sum += Data_[i];
-            temp[i + 1] = Sum * scale;
+            temp[i] = Sum * scale1 + i * scale2;
         }
 
         FLType val;
         DType val_lower, val_upper;
-        DType val_lower_upper = Bins_ - 1;
-        FLType scale1 = static_cast<FLType>(Bins_) / dRange;
+        DType val_lower_upper = Bins_ - 2;
+        scale1 = static_cast<FLType>(Bins_ - 1) / sRange;
 
         for (LUT<DType>::LevelType i = 0; i < LUT_Levels; i++)
         {

@@ -1,9 +1,5 @@
-#include <iostream>
 #include <cmath>
-#include "include\Bilateral.h"
-#include "include\Gaussian.h"
-#include "include\Type_Conv.h"
-#include "include\LUT.h"
+#include "Bilateral.h"
 
 
 Plane & Bilateral2D(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane)

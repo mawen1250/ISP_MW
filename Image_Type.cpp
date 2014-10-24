@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Image_Type.h"
 #include "LUT.h"
+#include "Histogram.h"
 
 
 // Calculating functions
@@ -361,6 +362,32 @@ const Plane & Plane::MinMax(DType & min, DType & max) const
     }
 
     return *this;
+}
+
+FLType Plane::Mean() const
+{
+    uint64 Sum = 0;
+
+    for (PCType i = 0; i < PixelCount_; i++)
+    {
+        Sum += Data_[i];
+    }
+
+    return static_cast<FLType>(Sum) / PixelCount_;
+}
+
+FLType Plane::Variance(FLType Mean) const
+{
+    FLType diff;
+    FLType Sum = 0;
+
+    for (PCType i = 0; i < PixelCount_; i++)
+    {
+        diff = Data_[i] - Mean;
+        Sum += diff * diff;
+    }
+
+    return Sum / PixelCount_;
 }
 
 
@@ -739,6 +766,49 @@ Plane & Plane::YFrom(const Frame & src)
 }
 
 
+Plane & Plane::SimplestColorBalance(Plane_FL & flt, const Plane & src, double lower_thr, double upper_thr, int HistBins)
+{
+    FLType min, max;
+    flt.MinMax(min, max);
+
+    if (max <= min)
+    {
+        From(src);
+        return *this;
+    }
+
+    if (lower_thr > 0 || upper_thr > 0)
+    {
+        flt.ReQuantize(min, min, max, false);
+        Histogram<FLType> Histogram(flt, HistBins);
+        min = Histogram.Min(lower_thr);
+        max = Histogram.Max(upper_thr);
+    }
+
+    FLType gain = ValueRange() / (max - min);
+    FLType offset = Floor() - min * gain + FLType(0.5);
+
+    if (lower_thr > 0 || upper_thr > 0)
+    {
+        FLType FloorFL = static_cast<FLType>(Floor());
+        FLType CeilFL = static_cast<FLType>(Ceil());
+        for (PCType i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = static_cast<DType>(Clip(flt[i] * gain + offset, FloorFL, CeilFL));
+        }
+    }
+    else
+    {
+        for (PCType i = 0; i < PixelCount_; i++)
+        {
+            Data_[i] = static_cast<DType>(flt[i] * gain + offset);
+        }
+    }
+
+    return *this;
+}
+
+
 // Functions of class Plane_FL
 void Plane_FL::DefaultPara(bool Chroma)
 {
@@ -973,6 +1043,32 @@ const Plane_FL & Plane_FL::MinMax(FLType & min, FLType & max) const
     }
 
     return *this;
+}
+
+FLType Plane_FL::Mean() const
+{
+    FLType Sum = 0;
+
+    for (PCType i = 0; i < PixelCount_; i++)
+    {
+        Sum += Data_[i];
+    }
+
+    return Sum / PixelCount_;
+}
+
+FLType Plane_FL::Variance(FLType Mean) const
+{
+    FLType diff;
+    FLType Sum = 0;
+
+    for (PCType i = 0; i < PixelCount_; i++)
+    {
+        diff = Data_[i] - Mean;
+        Sum += diff * diff;
+    }
+
+    return Sum / PixelCount_;
 }
 
 
@@ -1499,8 +1595,38 @@ Plane_FL & Plane_FL::YFrom(const Frame & src)
 }
 
 
+Plane_FL & Plane_FL::SimplestColorBalance(const Plane_FL & flt, const Plane_FL & src, double lower_thr, double upper_thr, int HistBins)
+{
+    FLType min, max;
+    flt.MinMax(min, max);
+
+    if (max <= min)
+    {
+        *this = src;
+        return *this;
+    }
+    else
+    {
+        *this = flt;
+    }
+
+    if (lower_thr> 0 || upper_thr > 0)
+    {
+        ReQuantize(min, min, max, false);
+        Histogram<FLType> Histogram(*this, HistBins);
+        min = Histogram.Min(lower_thr);
+        max = Histogram.Max(upper_thr);
+    }
+
+    ReQuantize(min, min, max, false);
+    ReQuantize(src.Floor(), src.Neutral(), src.Ceil(), true, lower_thr> 0 || upper_thr > 0);
+
+    return *this;
+}
+
+
 // Functions of class Frame
-void Frame::InitPlanes(PCType Width, PCType Height, DType BitDepth)
+void Frame::InitPlanes(PCType Width, PCType Height, DType BitDepth, bool Init)
 {
     DType Floor, Neutral, Ceil, ValueRange;
 
@@ -1513,21 +1639,21 @@ void Frame::InitPlanes(PCType Width, PCType Height, DType BitDepth)
 
         if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::R)
         {
-            R_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+            R_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_, Init);
 
             P_[PlaneCount_++] = R_;
         }
 
         if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::G)
         {
-            G_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+            G_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_, Init);
 
             P_[PlaneCount_++] = G_;
         }
 
         if (PixelType_ == PixelType::RGB || PixelType_ == PixelType::B)
         {
-            B_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+            B_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_, Init);
 
             P_[PlaneCount_++] = B_;
         }
@@ -1552,7 +1678,7 @@ void Frame::InitPlanes(PCType Width, PCType Height, DType BitDepth)
 
             Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, BitDepth, QuantRange_, false);
 
-            Y_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_);
+            Y_ = new Plane(Floor, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar_, Init);
 
             P_[PlaneCount_++] = Y_;
         }
@@ -1577,14 +1703,14 @@ void Frame::InitPlanes(PCType Width, PCType Height, DType BitDepth)
 
             if (PixelType_ != PixelType::V)
             {
-                U_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear);
+                U_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear, Init);
 
                 P_[PlaneCount_++] = U_;
             }
 
             if (PixelType_ != PixelType::U)
             {
-                V_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear);
+                V_ = new Plane(Neutral, Width, Height, BitDepth, Floor, Neutral, Ceil, TransferChar::linear, Init);
 
                 P_[PlaneCount_++] = V_;
             }
@@ -1592,7 +1718,7 @@ void Frame::InitPlanes(PCType Width, PCType Height, DType BitDepth)
     }
 }
 
-void Frame::CopyPlanes(const Frame & src, bool Copy)
+void Frame::CopyPlanes(const Frame & src, bool Copy, bool Init)
 {
     DType Floor, Neutral, Ceil, ValueRange;
 
@@ -1618,7 +1744,7 @@ void Frame::CopyPlanes(const Frame & src, bool Copy)
             {
                 Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.R_->BitDepth(), QuantRange_, false);
 
-                R_ = new Plane(Floor, src.R_->Width(), src.R_->Height(), src.R_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
+                R_ = new Plane(Floor, src.R_->Width(), src.R_->Height(), src.R_->BitDepth(), Floor, Neutral, Ceil, TransferChar_, Init);
             }
             P_[PlaneCount_++] = R_;
         }
@@ -1633,7 +1759,7 @@ void Frame::CopyPlanes(const Frame & src, bool Copy)
             {
                 Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.G_->BitDepth(), QuantRange_, false);
 
-                G_ = new Plane(Floor, src.G_->Width(), src.G_->Height(), src.G_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
+                G_ = new Plane(Floor, src.G_->Width(), src.G_->Height(), src.G_->BitDepth(), Floor, Neutral, Ceil, TransferChar_, Init);
             }
             P_[PlaneCount_++] = G_;
         }
@@ -1648,7 +1774,7 @@ void Frame::CopyPlanes(const Frame & src, bool Copy)
             {
                 Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.B_->BitDepth(), QuantRange_, false);
 
-                B_ = new Plane(Floor, src.B_->Width(), src.B_->Height(), src.B_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
+                B_ = new Plane(Floor, src.B_->Width(), src.B_->Height(), src.B_->BitDepth(), Floor, Neutral, Ceil, TransferChar_, Init);
             }
             P_[PlaneCount_++] = B_;
         }
@@ -1665,7 +1791,7 @@ void Frame::CopyPlanes(const Frame & src, bool Copy)
             {
                 Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.Y_->BitDepth(), QuantRange_, false);
 
-                Y_ = new Plane(Floor, src.Y_->Width(), src.Y_->Height(), src.Y_->BitDepth(), Floor, Neutral, Ceil, TransferChar_);
+                Y_ = new Plane(Floor, src.Y_->Width(), src.Y_->Height(), src.Y_->BitDepth(), Floor, Neutral, Ceil, TransferChar_, Init);
             }
             P_[PlaneCount_++] = Y_;
         }
@@ -1682,7 +1808,7 @@ void Frame::CopyPlanes(const Frame & src, bool Copy)
                 {
                     Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.U_->BitDepth(), QuantRange_, true);
 
-                    U_ = new Plane(Neutral, src.U_->Width(), src.U_->Height(), src.U_->BitDepth(), Floor, Neutral, Ceil, TransferChar::linear);
+                    U_ = new Plane(Neutral, src.U_->Width(), src.U_->Height(), src.U_->BitDepth(), Floor, Neutral, Ceil, TransferChar::linear, Init);
                 }
                 P_[PlaneCount_++] = U_;
             }
@@ -1697,7 +1823,7 @@ void Frame::CopyPlanes(const Frame & src, bool Copy)
                 {
                     Quantize_Value(&Floor, &Neutral, &Ceil, &ValueRange, src.V_->BitDepth(), QuantRange_, true);
 
-                    V_ = new Plane(Neutral, src.V_->Width(), src.V_->Height(), src.V_->BitDepth(), Floor, Neutral, Ceil, TransferChar::linear);
+                    V_ = new Plane(Neutral, src.V_->Width(), src.V_->Height(), src.V_->BitDepth(), Floor, Neutral, Ceil, TransferChar::linear, Init);
                 }
                 P_[PlaneCount_++] = V_;
             }
@@ -1706,11 +1832,11 @@ void Frame::CopyPlanes(const Frame & src, bool Copy)
 }
 
 
-Frame::Frame(const Frame & src, bool Copy)
+Frame::Frame(const Frame & src, bool Copy, bool Init)
     : FrameNum_(src.FrameNum_), PixelType_(src.PixelType_), QuantRange_(src.QuantRange_), ChromaPlacement_(src.ChromaPlacement_),
     ColorPrim_(src.ColorPrim_), TransferChar_(src.TransferChar_), ColorMatrix_(src.ColorMatrix_)
 {
-    CopyPlanes(src, Copy);
+    CopyPlanes(src, Copy, Init);
 }
 
 Frame::Frame(Frame && src)
@@ -1736,7 +1862,7 @@ Frame::Frame(Frame && src)
     src.A_ = nullptr;
 }
 
-Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth)
+Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth, bool Init)
     : FrameNum_(FrameNum), PixelType_(_PixelType), QuantRange_(isYUV() ? QuantRange::TV : QuantRange::PC), ChromaPlacement_(ChromaPlacement::MPEG2),
     ColorPrim_(ColorPrim_Default(Width, Height, isRGB())), TransferChar_(TransferChar_Default(Width, Height, isRGB())), ColorMatrix_(ColorMatrix_Default(Width, Height))
 {
@@ -1747,11 +1873,11 @@ Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height,
         exit(EXIT_FAILURE);
     }
 
-    InitPlanes(Width, Height, BitDepth);
+    InitPlanes(Width, Height, BitDepth, Init);
 }
 
 Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth,
-    QuantRange _QuantRange, ChromaPlacement _ChromaPlacement)
+    QuantRange _QuantRange, ChromaPlacement _ChromaPlacement, bool Init)
     : FrameNum_(FrameNum), PixelType_(_PixelType), QuantRange_(_QuantRange), ChromaPlacement_(_ChromaPlacement),
     ColorPrim_(ColorPrim_Default(Width, Height, isRGB())), TransferChar_(TransferChar_Default(Width, Height, isRGB())), ColorMatrix_(ColorMatrix_Default(Width, Height))
 {
@@ -1762,11 +1888,11 @@ Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height,
         exit(EXIT_FAILURE);
     }
 
-    InitPlanes(Width, Height, BitDepth);
+    InitPlanes(Width, Height, BitDepth, Init);
 }
 
 Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth, QuantRange _QuantRange,
-    ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix)
+    ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix, bool Init)
     : FrameNum_(FrameNum), PixelType_(_PixelType), QuantRange_(_QuantRange), ChromaPlacement_(_ChromaPlacement),
     ColorPrim_(_ColorPrim), TransferChar_(_TransferChar), ColorMatrix_(_ColorMatrix)
 {
@@ -1777,7 +1903,7 @@ Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height,
         exit(EXIT_FAILURE);
     }
 
-    InitPlanes(Width, Height, BitDepth);
+    InitPlanes(Width, Height, BitDepth, Init);
 }
 
 Frame::~Frame()

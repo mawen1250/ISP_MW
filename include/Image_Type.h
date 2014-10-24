@@ -64,7 +64,7 @@ public:
     Plane(const Plane & src); // Copy constructor
     Plane(const Plane & src, bool Init, DType Value = 0);
     Plane(Plane && src); // Move constructor
-    Plane(const Plane_FL & src, DType BitDepth = 16); // Convertor/Constructor from Plane_FL
+    explicit Plane(const Plane_FL & src, DType BitDepth = 16); // Convertor/Constructor from Plane_FL
     Plane(const Plane_FL & src, bool Init, DType Value = 0, DType BitDepth = 16);
     Plane(const Plane_FL & src, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
     Plane(const Plane_FL & src, bool Init, DType Value, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
@@ -96,6 +96,9 @@ public:
     DType Min() const;
     DType Max() const;
     const Plane & MinMax(DType & min, DType & max) const;
+    FLType Mean() const;
+    FLType Variance(FLType Mean) const;
+    FLType Variance() const { return Variance(Mean()); }
 
     Plane & Width(PCType Width) { return ReSize(Width, Height_); }
     Plane & Height(PCType Height) { return ReSize(Width_, Height); }
@@ -114,6 +117,8 @@ public:
     FLType GetFL_PCChroma(DType input) const { return Clip(static_cast<FLType>(input - Neutral_) / ValueRange_, -0.5, 0.5); }
     DType GetD(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.5)); }
     DType GetD_PCChroma(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.499999)); }
+
+    Plane & SimplestColorBalance(Plane_FL & flt, const Plane & src, double lower_thr = 0, double upper_thr = 0, int HistBins = 4096);
 
     template <typename T> DType Quantize(T input) const
     {
@@ -173,6 +178,9 @@ public:
     FLType Min() const;
     FLType Max() const;
     const Plane_FL & MinMax(FLType & min, FLType & max) const;
+    FLType Mean() const;
+    FLType Variance(FLType Mean) const;
+    FLType Variance() const { return Variance(Mean()); }
 
     Plane_FL & Width(PCType Width) { return ReSize(Width, Height_); }
     Plane_FL & Height(PCType Height) { return ReSize(Width_, Height); }
@@ -190,6 +198,8 @@ public:
     Plane_FL & YFrom(const Frame & src);
     Plane_FL & YFrom(const Frame & src, ColorMatrix dstColorMatrix);
 
+    Plane_FL & SimplestColorBalance(const Plane_FL & flt, const Plane_FL & src, double lower_thr = 0, double upper_thr = 0, int HistBins = 4096);
+
     template <typename T> FLType Quantize(T input) const
     {
         return input <= Floor_ ? Floor_ : input >= Ceil_ ? Ceil_ : input;
@@ -200,6 +210,7 @@ public:
 class Frame {
 public:
     typedef sint32 PlaneCountType;
+    static const PlaneCountType MaxPlaneCount = 7;
 private:
     FCType FrameNum_;
     PixelType PixelType_;
@@ -217,19 +228,18 @@ private:
     Plane * U_ = nullptr;
     Plane * V_ = nullptr;
     Plane * A_ = nullptr;
-    const PlaneCountType MaxPlaneCount = 7;
 protected:
-    void InitPlanes(PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16);
-    void CopyPlanes(const Frame & src, bool Copy = true);
+    void InitPlanes(PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool Init = true);
+    void CopyPlanes(const Frame & src, bool Copy = true, bool Init = false);
 public:
     Frame() {} // Default constructor
-    Frame(const Frame & src, bool Copy = true); // Copy constructor
+    Frame(const Frame & src, bool Copy = true, bool Init = false); // Copy constructor
     Frame(Frame && src); // Move constructor
-    explicit Frame(FCType FrameNum, PixelType _PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16); // Convertor/Constructor from FCType
+    explicit Frame(FCType FrameNum, PixelType _PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool Init = true); // Convertor/Constructor from FCType
     Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth,
-        QuantRange _QuantRange, ChromaPlacement _ChromaPlacement = ChromaPlacement::MPEG2);
+        QuantRange _QuantRange, ChromaPlacement _ChromaPlacement = ChromaPlacement::MPEG2, bool Init = true);
     Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth, QuantRange _QuantRange,
-        ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix);
+        ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix, bool Init = true);
     ~Frame(); // Destructor
 
     Frame & operator=(const Frame & src); // Copy assignment operator
