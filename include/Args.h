@@ -183,12 +183,23 @@ public:
         }
     }
 
-    template<>
-    void GetPara(int &i, std::string &para)
+    void GetPara(int &i, std::string &para, int mode = 0)
     {
         if (++i < argc)
         {
             para = args[i];
+
+            switch (mode)
+            {
+            case 0:
+                break;
+            case 1:
+                std::transform(para.begin(), para.end(), para.begin(), tolower);
+                break;
+            case 2:
+                std::transform(para.begin(), para.end(), para.begin(), toupper);
+                break;
+            }
         }
         else
         {

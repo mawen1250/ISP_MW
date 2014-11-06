@@ -51,6 +51,9 @@
     <ClCompile Include="Histogram_Equalization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AWB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Bilateral.h">
@@ -108,6 +111,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AWB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

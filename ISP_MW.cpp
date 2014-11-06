@@ -9,15 +9,18 @@
 //#define Test_Other
 //#define Test_Write
 
+//#define Convolution
+//#define EdgeDetect_
 //#define Gaussian
 //#define Bilateral
 //#define Transpose_
 //#define Specular_Highlight_Removal_
 //#define Tone_Mapping
-#define Retinex_MSRCP_
+//#define Retinex_MSRCP_
 //#define Retinex_MSRCR_
 //#define Retinex_MSRCR_GIMP_
 //#define Histogram_Equalization_
+#define AWB_
 
 
 int main(int argc, char ** argv)
@@ -34,7 +37,11 @@ int main(int argc, char ** argv)
     system("pause");
 #elif defined(Test_Write) // Test_Other
     Frame PFrame;
-#if defined(Gaussian)
+#if defined(Convolution)
+    PFrame = Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
+#elif defined(EdgeDetect_)
+    PFrame = EdgeDetect(IFrame, EdgeKernel::Laplace1);
+#elif defined(Gaussian)
     PFrame = Gaussian2D(IFrame, 5.0);
 #elif defined(Bilateral)
     Bilateral2D_Data bldata(IFrame, 3.0, 0.02, 0);
@@ -51,16 +58,24 @@ int main(int argc, char ** argv)
     PFrame = Retinex_MSRCR(IFrame);
 #elif defined(Retinex_MSRCR_GIMP_)
     PFrame = Retinex_MSRCR_GIMP(IFrame);
+#elif defined(AWB_)
+    AWB1 AWBObj(IFrame);
+    PFrame = AWBObj.process();
 #endif
     ImageWriter(PFrame, "D:\\Test Images\\01.Test.png");
     system("pause");
 #else // Test_Write
     PCType i;
-    const int Loop = 50;
+    const int Loop = 1000;
 
     for (i = 0; i < Loop; i++)
     {
-#if defined(Gaussian)
+#if defined(Convolution)
+        //Convolution3V(IFrame, 1, 2, 1);
+        Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
+#elif defined(EdgeDetect_)
+        EdgeDetect(IFrame, EdgeKernel::Laplace2);
+#elif defined(Gaussian)
         Gaussian2D(IFrame, 5.0);
 #elif defined(Bilateral)
         Bilateral2D_Data bldata(IFrame, 3.0, 0.08, 1);
@@ -139,6 +154,18 @@ int Filtering(const int argc, char ** argv)
     else if (FilterName == "--he" || FilterName == "--histogram_equalization")
     {
         FilterObj = new Histogram_Equalization_IO(argc2, args);
+    }
+    else if (FilterName == "--awb1")
+    {
+        FilterObj = new AWB1_IO(argc2, args);
+    }
+    else if (FilterName == "--awb2")
+    {
+        FilterObj = new AWB2_IO(argc2, args);
+    }
+    else if (FilterName == "--ed" || FilterName == "--edgedetect")
+    {
+        FilterObj = new EdgeDetect_IO(argc2, args);
     }
     else
     {

@@ -425,7 +425,10 @@ Plane & Plane::ReQuantize(DType BitDepth, QuantRange _QuantRange, bool scale, bo
 
 Plane & Plane::ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil, bool scale, bool clip)
 {
-    PCType i;
+    PCType i, j, upper;
+    PCType height = Height();
+    PCType width = Width();
+    PCType stride = Stride();
     DType ValueRange = Ceil - Floor;
 
     const char * FunctionName = "Plane::ReQuantize";
@@ -452,79 +455,31 @@ Plane & Plane::ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil
 
     if (scale && Data_ && (Floor_ != Floor || Neutral_ != Neutral || Ceil_ != Ceil))
     {
-        FLType FloorFL = static_cast<FLType>(Floor);
-        FLType CeilFL = static_cast<FLType>(Ceil);
-        if (isPCChroma()) // original Plane is chroma of PC range
+        FLType gain = static_cast<FLType>(ValueRange) / ValueRange_;
+        FLType offset = Neutral - Neutral_ * gain + FLType(Floor < Neutral && (Floor + Ceil) % 2 == 1 ? 0.499999 : 0.5);
+
+        if (clip)
         {
-            if ((Floor + Ceil - 1) / 2 == Neutral - 1) // target Plane is chroma of PC range
+            FLType FloorFL = static_cast<FLType>(Floor);
+            FLType CeilFL = static_cast<FLType>(Ceil);
+
+            for (j = 0; j < height; j++)
             {
-                if (clip)
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
                 {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(Clip(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.49999999), FloorFL, CeilFL));
-                    }
-                }
-                else
-                {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
-                    }
-                }
-            }
-            else // target Plane is not chroma of PC range
-            {
-                if (clip)
-                {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(Clip(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.5), FloorFL, CeilFL));
-                    }
-                }
-                else
-                {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(GetFL_PCChroma(Data_[i])*ValueRange + Neutral + FLType(0.5));
-                    }
+                    Data_[i] = static_cast<DType>(Clip(Data_[i] * gain + offset, FloorFL, CeilFL));
                 }
             }
         }
-        else // original Plane is not chroma of PC range
+        else
         {
-            if ((Floor + Ceil - 1) / 2 == Neutral - 1) // target Plane is chroma of PC range
+            for (j = 0; j < height; j++)
             {
-                if (clip)
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
                 {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(Clip(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.49999999), FloorFL, CeilFL));
-                    }
-                }
-                else
-                {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.49999999));
-                    }
-                }
-            }
-            else // target Plane is not chroma of PC range
-            {
-                if (clip)
-                {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(Clip(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.5), FloorFL, CeilFL));
-                    }
-                }
-                else
-                {
-                    for (i = 0; i < PixelCount_; i++)
-                    {
-                        Data_[i] = static_cast<DType>(GetFL(Data_[i])*ValueRange + Neutral + FLType(0.5));
-                    }
+                    Data_[i] = static_cast<DType>(Data_[i] * gain + offset);
                 }
             }
         }
@@ -542,7 +497,7 @@ Plane & Plane::ReQuantize(DType BitDepth, DType Floor, DType Neutral, DType Ceil
 
 Plane & Plane::From(const Plane & src)
 {
-    PCType i;
+    PCType i, j, upper;
 
     if (isChroma() != src.isChroma()) // Plane "src" and "dst" are not both luma planes or chroma planes.
     {
@@ -553,41 +508,28 @@ Plane & Plane::From(const Plane & src)
 
     ReSize(src.Width(), src.Height());
 
+    PCType height = Height();
+    PCType width = Width();
+    PCType stride = Stride();
+
     if (Floor_ == src.Floor_ && Neutral_ == src.Neutral_ && Ceil_ == src.Ceil_)
     {
         memcpy(Data_, src.Data_, sizeof(DType)*PixelCount_);
     }
-    else if (src.isPCChroma())
-    {
-        if (isPCChroma())
-        {
-            for (i = 0; i < PixelCount_; i++)
-            {
-                Data_[i] = GetD_PCChroma(src.GetFL_PCChroma(src[i]));
-            }
-        }
-        else
-        {
-            for (i = 0; i < PixelCount_; i++)
-            {
-                Data_[i] = GetD(src.GetFL_PCChroma(src[i]));
-            }
-        }
-    }
     else
     {
-        if (isPCChroma())
+        FLType gain = static_cast<FLType>(ValueRange_) / src.ValueRange_;
+        FLType offset = Neutral_ - src.Neutral_ * gain + FLType(isPCChroma() ? 0.499999 : 0.5);
+
+        FLType FloorFL = static_cast<FLType>(Floor_);
+        FLType CeilFL = static_cast<FLType>(Ceil_);
+
+        for (j = 0; j < height; j++)
         {
-            for (i = 0; i < PixelCount_; i++)
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
             {
-                Data_[i] = GetD_PCChroma(src.GetFL(src[i]));
-            }
-        }
-        else
-        {
-            for (i = 0; i < PixelCount_; i++)
-            {
-                Data_[i] = GetD(src.GetFL(src[i]));
+                Data_[i] = static_cast<DType>(Clip(Data_[i] * gain + offset, FloorFL, CeilFL));
             }
         }
     }
@@ -744,12 +686,15 @@ Plane & Plane::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
 
         ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
 
-        FLType FloorFL = static_cast<FLType>(srcR.Floor());
-        FLType gain = FLType(1) / srcR.ValueRange();
+        FLType gain = static_cast<FLType>(ValueRange_) / srcR.ValueRange_;
+        FLType offset = Floor_ - srcR.Floor_ * gain + FLType(0.5);
+        Kr *= gain;
+        Kg *= gain;
+        Kb *= gain;
 
         for (i = 0; i < pcount; i++)
         {
-            Data_[i] = GetD((Kr*srcR[i] + Kg*srcG[i] + Kb*srcB[i] - FloorFL) * gain);
+            Data_[i] = static_cast<DType>(Kr*srcR[i] + Kg*srcG[i] + Kb*srcB[i] + offset);
         }
     }
     else if (src.isYUV())
@@ -763,6 +708,160 @@ Plane & Plane::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
 Plane & Plane::YFrom(const Frame & src)
 {
     return YFrom(src, src.GetColorMatrix());
+}
+
+
+Plane & Plane::Binarize(const Plane &src, DType lower_thrD, DType upper_thrD)
+{
+    PCType i, j, upper;
+
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Stride();
+
+    double lower_thr = static_cast<double>(lower_thrD - src.Floor()) / src.ValueRange();
+    double upper_thr = static_cast<double>(upper_thrD - src.Floor()) / src.ValueRange();
+
+    if (upper_thr <= lower_thr || lower_thr >= 1 || upper_thr < 0)
+    {
+        for (j = 0; j < height; j++)
+        {
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
+            {
+                Data_[i] = Floor_;
+            }
+        }
+    }
+    else if (lower_thr < 0)
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = Ceil_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+    else
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD && src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+
+    return *this;
+}
+
+
+Plane & Plane::Binarize_ratio(const Plane &src, double lower_thr, double upper_thr)
+{
+    PCType i, j, upper;
+
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Stride();
+
+    DType lower_thrD = static_cast<DType>(lower_thr * src.ValueRange() + 0.5) + src.Floor();
+    DType upper_thrD = static_cast<DType>(upper_thr * src.ValueRange() + 0.5) + src.Floor();
+
+    if (upper_thr <= lower_thr || lower_thr >= 1 || upper_thr < 0)
+    {
+        for (j = 0; j < height; j++)
+        {
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
+            {
+                Data_[i] = Floor_;
+            }
+        }
+    }
+    else if (lower_thr < 0)
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = Ceil_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+    else
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD && src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+
+    return *this;
 }
 
 
@@ -810,19 +909,19 @@ Plane & Plane::SimplestColorBalance(Plane_FL & flt, const Plane & src, double lo
 
 
 // Functions of class Plane_FL
-void Plane_FL::DefaultPara(bool Chroma)
+void Plane_FL::DefaultPara(bool Chroma, FLType range)
 {
     if (Chroma) // Plane "src" is chroma
     {
-        Floor_ = -0.5;
+        Floor_ = -range / 2;
         Neutral_ = 0;
-        Ceil_ = 0.5;
+        Ceil_ = range / 2;
     }
     else // Plane "src" is not chroma
     {
         Floor_ = 0;
         Neutral_ = 0;
-        Ceil_ = 1;
+        Ceil_ = range;
     }
 }
 
@@ -880,22 +979,36 @@ Plane_FL::Plane_FL(Plane_FL && src)
     src.Data_ = nullptr;
 }
 
-Plane_FL::Plane_FL(const Plane & src)
+Plane_FL::Plane_FL(const Plane & src, FLType range)
     : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), TransferChar_(src.GetTransferChar())
 {
     Data_ = new FLType[PixelCount_];
 
-    DefaultPara(src.isChroma());
+    if (range > 0)
+        DefaultPara(src.isChroma(), range);
+    else
+    {
+        Floor_ = src.Floor();
+        Neutral_ = src.Neutral();
+        Ceil_ = src.Ceil();
+    }
 
     From(src);
 }
 
-Plane_FL::Plane_FL(const Plane & src, bool Init, FLType Value)
+Plane_FL::Plane_FL(const Plane & src, bool Init, FLType Value, FLType range)
     : Width_(src.Width()), Height_(src.Height()), PixelCount_(Width_ * Height_), TransferChar_(src.GetTransferChar())
 {
     Data_ = new FLType[PixelCount_];
 
-    DefaultPara(src.isChroma());
+    if (range > 0)
+        DefaultPara(src.isChroma(), range);
+    else
+    {
+        Floor_ = src.Floor();
+        Neutral_ = src.Neutral();
+        Ceil_ = src.Ceil();
+    }
 
     InitValue(Value, Init);
 }
@@ -1137,78 +1250,44 @@ Plane_FL & Plane_FL::ReQuantize(FLType Floor, FLType Neutral, FLType Ceil, bool 
 
 Plane_FL & Plane_FL::From(const Plane & src)
 {
-    PCType i;
-    DType iFloor = src.Floor();
-    DType iNeutral = src.Neutral();
-    DType iValueRange = src.ValueRange();
-    FLType oFloor = Floor_;
-    FLType oNeutral = Neutral_;
-    FLType oValueRange = Ceil_ - Floor_;
+    PCType i, j, upper;
+    DType sFloor = src.Floor();
+    DType sNeutral = src.Neutral();
+    DType sValueRange = src.ValueRange();
+    FLType dFloor = Floor_;
+    FLType dNeutral = Neutral_;
+    FLType dValueRange = Ceil_ - Floor_;
     
     if (isChroma() != src.isChroma()) DefaultPara(src.isChroma());
 
     ReSize(src.Width(), src.Height());
 
-    if (!isChroma()) // Plane_FL "*this" is not chroma
-    {
-        if (Floor_ == 0 && Neutral_ == 0 && Ceil_ == 1)
-        {
-            for (i = 0; i < PixelCount_; i++)
-            {
-                Data_[i] = src.GetFL(src[i]);
-            }
-        }
-        else
-        {
-            FLType gain = oValueRange / iValueRange;
-            FLType offset = oFloor - iFloor*gain;
+    PCType height = Height();
+    PCType width = Width();
+    PCType stride = Stride();
 
-            for (i = 0; i < PixelCount_; i++)
+    if (sFloor == dFloor && sNeutral == dNeutral && sValueRange == dValueRange)
+    {
+        for (j = 0; j < height; j++)
+        {
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
             {
-                Data_[i] = src[i] * gain + offset;
+                Data_[i] = static_cast<FLType>(src[i]);
             }
         }
     }
     else
     {
-        if (Floor_ == -0.5 && Neutral_ == 0 && Ceil_ == 0.5)
-        {
-            if (src.isPCChroma())
-            {
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data_[i] = src.GetFL_PCChroma(src[i]);
-                }
-            }
-            else
-            {
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data_[i] = src.GetFL(src[i]);
-                }
-            }
-        }
-        else
-        {
-            if (src.isPCChroma())
-            {
-                FLType gain = oValueRange / iValueRange;
-                FLType offset = oNeutral - iNeutral*gain;
+        FLType gain = dValueRange / sValueRange;
+        FLType offset = dNeutral - sNeutral * gain;
 
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data_[i] = src[i] * gain + offset;
-                }
-            }
-            else
+        for (j = 0; j < height; j++)
+        {
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
             {
-                FLType gain = oValueRange / iValueRange;
-                FLType offset = oNeutral - iNeutral*gain;
-
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data_[i] = src[i] * gain + offset;
-                }
+                Data_[i] = static_cast<FLType>(src[i]) * gain + offset;
             }
         }
     }
@@ -1218,78 +1297,31 @@ Plane_FL & Plane_FL::From(const Plane & src)
 
 const Plane_FL & Plane_FL::To(Plane & dst) const
 {
-    PCType i;
-    FLType iFloor = Floor_;
-    FLType iNeutral = Neutral_;
-    FLType iValueRange = Ceil_ - Floor_;
-    DType oFloor = dst.Floor();
-    DType oNeutral = dst.Neutral();
-    DType oValueRange = dst.ValueRange();
+    PCType i, j, upper;
+    FLType sFloor = Floor_;
+    FLType sNeutral = Neutral_;
+    FLType sValueRange = Ceil_ - Floor_;
+    DType dFloor = dst.Floor();
+    DType dNeutral = dst.Neutral();
+    DType dValueRange = dst.ValueRange();
+    FLType dFloorFL = static_cast<FLType>(dFloor);
+    FLType dCeilFL = static_cast<FLType>(dst.Ceil());
 
     dst.ReSize(Width_, Height_);
-    DType * Data = dst.Data();
 
-    if (!isChroma()) // Plane_FL "*this" is not chroma
+    PCType height = dst.Height();
+    PCType width = dst.Width();
+    PCType stride = dst.Stride();
+
+    FLType gain = dValueRange / sValueRange;
+    FLType offset = dNeutral - sNeutral * gain + FLType(dst.isPCChroma() ? 0.499999 : 0.5);
+
+    for (j = 0; j < height; j++)
     {
-        if (Floor_ == 0 && Neutral_ == 0 && Ceil_ == 1)
+        i = stride * j;
+        for (upper = i + width; i < upper; i++)
         {
-            for (i = 0; i < PixelCount_; i++)
-            {
-                Data[i] = dst.GetD(Quantize(Data_[i]));
-            }
-        }
-        else
-        {
-            FLType gain = oValueRange / iValueRange;
-            FLType offset = oFloor - iFloor*gain + FLType(0.5);
-
-            for (i = 0; i < PixelCount_; i++)
-            {
-                Data[i] = static_cast<DType>(Quantize(Data_[i]) * gain + offset);
-            }
-        }
-    }
-    else // Plane_FL "*this" is chroma
-    {
-        if (Floor_ == -0.5 && Neutral_ == 0 && Ceil_ == 0.5)
-        {
-            if (dst.isPCChroma())
-            {
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data[i] = dst.GetD_PCChroma(Quantize(Data_[i]));
-                }
-            }
-            else
-            {
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data[i] = dst.GetD(Quantize(Data_[i]));
-                }
-            }
-        }
-        else
-        {
-            if (dst.isPCChroma())
-            {
-                FLType gain = oValueRange / iValueRange;
-                FLType offset = oNeutral - iNeutral*gain + FLType(0.49999999);
-
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data[i] = static_cast<DType>(Quantize(Data_[i]) * gain + offset);
-                }
-            }
-            else
-            {
-                FLType gain = oValueRange / iValueRange;
-                FLType offset = oNeutral - iNeutral*gain + FLType(0.5);
-
-                for (i = 0; i < PixelCount_; i++)
-                {
-                    Data[i] = static_cast<DType>(Quantize(Data_[i]) * gain + offset);
-                }
-            }
+            dst[i] = static_cast<DType>(Clip(Data_[i] * gain + offset, dFloorFL, dCeilFL));
         }
     }
 
@@ -1573,12 +1605,15 @@ Plane_FL & Plane_FL::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
 
         ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
 
-        FLType sFloorFL = static_cast<FLType>(srcR.Floor());
-        FLType gain = FLType(1) / srcR.ValueRange();
+        FLType gain = (Ceil_ - Floor_) / srcR.ValueRange();
+        FLType offset = Floor_ - srcR.Floor() * gain;
+        Kr *= gain;
+        Kg *= gain;
+        Kb *= gain;
 
         for (i = 0; i < pcount; i++)
         {
-            Data_[i] = (Kr*srcR[i] + Kg*srcG[i] + Kb*srcB[i] - sFloorFL) * gain;
+            Data_[i] = Kr*srcR[i] + Kg*srcG[i] + Kb*srcB[i] + offset;
         }
     }
     else if (src.isYUV())
@@ -1592,6 +1627,160 @@ Plane_FL & Plane_FL::YFrom(const Frame & src, ColorMatrix dstColorMatrix)
 Plane_FL & Plane_FL::YFrom(const Frame & src)
 {
     return YFrom(src, src.GetColorMatrix());
+}
+
+
+Plane_FL & Plane_FL::Binarize(const Plane_FL &src, FLType lower_thrD, FLType upper_thrD)
+{
+    PCType i, j, upper;
+
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Stride();
+
+    double lower_thr = static_cast<double>(lower_thrD - src.Floor()) / src.ValueRange();
+    double upper_thr = static_cast<double>(upper_thrD - src.Floor()) / src.ValueRange();
+
+    if (upper_thr <= lower_thr || lower_thr >= 1 || upper_thr < 0)
+    {
+        for (j = 0; j < height; j++)
+        {
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
+            {
+                Data_[i] = Floor_;
+            }
+        }
+    }
+    else if (lower_thr < 0)
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = Ceil_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+    else
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD && src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+
+    return *this;
+}
+
+
+Plane_FL & Plane_FL::Binarize_ratio(const Plane_FL &src, double lower_thr, double upper_thr)
+{
+    PCType i, j, upper;
+
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Stride();
+
+    FLType lower_thrD = static_cast<FLType>(lower_thr * src.ValueRange()) + src.Floor();
+    FLType upper_thrD = static_cast<FLType>(upper_thr * src.ValueRange()) + src.Floor();
+
+    if (upper_thr <= lower_thr || lower_thr >= 1 || upper_thr < 0)
+    {
+        for (j = 0; j < height; j++)
+        {
+            i = stride * j;
+            for (upper = i + width; i < upper; i++)
+            {
+                Data_[i] = Floor_;
+            }
+        }
+    }
+    else if (lower_thr < 0)
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = Ceil_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+    else
+    {
+        if (upper_thr >= 1)
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+        else
+        {
+            for (j = 0; j < height; j++)
+            {
+                i = stride * j;
+                for (upper = i + width; i < upper; i++)
+                {
+                    Data_[i] = src[i] > lower_thrD && src[i] <= upper_thrD ? Ceil_ : Floor_;
+                }
+            }
+        }
+    }
+
+    return *this;
 }
 
 

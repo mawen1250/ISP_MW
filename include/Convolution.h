@@ -2,14 +2,160 @@
 #define CONVOLUTION_H_
 
 
+#include "IO.h"
 #include "Image_Type.h"
 
 
-Plane & Convolution3V(Plane & Plane, bool norm, float K0, float K1, float K2);
+enum class EdgeKernel
+{
+    Sobel = 0,
+    Prewitt,
+    Laplace1 = 10,
+    Laplace2,
+    Laplace3
+};
 
-Plane & Convolution3H(Plane & Plane, bool norm, float K0, float K1, float K2);
 
-Plane & Convolution3(Plane & Plane, bool norm, float K0, float K1, float K2, float K3, float K4, float K5, float K6, float K7, float K8);
+const struct EdgeDetect_Para
+{
+    EdgeKernel Kernel = EdgeKernel::Sobel;
+} ED_Default;
+
+
+Plane & Convolution3V(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType K2, bool norm = true);
+Plane & Convolution3H(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType K2, bool norm = true);
+Plane & Convolution3(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType K2, FLType K3, FLType K4, FLType K5, FLType K6, FLType K7, FLType K8, bool norm = true);
+Plane & FirstOrderDerivative3(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType K2, FLType K6, FLType K7, FLType K8, bool norm = true);
+Plane & EdgeDetect(Plane &dst, const Plane &src, EdgeKernel Kernel = EdgeKernel::Sobel);
+
+
+inline Plane Convolution3V(const Plane &src, FLType K0, FLType K1, FLType K2, bool norm = true)
+{
+    Plane dst(src, false);
+    return Convolution3V(dst, src, K0, K1, K2, norm);
+}
+
+inline Plane Convolution3H(const Plane &src, FLType K0, FLType K1, FLType K2, bool norm = true)
+{
+    Plane dst(src, false);
+    return Convolution3H(dst, src, K0, K1, K2, norm);
+}
+
+inline Plane Convolution3(const Plane &src, FLType K0, FLType K1, FLType K2, FLType K3, FLType K4, FLType K5, FLType K6, FLType K7, FLType K8, bool norm = true)
+{
+    Plane dst(src, false);
+    return Convolution3(dst, src, K0, K1, K2, K3, K4, K5, K6, K7, K8, norm);
+}
+
+inline Plane EdgeDetect(const Plane &src, EdgeKernel Kernel = EdgeKernel::Sobel)
+{
+    Plane dst(src, false);
+    return EdgeDetect(dst, src, Kernel);
+}
+
+
+inline Frame Convolution3V(const Frame &src, FLType K0, FLType K1, FLType K2, bool norm = true)
+{
+    Frame dst(src, false);
+
+    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
+    {
+        Convolution3V(dst.P(i), src.P(i), K0, K1, K2, norm);
+    }
+
+    return dst;
+}
+
+inline Frame Convolution3H(const Frame &src, FLType K0, FLType K1, FLType K2, bool norm = true)
+{
+    Frame dst(src, false);
+
+    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
+    {
+        Convolution3H(dst.P(i), src.P(i), K0, K1, K2, norm);
+    }
+
+    return dst;
+}
+
+inline Frame Convolution3(const Frame &src, FLType K0, FLType K1, FLType K2, FLType K3, FLType K4, FLType K5, FLType K6, FLType K7, FLType K8, bool norm = true)
+{
+    Frame dst(src, false);
+
+    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
+    {
+        Convolution3(dst.P(i), src.P(i), K0, K1, K2, K3, K4, K5, K6, K7, K8, norm);
+    }
+
+    return dst;
+}
+
+inline Frame EdgeDetect(const Frame &src, EdgeKernel Kernel = EdgeKernel::Sobel)
+{
+    Frame dst(src, false);
+
+    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
+    {
+        EdgeDetect(dst.P(i), src.P(i), Kernel);
+    }
+
+    return dst;
+}
+
+
+class EdgeDetect_IO
+    : public FilterIO
+{
+protected:
+    EdgeKernel Kernel = ED_Default.Kernel;
+
+    virtual void arguments_process()
+    {
+        FilterIO::arguments_process();
+
+        Args ArgsObj(argc, args);
+        std::string KernelStr;
+
+        for (int i = 0; i < argc; i++)
+        {
+            if (args[i] == "-K" || args[i] == "--kernel")
+            {
+                ArgsObj.GetPara(i, KernelStr, 1);
+
+                if (KernelStr == "sobel")
+                    Kernel = EdgeKernel::Sobel;
+                else if (KernelStr == "prewitt")
+                    Kernel = EdgeKernel::Prewitt;
+                else if (KernelStr == "laplace1")
+                    Kernel = EdgeKernel::Laplace1;
+                else if (KernelStr == "laplace2")
+                    Kernel = EdgeKernel::Laplace2;
+                else if (KernelStr == "laplace3")
+                    Kernel = EdgeKernel::Laplace3;
+
+                continue;
+            }
+            if (args[i][0] == '-')
+            {
+                i++;
+                continue;
+            }
+        }
+
+        ArgsObj.Check();
+    }
+
+    virtual Frame processFrame(const Frame &src)
+    {
+        return EdgeDetect(src, Kernel);
+    }
+
+public:
+    EdgeDetect_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".EdgeDetect")
+        : FilterIO(_argc, _args, _Tag) {}
+
+    ~EdgeDetect_IO() {}
+};
 
 
 #endif

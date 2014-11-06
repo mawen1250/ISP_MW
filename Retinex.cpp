@@ -364,7 +364,7 @@ Frame & Retinex_MSRCR(Frame & dst, const Frame & src, const std::vector<double> 
     else
     {
         const char * FunctionName = "Retinex_MSRCR";
-        std::cerr << FunctionName << ": invalid PixelType of Frame \"src=\", should be RGB.\n";
+        std::cerr << FunctionName << ": invalid PixelType of Frame \"src\", should be RGB.\n";
         exit(EXIT_FAILURE);
     }
 

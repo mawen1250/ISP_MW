@@ -79,8 +79,9 @@ public:
     DType & operator[](PCType i) { return Data_[i]; }
     DType operator[](PCType i) const { return Data_[i]; }
 
-    PCType Width() const { return Width_; }
     PCType Height() const { return Height_; }
+    PCType Width() const { return Width_; }
+    PCType Stride() const { return Width_; }
     PCType PixelCount() const { return PixelCount_; }
     DType BitDepth() const { return BitDepth_; }
     DType Floor() const { return Floor_; }
@@ -92,7 +93,7 @@ public:
     const DType * Data() const { return Data_; }
 
     bool isChroma() const { return Floor_ < Neutral_; }
-    bool isPCChroma() const { return (Floor_ + Ceil_ - 1) / 2 == Neutral_ - 1; }
+    bool isPCChroma() const { return Floor_ < Neutral_ && (Floor_ + Ceil_) % 2 == 1; }
     DType Min() const;
     DType Max() const;
     const Plane & MinMax(DType & min, DType & max) const;
@@ -118,6 +119,10 @@ public:
     DType GetD(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.5)); }
     DType GetD_PCChroma(FLType input) const { return static_cast<DType>(input*ValueRange_ + Neutral_ + FLType(0.499999)); }
 
+    Plane & Binarize(const Plane &src, DType lower_thrD, DType upper_thrD);
+    Plane & Binarize(DType lower_thrD, DType upper_thrD) { return Binarize(*this, lower_thrD, upper_thrD); }
+    Plane & Binarize_ratio(const Plane &src, double lower_thr = 0, double upper_thr = 1);
+    Plane & Binarize_ratio(double lower_thr = 0, double upper_thr = 1) { return Binarize_ratio(*this, lower_thr, upper_thr); }
     Plane & SimplestColorBalance(Plane_FL & flt, const Plane & src, double lower_thr = 0, double upper_thr = 0, int HistBins = 4096);
 
     template <typename T> DType Quantize(T input) const
@@ -139,7 +144,7 @@ private:
     TransferChar TransferChar_;
     FLType * Data_ = nullptr;
 protected:
-    void DefaultPara(bool Chroma);
+    void DefaultPara(bool Chroma, FLType range = 1);
     void CopyParaFrom(const Plane_FL & src);
     void InitValue(FLType Value, bool Init = true);
 public:
@@ -147,8 +152,8 @@ public:
     Plane_FL(const Plane_FL & src); // Copy constructor
     Plane_FL(const Plane_FL & src, bool Init, FLType Value = 0);
     Plane_FL(Plane_FL && src); // Move constructor
-    explicit Plane_FL(const Plane & src); // Convertor/Constructor from Plane
-    Plane_FL(const Plane & src, bool Init, FLType Value = 0);
+    explicit Plane_FL(const Plane & src, FLType range = 1.); // Convertor/Constructor from Plane
+    Plane_FL(const Plane & src, bool Init, FLType Value = 0, FLType range = 1.);
     Plane_FL(const Plane_FL & src, TransferChar dstTransferChar);
     Plane_FL(const Plane & src, TransferChar dstTransferChar);
     explicit Plane_FL(FLType Value, PCType Width = 1920, PCType Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Convertor/Constructor from FLType
@@ -162,8 +167,9 @@ public:
     FLType & operator[](PCType i) { return Data_[i]; }
     FLType operator[](PCType i) const { return Data_[i]; }
 
-    PCType Width() const { return Width_; }
     PCType Height() const { return Height_; }
+    PCType Width() const { return Width_; }
+    PCType Stride() const { return Width_; }
     PCType PixelCount() const { return PixelCount_; }
     FLType Floor() const { return Floor_; }
     FLType Neutral() const { return Neutral_; }
@@ -198,6 +204,10 @@ public:
     Plane_FL & YFrom(const Frame & src);
     Plane_FL & YFrom(const Frame & src, ColorMatrix dstColorMatrix);
 
+    Plane_FL & Binarize(const Plane_FL &src, FLType lower_thrD, FLType upper_thrD);
+    Plane_FL & Binarize(FLType lower_thrD, FLType upper_thrD) { return Binarize(*this, lower_thrD, upper_thrD); }
+    Plane_FL & Binarize_ratio(const Plane_FL &src, double lower_thr = 0, double upper_thr = 1);
+    Plane_FL & Binarize_ratio(double lower_thr = 0, double upper_thr = 1) { return Binarize_ratio(*this, lower_thr, upper_thr); }
     Plane_FL & SimplestColorBalance(const Plane_FL & flt, const Plane_FL & src, double lower_thr = 0, double upper_thr = 0, int HistBins = 4096);
 
     template <typename T> FLType Quantize(T input) const
@@ -276,8 +286,9 @@ public:
     bool isYUV() const { return PixelType_ >= PixelType::Y && PixelType_ < PixelType::R; }
     bool isRGB() const { return PixelType_ >= PixelType::R && PixelType_ <= PixelType::RGB; }
 
-    PCType Width() const { return P_[0]->Width(); }
     PCType Height() const { return P_[0]->Height(); }
+    PCType Width() const { return P_[0]->Width(); }
+    PCType Stride() const { return P_[0]->Stride(); }
     PCType PixelCount() const { return P_[0]->PixelCount(); }
     DType BitDepth() const { return P_[0]->BitDepth(); }
 

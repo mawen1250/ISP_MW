@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AWB.cpp" />
     <ClCompile Include="Bilateral.cpp" />
     <ClCompile Include="Convolution.cpp" />
     <ClCompile Include="Format_Conversion.cpp" />
@@ -146,6 +147,7 @@
     <ClInclude Include="include\Convolution.h" />
     <ClInclude Include="include\Format_Conversion.h" />
     <ClInclude Include="include\Gaussian.h" />
+    <ClInclude Include="include\AWB.h" />
     <ClInclude Include="include\Histogram_Equalization.h" />
     <ClInclude Include="include\Highlight_Removal.h" />
     <ClInclude Include="include\Histogram.h" />

@@ -2,7 +2,6 @@
 #define RETINEX_H_
 
 
-#include <vector>
 #include "IO.h"
 #include "Image_Type.h"
 #include "Histogram.h"

@@ -19,6 +19,7 @@
 #include "Tone_Mapping.h"
 #include "Retinex.h"
 #include "Histogram_Equalization.h"
+#include "AWB.h"
 
 
 int Filtering(const int argc, char ** argv);

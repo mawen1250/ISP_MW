@@ -1,4 +1,5 @@
 #include "Gaussian.h"
+#include "Transform.h"
 
 
 // Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
@@ -39,15 +40,16 @@ void Recursive_Gaussian_Parameters(const double sigma, FLType & B, FLType & B1, 
     B3 = static_cast<FLType>(b3 / b0);
 }
 
-void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+/*void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
 {
     PCType i, j, lower, upper;
-    PCType sw = input.Width();
-    PCType sh = input.Height();
-    PCType pcount = sw*sh;
+    PCType height = input.Height();
+    PCType width = input.Width();
+    PCType stride = input.Width();
+    PCType pcount = stride * height;
     FLType P0, P1, P2, P3;
 
-    for (j = 0; j < sw; j++)
+    for (j = 0; j < width; j++)
     {
         lower = j;
         upper = pcount;
@@ -55,7 +57,7 @@ void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, co
         i = lower;
         output[i] = P3 = P2 = P1 = input[i];
 
-        for (i += sw; i < upper; i += sw)
+        for (i += stride; i < upper; i += stride)
         {
             P0 = B*input[i] + B1*P1 + B2*P2 + B3*P3;
             P3 = P2;
@@ -64,10 +66,10 @@ void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, co
             output[i] = P0;
         }
 
-        i -= sw;
+        i -= stride;
         P3 = P2 = P1 = output[i];
         
-        for (i -= sw; i >= lower; i -= sw)
+        for (i -= stride; i >= lower; i -= stride)
         {
             P0 = B*output[i] + B1*P1 + B2*P2 + B3*P3;
             P3 = P2;
@@ -76,19 +78,73 @@ void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, co
             output[i] = P0;
         }
     }
+}*/
+void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+{
+    PCType i0, i1, i2, i3, j, lower, upper;
+    PCType height = input.Height();
+    PCType width = input.Width();
+    PCType stride = input.Width();
+    FLType P0, P1, P2, P3;
+
+    if (output.Data() != input.Data())
+    {
+        memcpy(output.Data(), input.Data(), sizeof(FLType) * width);
+    }
+
+    for (j = 0; j < height; j++)
+    {
+        lower = stride * j;
+        upper = lower + width;
+
+        i0 = lower;
+        i1 = j < 1 ? i0 : i0 - stride;
+        i2 = j < 2 ? i1 : i1 - stride;
+        i3 = j < 3 ? i2 : i2 - stride;
+
+        for (; i0 < upper; i0++, i1++, i2++, i3++)
+        {
+            P3 = output[i3];
+            P2 = output[i2];
+            P1 = output[i1];
+            P0 = input[i0];
+            output[i0] = B*P0 + B1*P1 + B2*P2 + B3*P3;
+        }
+    }
+
+    for (j = height - 1; j >= 0; j--)
+    {
+        lower = stride * j;
+        upper = lower + width;
+
+        i0 = lower;
+        i1 = j >= height - 1 ? i0 : i0 + stride;
+        i2 = j >= height - 2 ? i1 : i1 + stride;
+        i3 = j >= height - 3 ? i2 : i2 + stride;
+
+        for (; i0 < upper; i0++, i1++, i2++, i3++)
+        {
+            P3 = output[i3];
+            P2 = output[i2];
+            P1 = output[i1];
+            P0 = output[i0];
+            output[i0] = B*P0 + B1*P1 + B2*P2 + B3*P3;
+        }
+    }
 }
 
 void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
 {
     PCType i, j, lower, upper;
-    PCType sw = input.Width();
-    PCType sh = input.Height();
+    PCType height = input.Height();
+    PCType width = input.Width();
+    PCType stride = input.Width();
     FLType P0, P1, P2, P3;
 
-    for (j = 0; j < sh; j++)
+    for (j = 0; j < height; j++)
     {
-        lower = sw*j;
-        upper = lower + sw;
+        lower = stride * j;
+        upper = lower + width;
 
         i = lower;
         output[i] = P3 = P2 = P1 = input[i];
