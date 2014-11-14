@@ -2,6 +2,7 @@
 #define TYPE_H_
 
 
+#include <climits>
 #include <cfloat>
 
 
@@ -21,6 +22,8 @@ typedef uint32 DType;
 typedef double FLType;
 
 
+const DType DType_MAX = ULONG_MAX;
+const DType DType_MIN = 0;
 const FLType FLType_MAX = sizeof(FLType) < 8 ? FLT_MAX : DBL_MAX;
 const FLType FLType_MIN = sizeof(FLType) < 8 ? FLT_MIN : DBL_MIN;
 

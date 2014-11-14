@@ -20,7 +20,7 @@
 //#define Retinex_MSRCR_
 //#define Retinex_MSRCR_GIMP_
 //#define Histogram_Equalization_
-#define AWB_
+//#define AWB_
 
 
 int main(int argc, char ** argv)
@@ -61,18 +61,21 @@ int main(int argc, char ** argv)
 #elif defined(AWB_)
     AWB1 AWBObj(IFrame);
     PFrame = AWBObj.process();
+#else
+    PFrame = IFrame;
 #endif
     ImageWriter(PFrame, "D:\\Test Images\\01.Test.png");
     system("pause");
 #else // Test_Write
     PCType i;
-    const int Loop = 1000;
-
+    const int Loop = 2000;
+    const Plane& srcR = IFrame.R();
+    Plane dstR(srcR, false);
     for (i = 0; i < Loop; i++)
     {
 #if defined(Convolution)
-        //Convolution3V(IFrame, 1, 2, 1);
-        Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
+        Convolution3V(IFrame, 1, 2, 1);
+        //Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
 #elif defined(EdgeDetect_)
         EdgeDetect(IFrame, EdgeKernel::Laplace2);
 #elif defined(Gaussian)
@@ -92,6 +95,19 @@ int main(int argc, char ** argv)
         Retinex_MSRCR_GIMP(IFrame);
 #elif defined(Histogram_Equalization_)
         Histogram_Equalization(IFrame, 1.0, false);
+#else
+        //DType count = 0;
+        //srcR.for_each([&count](DType x){ count += x; });
+
+        //dstR.transform(srcR, [](DType x){ return static_cast<DType>(log(x) + 0.5); });
+        //dstR.transform_PPL(srcR, [](DType x){ return static_cast<DType>(log(x) + 0.5); });
+
+        dstR.convolute_PPL<1, 1>(srcR, [](DType (*srcb2D)[3])->DType
+        {
+            return (srcb2D[0][0] + 2 * srcb2D[0][1] + srcb2D[0][2]
+                + 2 * srcb2D[1][0] + 4 * srcb2D[1][1] + 2 * srcb2D[1][2]
+                + srcb2D[2][0] + 2 * srcb2D[2][1] + srcb2D[2][2]) / 16;
+        });
 #endif
     }
 #endif // Test_Write
@@ -118,7 +134,6 @@ int Filtering(const int argc, char ** argv)
 
     int argc2 = argc - 2;
     std::vector<std::string> args(argc2);
-    //std::string * args = new std::string[argc2];
 
     for (i = 0; i < argc2; i++)
     {

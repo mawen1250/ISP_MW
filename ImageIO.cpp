@@ -3,7 +3,7 @@
 #include "LUT.h"
 
 
-Frame ImageReader(const std::string & filename, const FCType FrameNum, const DType BitDepth)
+Frame ImageReader(const std::string& filename, const FCType FrameNum, const DType BitDepth)
 {
     cv::Mat image = cv::imread(filename, cv::IMREAD_COLOR);
 
@@ -11,8 +11,8 @@ Frame ImageReader(const std::string & filename, const FCType FrameNum, const DTy
     {
         std::cout << "Could not open or find the image file: " << filename << std::endl;
 
-        Frame Frame(FrameNum, PixelType::RGB, 1920, 1080, BitDepth);
-        return Frame;
+        Frame src(FrameNum, PixelType::RGB, 1920, 1080, BitDepth, true);
+        return src;
     }
 
     PCType sw = image.cols;
@@ -21,12 +21,12 @@ Frame ImageReader(const std::string & filename, const FCType FrameNum, const DTy
     PCType nCols = sw * image.channels();
     PCType nRows = sh;
 
-    Frame Frame(FrameNum, PixelType::RGB, sw, sh, BitDepth);
+    Frame src(FrameNum, PixelType::RGB, sw, sh, BitDepth, false);
 
     PCType i, j;
-    Plane & R = Frame.R();
-    Plane & G = Frame.G();
-    Plane & B = Frame.B();
+    Plane& R = src.R();
+    Plane& G = src.G();
+    Plane& B = src.B();
 
     if (image.isContinuous())
     {
@@ -74,19 +74,19 @@ Frame ImageReader(const std::string & filename, const FCType FrameNum, const DTy
         std::cout << "Memory is not continuous for image file: " << filename << std::endl;
     }
 
-    return Frame;
+    return src;
 }
 
 
-bool ImageWriter(const Frame & Frame, const std::string & filename, int _type)
+bool ImageWriter(const Frame& src, const std::string& filename, int _type)
 {
-    cv::Mat image(Frame.Height(), Frame.Width(), _type);
+    cv::Mat image(src.Height(), src.Width(), _type);
 
     PCType i, j;
-    const Plane & R = Frame.R();
-    const Plane & G = Frame.G();
-    const Plane & B = Frame.B();
-    PCType pcount = Frame.PixelCount();
+    const Plane& R = src.R();
+    const Plane& G = src.G();
+    const Plane& B = src.B();
+    PCType pcount = src.PixelCount();
 
     if (image.isContinuous()) {
         uchar * p = image.ptr<uchar>(0);
@@ -127,7 +127,7 @@ bool ImageWriter(const Frame & Frame, const std::string & filename, int _type)
             }
         }
         
-        imwrite(filename, image);
+        cv::imwrite(filename, image);
 
         return true;
     }

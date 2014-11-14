@@ -11,6 +11,7 @@ class Histogram {
 public:
     typedef sint32 BinType;
     typedef sint32 CountType;
+
 private:
     T Lower_ = 0;
     T Upper_ = -1;
@@ -18,11 +19,13 @@ private:
     FLType Scale_ = 1;
     CountType Count_ = 0;
     CountType * Data_ = nullptr;
+
 protected:
     template < typename T0 > BinType ToBinType(const T0 & input) const { return static_cast<BinType>(input); }
     template < > BinType ToBinType<float>(const float & input) const { return static_cast<BinType>(input + 0.5F); }
     template < > BinType ToBinType<double>(const double & input) const { return static_cast<BinType>(input + 0.5); }
     template < > BinType ToBinType<long double>(const long double & input) const { return static_cast<BinType>(input + 0.5L); }
+
 public:
     Histogram() {} // Default constructor
     Histogram(const Histogram & src); // Copy constructor

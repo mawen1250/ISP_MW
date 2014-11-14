@@ -9,9 +9,11 @@ template < typename T = DType >
 class LUT {
 public:
     typedef uint32 LevelType;
+
 private:
     LevelType Levels_ = 0;
     T * Table_ = nullptr;
+
 public:
     LUT() {} // Default constructor
     LUT(const LUT & src); // Copy constructor

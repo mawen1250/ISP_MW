@@ -116,5 +116,8 @@
     <ClInclude Include="include\AWB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Image_Type.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

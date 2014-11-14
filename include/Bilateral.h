@@ -45,17 +45,9 @@ public:
     Bilateral2D_Data(const Plane & input, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
         int _algorithm = Bilateral2D_Default.algorithm, int _PBFICnum = Bilateral2D_Default.PBFICnum)
         : PlaneCount(1), isChroma(input.isChroma()), BPS(input.BitDepth()),
-        sigmaS(PlaneCount), sigmaR(PlaneCount), process(PlaneCount), algorithm(PlaneCount), radius0(PlaneCount), PBFICnum(PlaneCount),
+        sigmaS(PlaneCount, _sigmaS), sigmaR(PlaneCount, _sigmaR), process(PlaneCount), algorithm(PlaneCount, _algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, _PBFICnum),
         radius(PlaneCount), samples(PlaneCount), step(PlaneCount), GS_LUT(PlaneCount), GR_LUT(PlaneCount)
     {
-        for (int i = 0; i < PlaneCount; i++)
-        {
-            sigmaS[i] = _sigmaS;
-            sigmaR[i] = _sigmaR;
-            algorithm[i] = _algorithm;
-            PBFICnum[i] = _PBFICnum;
-        }
-
         process_define();
 
         Bilateral2D_0_Paras();
@@ -71,17 +63,9 @@ public:
     Bilateral2D_Data(const Frame & input, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
         int _algorithm = Bilateral2D_Default.algorithm, int _PBFICnum = Bilateral2D_Default.PBFICnum)
         : PlaneCount(input.PlaneCount()), isYUV(input.isYUV()), BPS(input.BitDepth()),
-        sigmaS(PlaneCount), sigmaR(PlaneCount), process(PlaneCount), algorithm(PlaneCount), radius0(PlaneCount), PBFICnum(PlaneCount),
+        sigmaS(PlaneCount, _sigmaS), sigmaR(PlaneCount, _sigmaR), process(PlaneCount), algorithm(PlaneCount, _algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, _PBFICnum),
         radius(PlaneCount), samples(PlaneCount), step(PlaneCount), GS_LUT(PlaneCount), GR_LUT(PlaneCount)
     {
-        for (int i = 0; i < PlaneCount; i++)
-        {
-            sigmaS[i] = _sigmaS;
-            sigmaR[i] = _sigmaR;
-            algorithm[i] = _algorithm;
-            PBFICnum[i] = _PBFICnum;
-        }
-
         process_define();
 
         Bilateral2D_0_Paras();

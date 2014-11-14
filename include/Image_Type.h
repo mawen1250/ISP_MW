@@ -2,6 +2,7 @@
 #define IMAGE_STRUCT_H_
 
 
+#include <vector>
 #include "Type.h"
 #include "Helper.h"
 #include "Specification.h"
@@ -56,20 +57,24 @@ private:
     DType ValueRange_;
     TransferChar TransferChar_;
     DType * Data_ = nullptr;
+
 protected:
+    void DefaultPara(bool Chroma, DType BitDepth = 16, QuantRange _QuantRange = QuantRange::PC);
     void CopyParaFrom(const Plane & src);
     void InitValue(DType Value, bool Init = true);
+
 public:
-    Plane() {} // Default constructor
+    explicit Plane(DType Value = 0, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool Init = true); // Default constructor and Convertor/Constructor from DType
+    Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar _TransferChar, bool Init = true);
+
     Plane(const Plane & src); // Copy constructor
     Plane(const Plane & src, bool Init, DType Value = 0);
     Plane(Plane && src); // Move constructor
     explicit Plane(const Plane_FL & src, DType BitDepth = 16); // Convertor/Constructor from Plane_FL
-    Plane(const Plane_FL & src, bool Init, DType Value = 0, DType BitDepth = 16);
     Plane(const Plane_FL & src, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
+    Plane(const Plane_FL & src, bool Init, DType Value = 0, DType BitDepth = 16);
     Plane(const Plane_FL & src, bool Init, DType Value, DType BitDepth, DType Floor, DType Neutral, DType Ceil);
-    explicit Plane(DType Value, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool Init = true); // Convertor/Constructor from DType
-    Plane(DType Value, PCType Width, PCType Height, DType BitDepth, DType Floor, DType Neutral, DType Ceil, TransferChar _TransferChar, bool Init = true);
+
     ~Plane(); // Destructor
 
     Plane & operator=(const Plane & src); // Copy assignment operator
@@ -109,6 +114,7 @@ public:
     Plane & SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
     Plane & From(const Plane & src);
+    Plane & From(const Plane_FL & src);
     Plane & ConvertFrom(const Plane & src, TransferChar dstTransferChar);
     Plane & ConvertFrom(const Plane & src) { return ConvertFrom(src, TransferChar_); }
     Plane & YFrom(const Frame & src);
@@ -125,11 +131,19 @@ public:
     Plane & Binarize_ratio(double lower_thr = 0, double upper_thr = 1) { return Binarize_ratio(*this, lower_thr, upper_thr); }
     Plane & SimplestColorBalance(Plane_FL & flt, const Plane & src, double lower_thr = 0, double upper_thr = 0, int HistBins = 4096);
 
-    template <typename T> DType Quantize(T input) const
-    {
-        T input_up = input + T(0.5);
-        return input <= Floor_ ? Floor_ : input_up >= Ceil_ ? Ceil_ : static_cast<DType>(input_up);
-    }
+    template < typename T > DType Quantize(T input) const;
+
+    template < typename _Fn1 > void for_each(_Fn1 _Func) const;
+    template < typename _Fn1 > void transform(_Fn1 _Func);
+    template < typename _St1, typename _Fn1 > void transform(const _St1& src, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _Fn1 > void transform(const _St1& src1, const _St2& src2, _Fn1 _Func);
+    template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute(const _St1& src, _Fn1 _Func);
+
+    template < typename _Fn1 > void for_each_PPL(_Fn1 _Func) const;
+    template < typename _Fn1 > void transform_PPL(_Fn1 _Func);
+    template < typename _St1, typename _Fn1 > void transform_PPL(const _St1& src, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _Fn1 > void transform_PPL(const _St1& src1, const _St2& src2, _Fn1 _Func);
+    template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute_PPL(const _St1& src, _Fn1 _Func);
 };
 
 
@@ -143,12 +157,16 @@ private:
     FLType Ceil_ = 1;
     TransferChar TransferChar_;
     FLType * Data_ = nullptr;
+
 protected:
     void DefaultPara(bool Chroma, FLType range = 1);
     void CopyParaFrom(const Plane_FL & src);
     void InitValue(FLType Value, bool Init = true);
+
 public:
-    Plane_FL() {} // Default constructor
+    explicit Plane_FL(FLType Value = 0, PCType Width = 1920, PCType Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Default constructor and Convertor/Constructor from FLType
+    Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar _TransferChar, bool Init = true);
+
     Plane_FL(const Plane_FL & src); // Copy constructor
     Plane_FL(const Plane_FL & src, bool Init, FLType Value = 0);
     Plane_FL(Plane_FL && src); // Move constructor
@@ -156,8 +174,7 @@ public:
     Plane_FL(const Plane & src, bool Init, FLType Value = 0, FLType range = 1.);
     Plane_FL(const Plane_FL & src, TransferChar dstTransferChar);
     Plane_FL(const Plane & src, TransferChar dstTransferChar);
-    explicit Plane_FL(FLType Value, PCType Width = 1920, PCType Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Convertor/Constructor from FLType
-    Plane_FL(FLType Value, PCType Width, PCType Height, FLType Floor, FLType Neutral, FLType Ceil, TransferChar _TransferChar, bool Init = true);
+
     ~Plane_FL(); // Destructor
 
     Plane_FL & operator=(const Plane_FL & src); // Copy assignment operator
@@ -210,10 +227,7 @@ public:
     Plane_FL & Binarize_ratio(double lower_thr = 0, double upper_thr = 1) { return Binarize_ratio(*this, lower_thr, upper_thr); }
     Plane_FL & SimplestColorBalance(const Plane_FL & flt, const Plane_FL & src, double lower_thr = 0, double upper_thr = 0, int HistBins = 4096);
 
-    template <typename T> FLType Quantize(T input) const
-    {
-        return input <= Floor_ ? Floor_ : input >= Ceil_ ? Ceil_ : input;
-    }
+    template < typename T > FLType Quantize(T input) const;
 };
 
 
@@ -221,6 +235,7 @@ class Frame {
 public:
     typedef sint32 PlaneCountType;
     static const PlaneCountType MaxPlaneCount = 7;
+
 private:
     FCType FrameNum_;
     PixelType PixelType_;
@@ -229,8 +244,10 @@ private:
     ColorPrim ColorPrim_;
     TransferChar TransferChar_;
     ColorMatrix ColorMatrix_;
+
     PlaneCountType PlaneCount_ = 0;
-    Plane ** P_ = nullptr;
+    std::vector<Plane *> P_;
+
     Plane * R_ = nullptr;
     Plane * G_ = nullptr;
     Plane * B_ = nullptr;
@@ -238,18 +255,27 @@ private:
     Plane * U_ = nullptr;
     Plane * V_ = nullptr;
     Plane * A_ = nullptr;
+
 protected:
+    bool isYUV(PixelType _PixelType) const { return _PixelType >= PixelType::Y && _PixelType < PixelType::R; }
+    bool isRGB(PixelType _PixelType) const { return _PixelType >= PixelType::R && _PixelType <= PixelType::RGB; }
+
     void InitPlanes(PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool Init = true);
     void CopyPlanes(const Frame & src, bool Copy = true, bool Init = false);
+    void MovePlanes(Frame & src);
+    void FreePlanes();
+
 public:
-    Frame() {} // Default constructor
-    Frame(const Frame & src, bool Copy = true, bool Init = false); // Copy constructor
-    Frame(Frame && src); // Move constructor
-    explicit Frame(FCType FrameNum, PixelType _PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080, DType BitDepth = 16, bool Init = true); // Convertor/Constructor from FCType
+    explicit Frame(FCType FrameNum = 0, PixelType _PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080,
+        DType BitDepth = 16, bool Init = true); // Default constructor and Convertor/Constructor from FCType
     Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth,
         QuantRange _QuantRange, ChromaPlacement _ChromaPlacement = ChromaPlacement::MPEG2, bool Init = true);
     Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, DType BitDepth, QuantRange _QuantRange,
         ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix, bool Init = true);
+
+    Frame(const Frame & src, bool Copy = true, bool Init = false); // Copy constructor
+    Frame(Frame && src); // Move constructor
+
     ~Frame(); // Destructor
 
     Frame & operator=(const Frame & src); // Copy assignment operator
@@ -294,6 +320,9 @@ public:
 
     Frame & ConvertFrom(const Frame & src, TransferChar dstTransferChar);
 };
+
+
+#include "Image_Type.hpp"
 
 
 #endif

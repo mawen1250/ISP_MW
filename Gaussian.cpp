@@ -140,7 +140,7 @@ void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, 
     PCType width = input.Width();
     PCType stride = input.Width();
     FLType P0, P1, P2, P3;
-
+    
     for (j = 0; j < height; j++)
     {
         lower = stride * j;
@@ -157,7 +157,7 @@ void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, 
             P1 = P0;
             output[i] = P0;
         }
-
+        
         i--;
         P3 = P2 = P1 = output[i];
 

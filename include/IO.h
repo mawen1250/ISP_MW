@@ -9,6 +9,11 @@
 
 class FilterIO
 {
+public:
+    typedef FilterIO _Myt;
+
+    static const std::string _MyTag;
+
 private:
     static const int DRIVELEN = 16;
     static const int PATHLEN = 256;
@@ -72,7 +77,7 @@ protected:
     virtual Frame processFrame(const Frame &src) = 0;
 
 public:
-    FilterIO(int _argc, const std::vector<std::string> &_args, std::string _Tag = "")
+    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = "")
         : argc(_argc), args(_args), Tag(std::move(_Tag)) {}
 
     virtual ~FilterIO() {}
@@ -86,9 +91,11 @@ public:
         processIO();
     }
 
-private:
-    FilterIO(FilterIO &&src);
-    FilterIO & operator=(FilterIO &&src);
+    _Myt() = delete;
+    _Myt(const _Myt &src) = default;
+    _Myt & operator=(const _Myt &src) = default;
+    _Myt(_Myt &&src) = delete;
+    _Myt & operator=(_Myt &&src) = delete;
 };
 
 

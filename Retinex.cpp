@@ -72,7 +72,7 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
             Recursive_Gaussian_Parameters(sigmaVector[s], B, B1, B2, B3);
             Recursive_Gaussian2D_Horizontal(gauss, idata, B, B1, B2, B3);
             Recursive_Gaussian2D_Vertical(gauss, B, B1, B2, B3);
-
+            
             for (j = 0; j < height; j++)
             {
                 i = stride * j;
@@ -122,7 +122,7 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
     }
 
     Plane_FL odata = Retinex_MSR(idata, sigmaVector);
-
+    
     odata.SimplestColorBalance(odata, idata, lower_thr, upper_thr, Retinex_Default.HistBins);
 
     return odata;
@@ -254,13 +254,13 @@ Frame & Retinex_MSRCP(Frame & dst, const Frame & src, const std::vector<double> 
         Plane & dstR = dst.R();
         Plane & dstG = dst.G();
         Plane & dstB = dst.B();
-
+        
         DType sFloor = srcR.Floor();
         FLType sRangeFL = static_cast<FLType>(srcR.ValueRange());
 
         Plane_FL idata(srcR, false);
 
-        offset = static_cast<FLType>(srcR.Floor() * -3);
+        offset = static_cast<FLType>(srcR.Floor()) * -3;
         gain = FLType(1) / (srcR.ValueRange() * 3);
 
         for (j = 0; j < height; j++)
@@ -271,9 +271,9 @@ Frame & Retinex_MSRCP(Frame & dst, const Frame & src, const std::vector<double> 
                 idata[i] = (srcR[i] + srcG[i] + srcB[i] + offset) * gain;
             }
         }
-
+        
         Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
-
+        
         DType Rval, Gval, Bval;
         offset = dstR.Floor() + FLType(0.5);
 
