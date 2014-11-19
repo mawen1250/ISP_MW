@@ -399,13 +399,13 @@ Frame & Retinex_MSRCR_GIMP(Frame & dst, const Frame & src, const std::vector<dou
 
         idata.From(srcR);
         odata = Retinex_MSRCR_GIMP(idata, sigmaVector, dynamic);
-        odata.To(dstR);
+        dstR.From(odata);
         idata.From(srcG);
         odata = Retinex_MSRCR_GIMP(idata, sigmaVector, dynamic);
-        odata.To(dstG);
+        dstG.From(odata);
         idata.From(srcB);
         odata = Retinex_MSRCR_GIMP(idata, sigmaVector, dynamic);
-        odata.To(dstB);
+        dstB.From(odata);
     }
     else
     {

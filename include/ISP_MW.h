@@ -2,6 +2,10 @@
 #define ISP_MW_H_
 
 
+//#define ENABLE_PPL
+//#define ENABLE_AMP
+
+
 #include "Type.h"
 #include "Helper.h"
 #include "IO.h"

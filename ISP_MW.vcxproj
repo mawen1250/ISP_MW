@@ -159,6 +159,7 @@
     <ClInclude Include="include\IO.h" />
     <ClInclude Include="include\ISP_MW.h" />
     <ClInclude Include="include\LUT.h" />
+    <ClInclude Include="include\LUT.hpp" />
     <ClInclude Include="include\Retinex.h" />
     <ClInclude Include="include\Specification.h" />
     <ClInclude Include="include\Tone_Mapping.h" />

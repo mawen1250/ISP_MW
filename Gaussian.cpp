@@ -19,7 +19,7 @@ Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma)
     Recursive_Gaussian2D_Horizontal(data, B, B1, B2, B3);
     Recursive_Gaussian2D_Vertical(data, B, B1, B2, B3);
     
-    data.To(output);
+    output.From(data);
     
     return output;
 }

@@ -23,19 +23,43 @@
 //#define AWB_
 
 
-int main(int argc, char ** argv)
-{
 #if defined(Test)
-    Frame IFrame = ImageReader("D:\\Test Images\\01.bmp");
+int main()
+{
 #ifdef Test_Other
-    for (double sigmaS = 0; sigmaS <= 25; sigmaS += 0.5)
+    const int Loop = 1000;
+
+    /*std::array<float, 921600> src;
+    std::array<float, 921600> dst;
+    src.fill(5.f);*/
+    std::vector<float> src(1280 * 720, 5.f);
+    std::vector<float> dst(1280 * 720);
+
+    for (int l = 0; l < Loop; l++)
     {
-        Bilateral2D_2_Para para(sigmaS);
-        std::cout << Max(static_cast<PCType>(sigmaS*sigmaSMul + 0.5), PCType(1)) << " "
-            << para.radius << " " << para.samples << " " << para.step << std::endl;
+        concurrency::parallel_for(0, 720, [&](int j)
+        {
+            int i = 720 * j;
+            for (int upper = i + 1280; i < upper; i++)
+            {
+                dst[i] = exp(log(src[i]));
+            }
+        });
     }
-    system("pause");
+
+    /*concurrency::array_view<float, 1> srcv(1280 * 720, src);
+    concurrency::array_view<float, 1> dstv(1280 * 720, dst);
+    dstv.discard_data();
+
+    for (int i = 0; i < Loop; i++)
+    {
+        concurrency::parallel_for_each(srcv.extent, [=](concurrency::index<1> idx) restrict(amp)
+        {
+            dstv[idx] = concurrency::fast_math::exp(concurrency::fast_math::log(srcv[idx]));
+        });
+    }*/
 #elif defined(Test_Write) // Test_Other
+    Frame IFrame = ImageReader("D:\\Test Images\\01.bmp");
     Frame PFrame;
 #if defined(Convolution)
     PFrame = Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
@@ -67,11 +91,13 @@ int main(int argc, char ** argv)
     ImageWriter(PFrame, "D:\\Test Images\\01.Test.png");
     system("pause");
 #else // Test_Write
-    PCType i;
-    const int Loop = 2000;
+    const int Loop = 300;
+
+    Frame IFrame = ImageReader("D:\\Test Images\\01.bmp");
     const Plane& srcR = IFrame.R();
     Plane dstR(srcR, false);
-    for (i = 0; i < Loop; i++)
+
+    for (int l = 0; l < Loop; l++)
     {
 #if defined(Convolution)
         Convolution3V(IFrame, 1, 2, 1);
@@ -101,22 +127,28 @@ int main(int argc, char ** argv)
 
         //dstR.transform(srcR, [](DType x){ return static_cast<DType>(log(x) + 0.5); });
         //dstR.transform_PPL(srcR, [](DType x){ return static_cast<DType>(log(x) + 0.5); });
+        dstR.transform_AMP(srcR, [](DType x) restrict(amp)
+        {
+            return static_cast<DType>(concurrency::fast_math::log(static_cast<float>(x)) + 0.5f);
+        });
 
-        dstR.convolute_PPL<1, 1>(srcR, [](DType (*srcb2D)[3])->DType
+        /*dstR.convolute<1, 1>(srcR, [](DType (*srcb2D)[3])->DType
         {
             return (srcb2D[0][0] + 2 * srcb2D[0][1] + srcb2D[0][2]
                 + 2 * srcb2D[1][0] + 4 * srcb2D[1][1] + 2 * srcb2D[1][2]
                 + srcb2D[2][0] + 2 * srcb2D[2][1] + srcb2D[2][2]) / 16;
-        });
+        });*/
 #endif
     }
 #endif // Test_Write
-#else // Test
-
-    return Filtering(argc, argv);
-    
-#endif // Test
+    return 0;
 }
+#else // Test
+int main(int argc, char ** argv)
+{
+    return Filtering(argc, argv);
+}
+#endif // Test
 
 
 int Filtering(const int argc, char ** argv)
