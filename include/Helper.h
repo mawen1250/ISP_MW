@@ -6,25 +6,25 @@
 
 
 // Round_Div
-template <typename T>
+template < typename T >
 inline T Round_Div(T dividend, T divisor)
 {
     return (dividend + divisor / 2) / divisor;
 }
 
-template <>
+template < >
 inline float Round_Div(float dividend, float divisor)
 {
     return dividend / divisor;
 }
 
-template <>
+template < >
 inline double Round_Div(double dividend, double divisor)
 {
     return dividend / divisor;
 }
 
-template <>
+template < >
 inline long double Round_Div(long double dividend, long double divisor)
 {
     return dividend / divisor;
@@ -32,7 +32,7 @@ inline long double Round_Div(long double dividend, long double divisor)
 
 
 // Round_BitRsh
-template <typename T>
+template < typename T >
 inline T Round_BitRsh(T input, int shift)
 {
     return (input + (1 << (shift - 1))) >> shift;
@@ -90,49 +90,49 @@ inline sint64 Round_S64(T input)
 
 
 // Clip_XXX
-template <typename T>
+template < typename T >
 inline uint8 Clip_U8(T input)
 {
     return input >= _UI8_MAX ? _UI8_MAX : input <= 0 ? 0 : static_cast<uint8>(input);
 }
 
-template <typename T>
+template < typename T >
 inline uint16 Clip_U16(T input)
 {
     return input >= _UI16_MAX ? _UI16_MAX : input <= 0 ? 0 : static_cast<uint16>(input);
 }
 
-template <typename T>
+template < typename T >
 inline uint32 Clip_U32(T input)
 {
     return input >= _UI32_MAX ? _UI32_MAX : input <= 0 ? 0 : static_cast<uint32>(input);
 }
 
-template <typename T>
+template < typename T >
 inline uint64 Clip_U64(T input)
 {
     return input >= _UI64_MAX ? _UI64_MAX : input <= 0 ? 0 : static_cast<uint64>(input);
 }
 
-template <typename T>
+template < typename T >
 inline sint8 Clip_S8(T input)
 {
     return input >= _I8_MAX ? _I8_MAX : input <= _I8_MIN ? _I8_MIN : static_cast<sint8>(input);
 }
 
-template <typename T>
+template < typename T >
 inline sint16 Clip_S16(T input)
 {
     return input >= _I16_MAX ? _I16_MAX : input <= _I16_MIN ? _I16_MIN : static_cast<sint16>(input);
 }
 
-template <typename T>
+template < typename T >
 inline sint32 Clip_S32(T input)
 {
     return input >= _I32_MAX ? _I32_MAX : input <= _I32_MIN ? _I32_MIN : static_cast<sint32>(input);
 }
 
-template <typename T>
+template < typename T >
 inline sint64 Clip_S64(T input)
 {
     return input >= _I64_MAX ? _I64_MAX : input <= _I64_MIN ? _I64_MIN : static_cast<sint64>(input);
@@ -140,19 +140,19 @@ inline sint64 Clip_S64(T input)
 
 
 // Max Min
-template <typename T>
+template < typename T >
 inline T Max(T a, T b)
 {
     return a < b ? b : a;
 }
 
-template <typename T>
+template < typename T >
 inline T Min(T a, T b)
 {
     return a > b ? b : a;
 }
 
-template <typename T>
+template < typename T >
 inline T Clip(T input, T lower, T upper)
 {
     return input >= upper ? upper : input <= lower ? lower : input;
@@ -160,10 +160,17 @@ inline T Clip(T input, T lower, T upper)
 
 
 // Abs
-template <typename T>
+template < typename T >
 inline T Abs(T input)
 {
     return input < 0 ? -input : input;
+}
+
+
+template < typename T >
+inline T AbsSub(T a, T b)
+{
+    return a >= b ? a - b : b - a;
 }
 
 
@@ -256,7 +263,7 @@ T damp_ratio(T ratio, T damp)
 
 
 // Interpolation
-template <typename T>
+template < typename T >
 inline T Linear2(T x, T x1, T y1, T x2, T y2)
 {
     return (y2 - y1) / (x2 - x1) * (x - x1) + y1;

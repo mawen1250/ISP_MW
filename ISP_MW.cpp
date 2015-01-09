@@ -21,18 +21,53 @@
 //#define Retinex_MSRCR_GIMP_
 //#define Histogram_Equalization_
 //#define AWB_
+#define NLMeans_
 
 
 #if defined(Test)
 int main()
 {
 #ifdef Test_Other
-    const int Loop = 1000;
+    const int Loop = 1;// 81600;
 
-    /*std::array<float, 921600> src;
-    std::array<float, 921600> dst;
-    src.fill(5.f);*/
-    std::vector<float> src(1280 * 720, 5.f);
+    const PCType BlockSize = 16;
+    typedef Block<double, double> BlockT;
+
+    Frame IFrame = ImageReader("D:\\Project\\Retinex test\\_DSC8176.JPG");
+    Plane &IR = IFrame.R();
+    
+    /*std::vector<Pos> matchedPos;
+    for (PCType l = 0; l < Loop; ++l)
+    {
+        BlockT ref(IR, BlockSize, BlockSize, Pos(1060, 765));
+        //std::cout << ref;
+
+        matchedPos.push_back(ref.BlockMatching(IR, true, 48, 2));
+        //BlockT matched(IR, BlockSize, BlockSize, matchedPos);
+        //std::cout << matched;
+    }
+
+    //auto matchedPosCode = ref.BlockMatchingMulti(IR, 48, 2);
+    //for (auto i = matchedPosCode.begin(); i != matchedPosCode.end(); ++i)
+    //{
+    //    std::cout << i->first << " " << i->second << std::endl;
+    //}
+
+    system("pause");*/
+
+    //std::vector<Pos> matchedPos;
+    for (PCType j = 0; j < IR.Height() - BlockSize + 1; j += BlockSize)
+    {
+        for (PCType i = 0; i < IR.Width() - BlockSize + 1; i += BlockSize)
+        {
+            BlockT ref(IR, BlockSize, BlockSize, Pos(j, i));
+
+            //matchedPos.push_back(ref.BlockMatching(IR, 48, 2));
+            auto matchedPosCode = ref.BlockMatchingMulti(IR, 48, 2);
+        }
+    }
+
+    /*std::vector<float> src(1280 * 720, 5.f);
     std::vector<float> dst(1280 * 720);
 
     for (int l = 0; l < Loop; l++)
@@ -45,7 +80,7 @@ int main()
                 dst[i] = exp(log(src[i]));
             }
         });
-    }
+    }*/
 
     /*concurrency::array_view<float, 1> srcv(1280 * 720, src);
     concurrency::array_view<float, 1> dstv(1280 * 720, dst);
@@ -59,7 +94,7 @@ int main()
         });
     }*/
 #elif defined(Test_Write) // Test_Other
-    Frame IFrame = ImageReader("D:\\Test Images\\01.bmp");
+    Frame IFrame = ImageReader("D:\\Test Images\\Noise\\03.0Source.png");
     Frame PFrame;
 #if defined(Convolution)
     PFrame = Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
@@ -85,13 +120,15 @@ int main()
 #elif defined(AWB_)
     AWB1 AWBObj(IFrame);
     PFrame = AWBObj.process();
+#elif defined(NLMeans_)
+    PFrame = NLMeans(IFrame);
 #else
     PFrame = IFrame;
 #endif
-    ImageWriter(PFrame, "D:\\Test Images\\01.Test.png");
+    ImageWriter(PFrame, "D:\\Test Images\\Noise\\03.0.png");
     system("pause");
 #else // Test_Write
-    const int Loop = 300;
+    const int Loop = 4;
 
     Frame IFrame = ImageReader("D:\\Test Images\\01.bmp");
     const Plane& srcR = IFrame.R();
@@ -121,6 +158,8 @@ int main()
         Retinex_MSRCR_GIMP(IFrame);
 #elif defined(Histogram_Equalization_)
         Histogram_Equalization(IFrame, 1.0, false);
+#elif defined(NLMeans_)
+        NLMeans(IFrame);
 #else
         //DType count = 0;
         //srcR.for_each([&count](DType x){ count += x; });
@@ -213,6 +252,10 @@ int Filtering(const int argc, char ** argv)
     else if (FilterName == "--ed" || FilterName == "--edgedetect")
     {
         FilterObj = new EdgeDetect_IO(argc2, args);
+    }
+    else if (FilterName == "--nlm" || FilterName == "--nlmeans" || FilterName == "--nonlocalmeans")
+    {
+        FilterObj = new NLMeans_IO(argc2, args);
     }
     else
     {

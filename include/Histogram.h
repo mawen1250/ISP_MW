@@ -7,7 +7,8 @@
 
 
 template < typename T = DType >
-class Histogram {
+class Histogram
+{
 public:
     typedef sint32 BinType;
     typedef sint32 CountType;

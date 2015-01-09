@@ -229,7 +229,7 @@ const LUT<T>& LUT<T>::Lookup(_Dt1& dst, const _St1 src) const
     return *this;
 }*/
 
-inline const LUT<DType> & LUT<DType>::Lookup(Plane& dst, const Plane& src) const
+inline const LUT<DType>& LUT<DType>::Lookup(Plane& dst, const Plane& src) const
 {
     PCType i, j, upper;
     PCType height = src.Height();
@@ -249,7 +249,7 @@ inline const LUT<DType> & LUT<DType>::Lookup(Plane& dst, const Plane& src) const
     return *this;
 }
 
-inline const LUT<FLType> & LUT<FLType>::Lookup(Plane_FL& dst, const Plane& src) const
+inline const LUT<FLType>& LUT<FLType>::Lookup(Plane_FL& dst, const Plane& src) const
 {
     PCType i, j;
     PCType height = src.Height();
@@ -276,7 +276,7 @@ inline const LUT<FLType> & LUT<FLType>::Lookup(Plane_FL& dst, const Plane& src) 
 }
 
 template < typename T >
-inline const LUT<T> & LUT<T>::Lookup(Plane_FL& dst, const Plane_FL& src) const
+inline const LUT<T>& LUT<T>::Lookup(Plane_FL& dst, const Plane_FL& src) const
 {
     PCType i, j, upper;
     PCType height = src.Height();

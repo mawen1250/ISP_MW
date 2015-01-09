@@ -13,7 +13,8 @@
 const DType MaxBitDepth = sizeof(DType) * 8 * 3 / 4;
 
 
-enum class PixelType {
+enum class PixelType
+{
     Y = 0,
     U = 1,
     V = 2,
@@ -27,15 +28,64 @@ enum class PixelType {
     RGB = 10
 };
 
-enum class ChromaPlacement {
+enum class ChromaPlacement
+{
     MPEG1 = 0,
     MPEG2 = 1,
     DV    = 2
 };
 
-enum class QuantRange {
+enum class QuantRange
+{
     TV = 0,
     PC = 1
+};
+
+
+struct Pos
+{
+    PCType y = 0;
+    PCType x = 0;
+
+    explicit Pos(PCType _y = 0, PCType _x = 0)
+        : y(_y), x(_x) {}
+
+    bool operator==(const Pos & right) const
+    {
+        return y == right.y && x == right.x;
+    }
+
+    bool operator<(const Pos &right) const
+    {
+        if (y < right.y)
+        {
+            return true;
+        }
+        else if (y > right.y)
+        {
+            return false;
+        }
+        else if (x < right.x)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool operator>(const Pos &right) const
+    {
+        return !(*this < right);
+    }
+
+    friend std::ostream &operator<<(std::ostream &out, const Pos &src)
+    {
+        out << "(" << src.y << ", " << src.x << ")";
+
+        return out;
+    }
 };
 
 
@@ -44,7 +94,8 @@ class Plane_FL;
 class Frame;
 
 
-class Plane {
+class Plane
+{
     typedef DType _Ty;
 
 public:
@@ -54,8 +105,8 @@ public:
     typedef ptrdiff_t difference_type;
     typedef _Ty *pointer;
     typedef const _Ty *const_pointer;
-    typedef _Ty& reference;
-    typedef const _Ty& const_reference;
+    typedef _Ty &reference;
+    typedef const _Ty &const_reference;
 
     typedef pointer iterator;
     typedef const_pointer const_iterator;
@@ -82,16 +133,16 @@ protected:
     void InitValue(value_type Value, bool Init = true);
 
 public:
-    explicit _Myt(value_type Value = 0, PCType Width = 1920, PCType Height = 1080, value_type BitDepth = 16, bool Init = true); // Default constructor and Convertor/Constructor from value_type
-    _Myt(value_type Value, PCType Width, PCType Height, value_type BitDepth, value_type Floor, value_type Neutral, value_type Ceil, TransferChar _TransferChar, bool Init = true);
+    explicit Plane(value_type Value = 0, PCType Width = 1920, PCType Height = 1080, value_type BitDepth = 16, bool Init = true); // Default constructor and Convertor/Constructor from value_type
+    Plane(value_type Value, PCType Width, PCType Height, value_type BitDepth, value_type Floor, value_type Neutral, value_type Ceil, TransferChar _TransferChar, bool Init = true);
 
-    _Myt(const _Myt& src); // Copy constructor
-    _Myt(const _Myt& src, bool Init, value_type Value = 0);
-    _Myt(_Myt&& src); // Move constructor
-    explicit _Myt(const Plane_FL& src, value_type BitDepth = 16); // Convertor/Constructor from Plane_FL
-    _Myt(const Plane_FL& src, value_type BitDepth, value_type Floor, value_type Neutral, value_type Ceil);
-    _Myt(const Plane_FL& src, bool Init, value_type Value = 0, value_type BitDepth = 16);
-    _Myt(const Plane_FL& src, bool Init, value_type Value, value_type BitDepth, value_type Floor, value_type Neutral, value_type Ceil);
+    Plane(const _Myt& src); // Copy constructor
+    Plane(const _Myt& src, bool Init, value_type Value = 0);
+    Plane(_Myt&& src); // Move constructor
+    explicit Plane(const Plane_FL& src, value_type BitDepth = 16); // Convertor/Constructor from Plane_FL
+    Plane(const Plane_FL& src, value_type BitDepth, value_type Floor, value_type Neutral, value_type Ceil);
+    Plane(const Plane_FL& src, bool Init, value_type Value = 0, value_type BitDepth = 16);
+    Plane(const Plane_FL& src, bool Init, value_type Value, value_type BitDepth, value_type Floor, value_type Neutral, value_type Ceil);
 
     ~Plane(); // Destructor
 
@@ -168,6 +219,7 @@ public:
     template < typename _St1, typename _Fn1 > void transform(const _St1& src, _Fn1 _Func);
     template < typename _St1, typename _St2, typename _Fn1 > void transform(const _St1& src1, const _St2& src2, _Fn1 _Func);
     template < typename _St1, typename _St2, typename _St3, typename _Fn1 > void transform(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > void transform(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func);
     template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute(const _St1& src, _Fn1 _Func);
 
     template < typename _Fn1 > void for_each_PPL(_Fn1 _Func) const;
@@ -176,6 +228,7 @@ public:
     template < typename _St1, typename _Fn1 > void transform_PPL(const _St1& src, _Fn1 _Func);
     template < typename _St1, typename _St2, typename _Fn1 > void transform_PPL(const _St1& src1, const _St2& src2, _Fn1 _Func);
     template < typename _St1, typename _St2, typename _St3, typename _Fn1 > void transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > void transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func);
     template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute_PPL(const _St1& src, _Fn1 _Func);
 
     template < typename _Fn1 > void for_each_AMP(_Fn1 _Func) const;
@@ -184,11 +237,13 @@ public:
     template < typename _St1, typename _Fn1 > void transform_AMP(const _St1& src, _Fn1 _Func);
     template < typename _St1, typename _St2, typename _Fn1 > void transform_AMP(const _St1& src1, const _St2& src2, _Fn1 _Func);
     template < typename _St1, typename _St2, typename _St3, typename _Fn1 > void transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > void transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func);
     template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute_AMP(const _St1& src, _Fn1 _Func);
 };
 
 
-class Plane_FL {
+class Plane_FL
+{
     typedef FLType _Ty;
 
 public:
@@ -198,8 +253,8 @@ public:
     typedef ptrdiff_t difference_type;
     typedef _Ty *pointer;
     typedef const _Ty *const_pointer;
-    typedef _Ty& reference;
-    typedef const _Ty& const_reference;
+    typedef _Ty &reference;
+    typedef const _Ty &const_reference;
 
     typedef pointer iterator;
     typedef const_pointer const_iterator;
@@ -224,16 +279,16 @@ protected:
     void InitValue(value_type Value, bool Init = true);
 
 public:
-    explicit _Myt(value_type Value = 0, PCType Width = 1920, PCType Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Default constructor and Convertor/Constructor from value_type
-    _Myt(value_type Value, PCType Width, PCType Height, value_type Floor, value_type Neutral, value_type Ceil, TransferChar _TransferChar, bool Init = true);
+    explicit Plane_FL(value_type Value = 0, PCType Width = 1920, PCType Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Default constructor and Convertor/Constructor from value_type
+    Plane_FL(value_type Value, PCType Width, PCType Height, value_type Floor, value_type Neutral, value_type Ceil, TransferChar _TransferChar, bool Init = true);
 
-    _Myt(const _Myt& src); // Copy constructor
-    _Myt(const _Myt& src, bool Init, value_type Value = 0);
-    _Myt(_Myt&& src); // Move constructor
-    explicit _Myt(const Plane& src, value_type range = 1.); // Convertor/Constructor from Plane
-    _Myt(const Plane& src, bool Init, value_type Value = 0, value_type range = 1.);
-    _Myt(const _Myt& src, TransferChar dstTransferChar);
-    _Myt(const Plane& src, TransferChar dstTransferChar);
+    Plane_FL(const _Myt& src); // Copy constructor
+    Plane_FL(const _Myt& src, bool Init, value_type Value = 0);
+    Plane_FL(_Myt&& src); // Move constructor
+    explicit Plane_FL(const Plane& src, value_type range = 1.); // Convertor/Constructor from Plane
+    Plane_FL(const Plane& src, bool Init, value_type Value = 0, value_type range = 1.);
+    Plane_FL(const _Myt& src, TransferChar dstTransferChar);
+    Plane_FL(const Plane& src, TransferChar dstTransferChar);
 
     ~Plane_FL(); // Destructor
 
@@ -296,10 +351,38 @@ public:
     _Myt& SimplestColorBalance(const _Myt& flt, const _Myt& src, double lower_thr = 0., double upper_thr = 0., int HistBins = 4096);
 
     template < typename T > value_type Quantize(T input) const;
+
+    template < typename _Fn1 > void for_each(_Fn1 _Func) const;
+    template < typename _Fn1 > void for_each(_Fn1 _Func);
+    template < typename _Fn1 > void transform(_Fn1 _Func);
+    template < typename _St1, typename _Fn1 > void transform(const _St1& src, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _Fn1 > void transform(const _St1& src1, const _St2& src2, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _Fn1 > void transform(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > void transform(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func);
+    template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute(const _St1& src, _Fn1 _Func);
+
+    template < typename _Fn1 > void for_each_PPL(_Fn1 _Func) const;
+    template < typename _Fn1 > void for_each_PPL(_Fn1 _Func);
+    template < typename _Fn1 > void transform_PPL(_Fn1 _Func);
+    template < typename _St1, typename _Fn1 > void transform_PPL(const _St1& src, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _Fn1 > void transform_PPL(const _St1& src1, const _St2& src2, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _Fn1 > void transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > void transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func);
+    template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute_PPL(const _St1& src, _Fn1 _Func);
+
+    template < typename _Fn1 > void for_each_AMP(_Fn1 _Func) const;
+    template < typename _Fn1 > void for_each_AMP(_Fn1 _Func);
+    template < typename _Fn1 > void transform_AMP(_Fn1 _Func);
+    template < typename _St1, typename _Fn1 > void transform_AMP(const _St1& src, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _Fn1 > void transform_AMP(const _St1& src1, const _St2& src2, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _Fn1 > void transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func);
+    template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > void transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func);
+    template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > void convolute_AMP(const _St1& src, _Fn1 _Func);
 };
 
 
-class Frame {
+class Frame
+{
     typedef DType _Ty;
 
 public:
@@ -310,8 +393,8 @@ public:
     typedef ptrdiff_t difference_type;
     typedef _Ty *pointer;
     typedef const _Ty *const_pointer;
-    typedef _Ty& reference;
-    typedef const _Ty& const_reference;
+    typedef _Ty &reference;
+    typedef const _Ty &const_reference;
 
     typedef pointer iterator;
     typedef const_pointer const_iterator;
@@ -349,15 +432,15 @@ protected:
     void FreePlanes();
 
 public:
-    explicit _Myt(FCType FrameNum = 0, PixelType _PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080,
+    explicit Frame(FCType FrameNum = 0, PixelType _PixelType = PixelType::RGB, PCType Width = 1920, PCType Height = 1080,
         value_type BitDepth = 16, bool Init = true); // Default constructor and Convertor/Constructor from FCType
-    _Myt(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, value_type BitDepth,
+    Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, value_type BitDepth,
         QuantRange _QuantRange, ChromaPlacement _ChromaPlacement = ChromaPlacement::MPEG2, bool Init = true);
-    _Myt(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, value_type BitDepth, QuantRange _QuantRange,
+    Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height, value_type BitDepth, QuantRange _QuantRange,
         ChromaPlacement _ChromaPlacement, ColorPrim _ColorPrim, TransferChar _TransferChar, ColorMatrix _ColorMatrix, bool Init = true);
 
-    _Myt(const _Myt& src, bool Copy = true, bool Init = false); // Copy constructor
-    _Myt(_Myt&& src); // Move constructor
+    Frame(const _Myt& src, bool Copy = true, bool Init = false); // Copy constructor
+    Frame(_Myt&& src); // Move constructor
 
     ~Frame(); // Destructor
 

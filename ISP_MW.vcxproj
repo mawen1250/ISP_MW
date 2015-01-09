@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClCompile Include="AWB.cpp" />
     <ClCompile Include="Bilateral.cpp" />
+    <ClCompile Include="BM3D.cpp" />
     <ClCompile Include="Convolution.cpp" />
     <ClCompile Include="Format_Conversion.cpp" />
     <ClCompile Include="Gaussian.cpp" />
@@ -139,6 +140,7 @@
     <ClCompile Include="ImageIO.cpp" />
     <ClCompile Include="Image_Type.cpp" />
     <ClCompile Include="ISP_MW.cpp" />
+    <ClCompile Include="NLMeans.cpp" />
     <ClCompile Include="Retinex.cpp" />
     <ClCompile Include="Tone_Mapping.cpp" />
     <ClCompile Include="Transform.cpp" />
@@ -146,6 +148,9 @@
   <ItemGroup>
     <ClInclude Include="include\Args.h" />
     <ClInclude Include="include\Bilateral.h" />
+    <ClInclude Include="include\Block.h" />
+    <ClInclude Include="include\Block.hpp" />
+    <ClInclude Include="include\BM3D.h" />
     <ClInclude Include="include\Convolution.h" />
     <ClInclude Include="include\Format_Conversion.h" />
     <ClInclude Include="include\Gaussian.h" />
@@ -160,6 +165,7 @@
     <ClInclude Include="include\ISP_MW.h" />
     <ClInclude Include="include\LUT.h" />
     <ClInclude Include="include\LUT.hpp" />
+    <ClInclude Include="include\NLMeans.h" />
     <ClInclude Include="include\Retinex.h" />
     <ClInclude Include="include\Specification.h" />
     <ClInclude Include="include\Tone_Mapping.h" />

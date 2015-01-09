@@ -6,7 +6,8 @@
 
 
 template < typename T = DType >
-class LUT {
+class LUT
+{
 public:
     typedef LUT<T> _Myt;
     typedef T value_type;
@@ -14,8 +15,8 @@ public:
     typedef ptrdiff_t difference_type;
     typedef T *pointer;
     typedef const T *const_pointer;
-    typedef T& reference;
-    typedef const T& const_reference;
+    typedef T &reference;
+    typedef const T &const_reference;
 
     typedef pointer iterator;
     typedef const_pointer const_iterator;

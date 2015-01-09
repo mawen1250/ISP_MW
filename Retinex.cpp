@@ -15,7 +15,7 @@ Plane & Retinex_SSR(Plane & dst, const Plane & src, double sigma, double lower_t
     PCType i, j, upper;
     PCType height = src.Height();
     PCType width = src.Width();
-    PCType stride = src.Width();
+    PCType stride = src.Stride();
 
     FLType B, B1, B2, B3;
     Recursive_Gaussian_Parameters(sigma, B, B1, B2, B3);
@@ -58,7 +58,7 @@ Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVe
     PCType i, j, upper;
     PCType height = idata.Height();
     PCType width = idata.Width();
-    PCType stride = idata.Width();
+    PCType stride = idata.Stride();
 
     Plane_FL odata(idata, true, 1);
     Plane_FL gauss(idata, false);
@@ -198,7 +198,7 @@ Frame & Retinex_MSRCP(Frame & dst, const Frame & src, const std::vector<double> 
     PCType i, j, upper;
     PCType height = src.Height();
     PCType width = src.Width();
-    PCType stride = src.Width();
+    PCType stride = src.Stride();
 
     FLType gain, offset;
 
@@ -314,7 +314,7 @@ Frame & Retinex_MSRCR(Frame & dst, const Frame & src, const std::vector<double> 
     PCType i, j, upper;
     PCType height = src.Height();
     PCType width = src.Width();
-    PCType stride = src.Width();
+    PCType stride = src.Stride();
 
     if (src.isRGB())
     {

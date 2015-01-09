@@ -13,6 +13,7 @@
 #include "Specification.h"
 #include "LUT.h"
 #include "Histogram.h"
+#include "Block.h"
 
 #include "ImageIO.h"
 #include "Transform.h"
@@ -24,6 +25,8 @@
 #include "Retinex.h"
 #include "Histogram_Equalization.h"
 #include "AWB.h"
+#include "NLMeans.h"
+#include "BM3D.h"
 
 
 int Filtering(const int argc, char ** argv);

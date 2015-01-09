@@ -31,10 +31,10 @@ void Plane::InitValue(value_type Value, bool Init)
 
         if (Value)
         {
-            for (PCType i = 0; i < PixelCount_; i++)
+            for_each([&](value_type &x)
             {
-                Data_[i] = Value;
-            }
+                x = Value;
+            });
         }
         else
         {
@@ -53,7 +53,7 @@ Plane::Plane(value_type Value, PCType Width, PCType Height, value_type BitDepth,
     : Width_(Width), Height_(Height), PixelCount_(Width_ * Height_), BitDepth_(BitDepth),
     Floor_(Floor), Neutral_(Neutral), Ceil_(Ceil), ValueRange_(Ceil_ - Floor_), TransferChar_(_TransferChar)
 {
-    const char * FunctionName = "class Plane constructor";
+    const char *FunctionName = "class Plane constructor";
     if (BitDepth > MaxBitDepth)
     {
         std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
@@ -273,7 +273,7 @@ Plane& Plane::ReSize(PCType Width, PCType Height)
 
 Plane& Plane::ReQuantize(value_type BitDepth, QuantRange _QuantRange, bool scale, bool clip)
 {
-    const char * FunctionName = "Plane::ReQuantize";
+    const char *FunctionName = "Plane::ReQuantize";
     if (BitDepth > MaxBitDepth)
     {
         std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
@@ -289,7 +289,7 @@ Plane& Plane::ReQuantize(value_type BitDepth, value_type Floor, value_type Neutr
 {
     value_type ValueRange = Ceil - Floor;
 
-    const char * FunctionName = "Plane::ReQuantize";
+    const char *FunctionName = "Plane::ReQuantize";
     if (BitDepth > MaxBitDepth)
     {
         std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
@@ -960,7 +960,7 @@ Plane_FL& Plane_FL::ReQuantize(value_type Floor, value_type Neutral, value_type 
 {
     PCType i;
 
-    const char * FunctionName = "Plane_FL::ReQuantize";
+    const char *FunctionName = "Plane_FL::ReQuantize";
     if (Ceil <= Floor)
     {
         std::cerr << FunctionName << ": invalid values of \"Floor=" << Floor << "\" and \"Ceil=" << Ceil << "\" are set.\n";
@@ -1720,7 +1720,7 @@ Frame::Frame(FCType FrameNum, PixelType _PixelType, PCType Width, PCType Height,
     : FrameNum_(FrameNum), PixelType_(_PixelType), QuantRange_(_QuantRange), ChromaPlacement_(_ChromaPlacement),
     ColorPrim_(_ColorPrim), TransferChar_(_TransferChar), ColorMatrix_(_ColorMatrix), P_(MaxPlaneCount, nullptr)
 {
-    const char * FunctionName = "class Frame constructor";
+    const char *FunctionName = "class Frame constructor";
     if (BitDepth > MaxBitDepth)
     {
         std::cerr << FunctionName << ": \"BitDepth=" << BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
