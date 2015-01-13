@@ -7,7 +7,8 @@
 #include "Histogram.h"
 
 
-const struct Retinex_Para {
+const struct Retinex_Para
+{
     double sigma = 100.0;
     std::vector<double> sigmaVector;
 

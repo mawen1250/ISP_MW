@@ -62,7 +62,8 @@ enum class ColorMatrix {
     smpte240m = 7,
     YCgCo = 8,
     bt2020nc = 9,
-    bt2020c = 10
+    bt2020c = 10,
+    Average = 100
 };
 
 
@@ -295,6 +296,11 @@ void ColorMatrix_Parameter(ColorMatrix _ColorMatrix, T &Kr, T &Kg, T &Kb)
         Kr = 0.2627;
         Kg = 0.6780;
         Kb = 0.0593;
+        break;
+    case ColorMatrix::Average:
+        Kr = 1. / 3.;
+        Kg = 1. / 3.;
+        Kb = 1. / 3.;
         break;
     default:
         Kr = 0.2126;

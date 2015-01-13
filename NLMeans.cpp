@@ -1,9 +1,10 @@
 #include "NLMeans.h"
 
 
+// Get the filtered block through weighted averaging of matched blocks in Plane src
 template < typename _St1, typename _Ty, typename _FTy >
-void NLMeans_WeightedAverage(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
-    const typename Block<_Ty, _FTy>::PosPairCode &posPairCode, PCType GroupSizeMax, double strength)
+void NLMeans::WeightedAverage(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
+    const typename Block<_Ty, _FTy>::PosPairCode &posPairCode)
 {
     PCType GroupSize = static_cast<PCType>(posPairCode.size());
     // When GroupSizeMax > 0, limit GroupSize up to GroupSizeMax
@@ -60,9 +61,11 @@ void NLMeans_WeightedAverage(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> 
 }
 
 
+// Get the filtered block through weighted averaging of matched blocks in Plane src
+// A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm
 template < typename _St1, typename _Ty, typename _FTy >
-void NLMeans_WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
-    const typename Block<_Ty, _FTy>::PosPairCode &posPairCode, PCType GroupSizeMax, double strength, double sigma)
+void NLMeans::WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
+    const typename Block<_Ty, _FTy>::PosPairCode &posPairCode)
 {
     PCType GroupSize = static_cast<PCType>(posPairCode.size());
     // When GroupSizeMax > 0, limit GroupSize up to GroupSizeMax
@@ -112,8 +115,10 @@ void NLMeans_WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block<
         }
     }
 
+    double _sigma = sigma * src.ValueRange() / 255.; // _sigma is converted from 8bit-scale to fit the src range
+
     double X, EX, VarX;
-    double VarN = sigma * sigma;
+    double VarN = _sigma * _sigma;
     double weightSumRec = 1 / weightSum;
 
     auto dstp = dstBlock.Data();
@@ -141,8 +146,7 @@ void NLMeans_WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block<
 
 
 // Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
-Plane &NLMeans(Plane &dst, const Plane &src, const Plane &ref, double sigma, double strength,
-    PCType GroupSizeMax, PCType BlockSize, PCType Overlap, PCType BMrange, PCType BMstep, double thMSE)
+Plane &NLMeans::process(Plane &dst, const Plane &src, const Plane &ref)
 {
     if (strength <= 0 || GroupSizeMax == 1 || BlockSize <= 0 || BMrange <= 0 || BMrange < BMstep || thMSE <= 0)
     {
@@ -155,20 +159,13 @@ Plane &NLMeans(Plane &dst, const Plane &src, const Plane &ref, double sigma, dou
 
     typedef Block<double, double> BlockT;
 
-    sigma = sigma * src.ValueRange() / 255.; // sigma is converted from 8bit-scale to fit the src range
     PCType BlockStep = BlockSize - Overlap;
     PCType RightBlockPos = width - BlockSize;
     PCType BottomBlockPos = height - BlockSize;
-    /*PCType BlockNumV = (height - Overlap) / BlockStep;
-    PCType BlockRsdV = (height - Overlap) % BlockStep;
-    if (BlockRsdV > 0) ++BlockNumV;
-    PCType BlockNumH = (width - Overlap) / BlockStep;
-    PCType BlockRsdH = (width - Overlap) % BlockStep;
-    if (BlockRsdH > 0) ++BlockNumH;
-    PCType BlockNum = BlockNumV * BlockNumH;*/
 
-    BlockT refSlidingWindow(BlockSize, BlockSize, Pos(0, 0), false);
     BlockT dstSlidingWindow(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT refSlidingWindow(BlockSize, BlockSize, Pos(0, 0), false);
 
     Plane_FL ResNum(dst, true, 0);
     Plane_FL ResDen(dst, true, 0);
@@ -177,7 +174,10 @@ Plane &NLMeans(Plane &dst, const Plane &src, const Plane &ref, double sigma, dou
     {
         for (PCType i = 0;;)
         {
-            // Get reference block from Plane ref
+            // Get source block from src
+            srcSlidingWindow.From(src, Pos(j, i));
+
+            // Get reference block from ref
             refSlidingWindow.From(ref, Pos(j, i));
 
             // Form a group by block matching between reference block and its neighborhood in Plane ref
@@ -185,7 +185,14 @@ Plane &NLMeans(Plane &dst, const Plane &src, const Plane &ref, double sigma, dou
 
             // Get the filtered block through weighted averaging of matched blocks in Plane src
             // A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm
-            NLMeans_WeightedAverage_Correction(dstSlidingWindow, refSlidingWindow, src, matchedPosPairGroup, GroupSizeMax, strength, sigma);
+            if (correction)
+            {
+                WeightedAverage_Correction(dstSlidingWindow, srcSlidingWindow, src, matchedPosPairGroup);
+            }
+            else
+            {
+                WeightedAverage(dstSlidingWindow, srcSlidingWindow, src, matchedPosPairGroup);
+            }
 
             // The filtered blocks are sumed and averaged to form the final filtered image
             dstSlidingWindow.AddTo(ResNum);
@@ -229,6 +236,140 @@ Plane &NLMeans(Plane &dst, const Plane &src, const Plane &ref, double sigma, dou
 
     // The filtered blocks are sumed and averaged to form the final filtered image
     dst.transform(ResNum, ResDen, [](Plane_FL::value_type num, Plane_FL::value_type den)
+    {
+        return static_cast<Plane::value_type>(num / den + Plane_FL::value_type(0.5));
+    });
+
+    return dst;
+}
+
+
+// Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
+Frame &NLMeans::process(Frame &dst, const Frame &src, const Frame &ref)
+{
+    if (strength <= 0 || GroupSizeMax == 1 || BlockSize <= 0 || BMrange <= 0 || BMrange < BMstep || thMSE <= 0)
+    {
+        dst = src;
+        return dst;
+    }
+
+    PCType height = src.Height();
+    PCType width = src.Width();
+
+    Plane &dst0 = dst.P(0);
+    Plane &dst1 = dst.P(1);
+    Plane &dst2 = dst.P(2);
+    const Plane &src0 = src.P(0);
+    const Plane &src1 = src.P(1);
+    const Plane &src2 = src.P(2);
+
+    Plane_FL refY(ref.P(0), false);
+    refY.YFrom(ref, ColorMatrix::Average);
+
+    typedef Block<double, double> BlockT;
+
+    PCType BlockStep = BlockSize - Overlap;
+    PCType RightBlockPos = width - BlockSize;
+    PCType BottomBlockPos = height - BlockSize;
+
+    BlockT dstSlidingWindow0(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT dstSlidingWindow1(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT dstSlidingWindow2(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow0(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow1(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow2(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT refSlidingWindowY(BlockSize, BlockSize, Pos(0, 0), false);
+
+    Plane_FL ResNum0(dst0, true, 0);
+    Plane_FL ResNum1(dst1, true, 0);
+    Plane_FL ResNum2(dst2, true, 0);
+    Plane_FL ResDen(dst0, true, 0);
+
+    for (PCType j = 0;;)
+    {
+        for (PCType i = 0;;)
+        {
+            // Get reference block from ref
+            refSlidingWindowY.From(refY, Pos(j, i));
+
+            // Get source block from src
+            srcSlidingWindow0.From(src0, Pos(j, i));
+            srcSlidingWindow1.From(src1, Pos(j, i));
+            srcSlidingWindow2.From(src2, Pos(j, i));
+
+            // Form a group by block matching between reference block and its neighborhood in Plane ref
+            auto matchedPosPairGroup = refSlidingWindowY.BlockMatchingMulti(refY, BMrange, BMstep, thMSE);
+
+            // Get the filtered block through weighted averaging of matched blocks in Plane src
+            // A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm
+            if (correction)
+            {
+                WeightedAverage_Correction(dstSlidingWindow0, srcSlidingWindow0, src0, matchedPosPairGroup);
+                WeightedAverage_Correction(dstSlidingWindow1, srcSlidingWindow1, src1, matchedPosPairGroup);
+                WeightedAverage_Correction(dstSlidingWindow2, srcSlidingWindow2, src2, matchedPosPairGroup);
+            }
+            else
+            {
+                WeightedAverage(dstSlidingWindow0, srcSlidingWindow0, src0, matchedPosPairGroup);
+                WeightedAverage(dstSlidingWindow1, srcSlidingWindow1, src1, matchedPosPairGroup);
+                WeightedAverage(dstSlidingWindow2, srcSlidingWindow2, src2, matchedPosPairGroup);
+            }
+
+            // The filtered blocks are sumed and averaged to form the final filtered image
+            dstSlidingWindow0.AddTo(ResNum0);
+            dstSlidingWindow1.AddTo(ResNum1);
+            dstSlidingWindow2.AddTo(ResNum2);
+
+            dstSlidingWindow0.CountTo(ResDen);
+
+            // Block loop controlling - horizontal
+            i += BlockStep;
+
+            if (i <= RightBlockPos)
+            {
+                continue;
+            }
+            else if (i < RightBlockPos + BlockStep)
+            {
+                i = RightBlockPos;
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Block loop controlling - vertical
+        j += BlockStep;
+
+        if (j <= BottomBlockPos)
+        {
+            continue;
+        }
+        else if (j < BottomBlockPos + BlockStep)
+        {
+            j = BottomBlockPos;
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    // The filtered blocks are sumed and averaged to form the final filtered image
+    dst0.transform(ResNum0, ResDen, [](Plane_FL::value_type num, Plane_FL::value_type den)
+    {
+        return static_cast<Plane::value_type>(num / den + Plane_FL::value_type(0.5));
+    });
+
+    dst1.transform(ResNum1, ResDen, [](Plane_FL::value_type num, Plane_FL::value_type den)
+    {
+        return static_cast<Plane::value_type>(num / den + Plane_FL::value_type(0.5));
+    });
+
+    dst2.transform(ResNum2, ResDen, [](Plane_FL::value_type num, Plane_FL::value_type den)
     {
         return static_cast<Plane::value_type>(num / den + Plane_FL::value_type(0.5));
     });

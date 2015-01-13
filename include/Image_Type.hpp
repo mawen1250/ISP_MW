@@ -45,28 +45,28 @@
 
 // Template functions
 template < typename _Ty > inline
-void Quantize_Value(_Ty& Floor, _Ty& Neutral, _Ty& Ceil, _Ty& ValueRange, _Ty BitDepth, QuantRange _QuantRange, bool Chroma)
+void Quantize_Value(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, _Ty BitDepth, QuantRange _QuantRange, bool Chroma)
 {
     if (Chroma)
     {
         Floor = _QuantRange == QuantRange::PC ? _Ty(0) : _Ty(16) << (BitDepth - _Ty(8));
         Ceil = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(240) << (BitDepth - _Ty(8));
         Neutral = 1 << (BitDepth - 1);
-        ValueRange = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(224) << (BitDepth - _Ty(8));
+        //ValueRange = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(224) << (BitDepth - _Ty(8));
     }
     else
     {
         Floor = _QuantRange == QuantRange::PC ? _Ty(0) : _Ty(16) << (BitDepth - _Ty(8));
         Ceil = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(235) << (BitDepth - _Ty(8));
         Neutral = Floor;
-        ValueRange = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(219) << (BitDepth - _Ty(8));
+        //ValueRange = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(219) << (BitDepth - _Ty(8));
     }
 }
 
 
 // Template functions of algorithm
 template < typename _St1, typename _Fn1 > inline
-void _For_each(_St1& data, _Fn1& _Func)
+void _For_each(_St1 &data, _Fn1 &_Func)
 {
     for (PCType j = 0; j < data.Height(); ++j)
     {
@@ -80,7 +80,7 @@ void _For_each(_St1& data, _Fn1& _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void _Transform(_St1& data, _Fn1& _Func)
+void _Transform(_St1 &data, _Fn1 &_Func)
 {
     for (PCType j = 0; j < data.Height(); ++j)
     {
@@ -94,7 +94,7 @@ void _Transform(_St1& data, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _Fn1 > inline
-void _Transform(_Dt1& dst, const _St1& src, _Fn1& _Func)
+void _Transform(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
@@ -116,7 +116,7 @@ void _Transform(_Dt1& dst, const _St1& src, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 > inline
-void _Transform(_Dt1& dst, const _St1& src1, const _St2& src2, _Fn1& _Func)
+void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -140,7 +140,7 @@ void _Transform(_Dt1& dst, const _St1& src1, const _St2& src2, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void _Transform(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3, _Fn1& _Func)
+void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -166,7 +166,7 @@ void _Transform(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3,
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void _Transform(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1& _Func)
+void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -194,7 +194,7 @@ void _Transform(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3,
 }
 
 template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 > inline
-void _Convolute(_Dt1& dst, const _St1& src, _Fn1& _Func)
+void _Convolute(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Convolute";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
@@ -264,7 +264,7 @@ void _Convolute(_Dt1& dst, const _St1& src, _Fn1& _Func)
 
 // Template functions of algorithm with PPL
 template < typename _St1, typename _Fn1 > inline
-void _For_each_PPL(_St1& data, _Fn1& _Func)
+void _For_each_PPL(_St1 &data, _Fn1 &_Func)
 {
     concurrency::parallel_for(PCType(0), dst.Height(), [&](PCType j)
     {
@@ -278,7 +278,7 @@ void _For_each_PPL(_St1& data, _Fn1& _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void _Transform_PPL(_St1& data, _Fn1& _Func)
+void _Transform_PPL(_St1 &data, _Fn1 &_Func)
 {
     concurrency::parallel_for(PCType(0), dst.Height(), [&](PCType j)
     {
@@ -292,7 +292,7 @@ void _Transform_PPL(_St1& data, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _Fn1 > inline
-void _Transform_PPL(_Dt1& dst, const _St1& src, _Fn1& _Func)
+void _Transform_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
@@ -314,7 +314,7 @@ void _Transform_PPL(_Dt1& dst, const _St1& src, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 > inline
-void _Transform_PPL(_Dt1& dst, const _St1& src1, const _St2& src2, _Fn1& _Func)
+void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height() || dst.Width() != src2.Width() || dst.Height() != src2.Height())
@@ -337,7 +337,7 @@ void _Transform_PPL(_Dt1& dst, const _St1& src1, const _St2& src2, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void _Transform_PPL(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3, _Fn1& _Func)
+void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -363,7 +363,7 @@ void _Transform_PPL(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& s
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void _Transform_PPL(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1& _Func)
+void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -391,7 +391,7 @@ void _Transform_PPL(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& s
 }
 
 template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 > inline
-void _Convolute_PPL(_Dt1& dst, const _St1& src, _Fn1& _Func)
+void _Convolute_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Convolute_PPL";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
@@ -461,7 +461,7 @@ void _Convolute_PPL(_Dt1& dst, const _St1& src, _Fn1& _Func)
 
 // Template functions of algorithm with AMP
 template < typename _St1, typename _Fn1 > inline
-void _For_each_AMP(_St1& data, _Fn1& _Func)
+void _For_each_AMP(_St1 &data, _Fn1 &_Func)
 {
     concurrency::array_view<decltype(data.value(0)), 1> datav(data.PixelCount(), datap);
 
@@ -472,7 +472,7 @@ void _For_each_AMP(_St1& data, _Fn1& _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void _Transform_AMP(_St1& data, _Fn1& _Func)
+void _Transform_AMP(_St1 &data, _Fn1 &_Func)
 {
     concurrency::array_view<decltype(data.value(0)), 1> datav(data.PixelCount(), data);
 
@@ -483,7 +483,7 @@ void _Transform_AMP(_St1& data, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _Fn1 > inline
-void _Transform_AMP(_Dt1& dst, const _St1& src, _Fn1& _Func)
+void _Transform_AMP(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
@@ -503,7 +503,7 @@ void _Transform_AMP(_Dt1& dst, const _St1& src, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 > inline
-void _Transform_AMP(_Dt1& dst, const _St1& src1, const _St2& src2, _Fn1& _Func)
+void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -525,7 +525,7 @@ void _Transform_AMP(_Dt1& dst, const _St1& src1, const _St2& src2, _Fn1& _Func)
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void _Transform_AMP(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3, _Fn1& _Func)
+void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -549,7 +549,7 @@ void _Transform_AMP(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& s
 }
 
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void _Transform_AMP(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1& _Func)
+void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
@@ -575,7 +575,7 @@ void _Transform_AMP(_Dt1& dst, const _St1& src1, const _St2& src2, const _St3& s
 }
 
 template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 > inline
-void _Convolute_AMP(_Dt1& dst, const _St1& src, _Fn1& _Func)
+void _Convolute_AMP(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Convolute_AMP";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
@@ -671,31 +671,31 @@ void Plane::transform(_Fn1 _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void Plane::transform(const _St1& src, _Fn1 _Func)
+void Plane::transform(const _St1 &src, _Fn1 _Func)
 {
     TRANSFORM(*this, src, _Func);
 }
 
 template < typename _St1, typename _St2, typename _Fn1 > inline
-void Plane::transform(const _St1& src1, const _St2& src2, _Fn1 _Func)
+void Plane::transform(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
 {
     TRANSFORM(*this, src1, src2, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void Plane::transform(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func)
+void Plane::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
 {
     TRANSFORM(*this, src1, src2, src3, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void Plane::transform(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func)
+void Plane::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
 {
     TRANSFORM(*this, src1, src2, src3, src4, _Func);
 }
 
 template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
-void Plane::convolute(const _St1& src, _Fn1 _Func)
+void Plane::convolute(const _St1 &src, _Fn1 _Func)
 {
     CONVOLUTE<VRad, HRad>(*this, src, _Func);
 }
@@ -720,31 +720,31 @@ void Plane::transform_PPL(_Fn1 _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void Plane::transform_PPL(const _St1& src, _Fn1 _Func)
+void Plane::transform_PPL(const _St1 &src, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src, _Func);
 }
 
 template < typename _St1, typename _St2, typename _Fn1 > inline
-void Plane::transform_PPL(const _St1& src1, const _St2& src2, _Fn1 _Func)
+void Plane::transform_PPL(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src1, src2, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void Plane::transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func)
+void Plane::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src1, src2, src3, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void Plane::transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func)
+void Plane::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src1, src2, src3, src4, _Func);
 }
 
 template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
-void Plane::convolute_PPL(const _St1& src, _Fn1 _Func)
+void Plane::convolute_PPL(const _St1 &src, _Fn1 _Func)
 {
     CONVOLUTE_PPL<VRad, HRad>(*this, src, _Func);
 }
@@ -769,31 +769,31 @@ void Plane::transform_AMP(_Fn1 _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void Plane::transform_AMP(const _St1& src, _Fn1 _Func)
+void Plane::transform_AMP(const _St1 &src, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src, _Func);
 }
 
 template < typename _St1, typename _St2, typename _Fn1 > inline
-void Plane::transform_AMP(const _St1& src1, const _St2& src2, _Fn1 _Func)
+void Plane::transform_AMP(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src1, src2, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void Plane::transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func)
+void Plane::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src1, src2, src3, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void Plane::transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func)
+void Plane::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src1, src2, src3, src4, _Func);
 }
 
 template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
-void Plane::convolute_AMP(const _St1& src, _Fn1 _Func)
+void Plane::convolute_AMP(const _St1 &src, _Fn1 _Func)
 {
     CONVOLUTE_AMP<VRad, HRad>(*this, src, _Func);
 }
@@ -826,31 +826,31 @@ void Plane_FL::transform(_Fn1 _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void Plane_FL::transform(const _St1& src, _Fn1 _Func)
+void Plane_FL::transform(const _St1 &src, _Fn1 _Func)
 {
     TRANSFORM(*this, src, _Func);
 }
 
 template < typename _St1, typename _St2, typename _Fn1 > inline
-void Plane_FL::transform(const _St1& src1, const _St2& src2, _Fn1 _Func)
+void Plane_FL::transform(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
 {
     TRANSFORM(*this, src1, src2, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void Plane_FL::transform(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func)
+void Plane_FL::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
 {
     TRANSFORM(*this, src1, src2, src3, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void Plane_FL::transform(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func)
+void Plane_FL::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
 {
     TRANSFORM(*this, src1, src2, src3, src4, _Func);
 }
 
 template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
-void Plane_FL::convolute(const _St1& src, _Fn1 _Func)
+void Plane_FL::convolute(const _St1 &src, _Fn1 _Func)
 {
     CONVOLUTE<VRad, HRad>(*this, src, _Func);
 }
@@ -875,31 +875,31 @@ void Plane_FL::transform_PPL(_Fn1 _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void Plane_FL::transform_PPL(const _St1& src, _Fn1 _Func)
+void Plane_FL::transform_PPL(const _St1 &src, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src, _Func);
 }
 
 template < typename _St1, typename _St2, typename _Fn1 > inline
-void Plane_FL::transform_PPL(const _St1& src1, const _St2& src2, _Fn1 _Func)
+void Plane_FL::transform_PPL(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src1, src2, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void Plane_FL::transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func)
+void Plane_FL::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src1, src2, src3, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void Plane_FL::transform_PPL(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func)
+void Plane_FL::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
 {
     TRANSFORM_PPL(*this, src1, src2, src3, src4, _Func);
 }
 
 template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
-void Plane_FL::convolute_PPL(const _St1& src, _Fn1 _Func)
+void Plane_FL::convolute_PPL(const _St1 &src, _Fn1 _Func)
 {
     CONVOLUTE_PPL<VRad, HRad>(*this, src, _Func);
 }
@@ -924,31 +924,31 @@ void Plane_FL::transform_AMP(_Fn1 _Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void Plane_FL::transform_AMP(const _St1& src, _Fn1 _Func)
+void Plane_FL::transform_AMP(const _St1 &src, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src, _Func);
 }
 
 template < typename _St1, typename _St2, typename _Fn1 > inline
-void Plane_FL::transform_AMP(const _St1& src1, const _St2& src2, _Fn1 _Func)
+void Plane_FL::transform_AMP(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src1, src2, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
-void Plane_FL::transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, _Fn1 _Func)
+void Plane_FL::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src1, src2, src3, _Func);
 }
 
 template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
-void Plane_FL::transform_AMP(const _St1& src1, const _St2& src2, const _St3& src3, const _St4& src4, _Fn1 _Func)
+void Plane_FL::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
 {
     TRANSFORM_AMP(*this, src1, src2, src3, src4, _Func);
 }
 
 template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
-void Plane_FL::convolute_AMP(const _St1& src, _Fn1 _Func)
+void Plane_FL::convolute_AMP(const _St1 &src, _Fn1 _Func)
 {
     CONVOLUTE_AMP<VRad, HRad>(*this, src, _Func);
 }

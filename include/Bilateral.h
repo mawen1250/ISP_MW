@@ -9,7 +9,8 @@
 #include "Gaussian.h"
 
 
-const struct Bilateral2D_Para {
+const struct Bilateral2D_Para
+{
     double sigmaS = 3.0;
     double sigmaR = 0.02;
     int algorithm = 0;
@@ -17,7 +18,8 @@ const struct Bilateral2D_Para {
 } Bilateral2D_Default;
 
 
-class Bilateral2D_Data {
+class Bilateral2D_Data
+{
 private:
     int PlaneCount = 1;
     bool isChroma = false;

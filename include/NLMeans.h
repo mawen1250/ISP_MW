@@ -8,68 +8,87 @@
 #include "Block.h"
 
 
-const struct NLMeans_Para {
+const struct NLMeans_Para
+{
+    bool correction = true;
     double sigma = 8.0;
-    double strength = sigma * 5;
+    double strength = correction ? sigma * 5 : sigma * 1.5;
     PCType GroupSizeMax = 16;
     PCType BlockSize = 8;
     PCType Overlap = 4;
     PCType BMrange = 24;
     PCType BMstep = 3;
-    double thMSE = sigma * 50;
+    double thMSE = correction ? sigma * 50 : sigma * 25;
 } NLMeans_Default;
 
 
-Plane &NLMeans(Plane &dst, const Plane &src, const Plane &ref, double sigma = NLMeans_Default.sigma, double strength = NLMeans_Default.strength,
-    PCType GroupSizeMax = NLMeans_Default.GroupSizeMax, PCType BlockSize = NLMeans_Default.BlockSize, PCType Overlap = NLMeans_Default.Overlap,
-    PCType BMrange = NLMeans_Default.BMrange, PCType BMstep = NLMeans_Default.BMstep, double thMSE = NLMeans_Default.thMSE);
-
-
-inline Plane NLMeans(const Plane &src, const Plane &ref, double sigma = NLMeans_Default.sigma, double strength = NLMeans_Default.strength,
-    PCType GroupSizeMax = NLMeans_Default.GroupSizeMax, PCType BlockSize = NLMeans_Default.BlockSize, PCType Overlap = NLMeans_Default.Overlap,
-    PCType BMrange = NLMeans_Default.BMrange, PCType BMstep = NLMeans_Default.BMstep, double thMSE = NLMeans_Default.thMSE)
+// Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
+class NLMeans
 {
-    Plane dst(src, false);
+private:
+    bool correction;
+    double sigma;
+    double strength;
+    PCType GroupSizeMax;
+    PCType BlockSize;
+    PCType Overlap;
+    PCType BMrange;
+    PCType BMstep;
+    double thMSE;
 
-    return NLMeans(dst, src, ref, sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
-}
+public:
+    NLMeans(bool _correction = NLMeans_Default.correction, double _sigma = NLMeans_Default.sigma, double _strength = NLMeans_Default.strength,
+        PCType _GroupSizeMax = NLMeans_Default.GroupSizeMax, PCType _BlockSize = NLMeans_Default.BlockSize, PCType _Overlap = NLMeans_Default.Overlap,
+        PCType _BMrange = NLMeans_Default.BMrange, PCType _BMstep = NLMeans_Default.BMstep, double _thMSE = NLMeans_Default.thMSE)
+        : correction(_correction), sigma(_sigma), strength(_strength),
+        GroupSizeMax(_GroupSizeMax), BlockSize(_BlockSize), Overlap(_Overlap),
+        BMrange(_BMrange), BMstep(_BMstep), thMSE(_thMSE)
+    {}
 
-inline Plane NLMeans(const Plane &src, double sigma = NLMeans_Default.sigma, double strength = NLMeans_Default.strength,
-    PCType GroupSizeMax = NLMeans_Default.GroupSizeMax, PCType BlockSize = NLMeans_Default.BlockSize, PCType Overlap = NLMeans_Default.Overlap,
-    PCType BMrange = NLMeans_Default.BMrange, PCType BMstep = NLMeans_Default.BMstep, double thMSE = NLMeans_Default.thMSE)
-{
-    Plane dst(src, false);
+    ~NLMeans()
+    {}
 
-    return NLMeans(dst, src, src, sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
-}
+    Plane &process(Plane &dst, const Plane &src, const Plane &ref);
 
-inline Frame NLMeans(const Frame &src, const Frame &ref, double sigma = NLMeans_Default.sigma, double strength = NLMeans_Default.strength,
-    PCType GroupSizeMax = NLMeans_Default.GroupSizeMax, PCType BlockSize = NLMeans_Default.BlockSize, PCType Overlap = NLMeans_Default.Overlap,
-    PCType BMrange = NLMeans_Default.BMrange, PCType BMstep = NLMeans_Default.BMstep, double thMSE = NLMeans_Default.thMSE)
-{
-    Frame dst(src, false);
-
-    for (Frame::PlaneCountType i = 0; i < dst.PlaneCount(); i++)
+    Plane process(const Plane &src, const Plane &ref)
     {
-        NLMeans(dst.P(i), src.P(i), ref.P(i), sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
+        Plane dst(src, false);
+
+        return process(dst, src, ref);
     }
 
-    return dst;
-}
-
-inline Frame NLMeans(const Frame &src, double sigma = NLMeans_Default.sigma, double strength = NLMeans_Default.strength,
-    PCType GroupSizeMax = NLMeans_Default.GroupSizeMax, PCType BlockSize = NLMeans_Default.BlockSize, PCType Overlap = NLMeans_Default.Overlap,
-    PCType BMrange = NLMeans_Default.BMrange, PCType BMstep = NLMeans_Default.BMstep, double thMSE = NLMeans_Default.thMSE)
-{
-    Frame dst(src, false);
-
-    for (Frame::PlaneCountType i = 0; i < dst.PlaneCount(); i++)
+    Plane process(const Plane &src)
     {
-        NLMeans(dst.P(i), src.P(i), src.P(i), sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
+        Plane dst(src, false);
+
+        return process(dst, src, src);
     }
 
-    return dst;
-}
+    Frame &process(Frame &dst, const Frame &src, const Frame &ref);
+
+    Frame process(const Frame &src, const Frame &ref)
+    {
+        Frame dst(src, false);
+
+        return process(dst, src, ref);
+    }
+
+    Frame process(const Frame &src)
+    {
+        Frame dst(src, false);
+
+        return process(dst, src, src);
+    }
+
+protected:
+    template < typename _St1, typename _Ty, typename _FTy >
+    void WeightedAverage(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
+        const typename Block<_Ty, _FTy>::PosPairCode &posPairCode);
+
+    template < typename _St1, typename _Ty, typename _FTy >
+    void WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
+        const typename Block<_Ty, _FTy>::PosPairCode &posPairCode);
+};
 
 
 class NLMeans_IO
@@ -77,14 +96,15 @@ class NLMeans_IO
 {
 protected:
     std::string RPath;
+    bool correction = NLMeans_Default.correction;
     double sigma = NLMeans_Default.sigma;
-    double strength = sigma * 5;
+    double strength = NLMeans_Default.strength;
     PCType GroupSizeMax = NLMeans_Default.GroupSizeMax;
     PCType BlockSize = NLMeans_Default.BlockSize;
     PCType Overlap = NLMeans_Default.Overlap;
     PCType BMrange = NLMeans_Default.BMrange;
     PCType BMstep = NLMeans_Default.BMstep;
-    double thMSE = sigma * 50;
+    double thMSE = NLMeans_Default.thMSE;
 
     virtual void arguments_process()
     {
@@ -102,11 +122,14 @@ protected:
                 ArgsObj.GetPara(i, RPath);
                 continue;
             }
+            if (args[i] == "-C" || args[i] == "--correction")
+            {
+                ArgsObj.GetPara(i, correction);
+                continue;
+            }
             if (args[i] == "-S" || args[i] == "--sigma")
             {
                 ArgsObj.GetPara(i, sigma);
-                if (!strength_def) strength = sigma * 5;
-                if (!thMSE_def) thMSE = sigma * 50;
                 continue;
             }
             if (args[i] == "-H" || args[i] == "--strength")
@@ -154,18 +177,23 @@ protected:
         }
 
         ArgsObj.Check();
+
+        if (!strength_def) strength = correction ? sigma * 5 : sigma * 1.5;
+        if (!thMSE_def) thMSE = correction ? sigma * 50 : sigma * 25;
     }
 
     virtual Frame processFrame(const Frame &src)
     {
+        NLMeans filter(correction, sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
+
         if (RPath.size() == 0)
         {
-            return NLMeans(src, sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
+            return filter.process(src);
         }
         else
         {
             const Frame ref = ImageReader(RPath);
-            return NLMeans(src, ref, sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
+            return filter.process(src, ref);
         }
     }
 

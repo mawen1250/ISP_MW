@@ -128,7 +128,7 @@ int main()
     ImageWriter(PFrame, "D:\\Test Images\\Noise\\03.0.png");
     system("pause");
 #else // Test_Write
-    const int Loop = 4;
+    const int Loop = 10;
 
     Frame IFrame = ImageReader("D:\\Test Images\\01.bmp");
     const Plane& srcR = IFrame.R();
@@ -159,7 +159,8 @@ int main()
 #elif defined(Histogram_Equalization_)
         Histogram_Equalization(IFrame, 1.0, false);
 #elif defined(NLMeans_)
-        NLMeans(IFrame);
+        NLMeans filter;
+        filter.process(IFrame);
 #else
         //DType count = 0;
         //srcR.for_each([&count](DType x){ count += x; });
