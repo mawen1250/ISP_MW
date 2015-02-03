@@ -135,6 +135,7 @@
     <ClCompile Include="Convolution.cpp" />
     <ClCompile Include="Format_Conversion.cpp" />
     <ClCompile Include="Gaussian.cpp" />
+    <ClCompile Include="Haze_Removal.cpp" />
     <ClCompile Include="Highlight_Removal.cpp" />
     <ClCompile Include="Histogram_Equalization.cpp" />
     <ClCompile Include="ImageIO.cpp" />
@@ -155,6 +156,7 @@
     <ClInclude Include="include\Format_Conversion.h" />
     <ClInclude Include="include\Gaussian.h" />
     <ClInclude Include="include\AWB.h" />
+    <ClInclude Include="include\Haze_Removal.h" />
     <ClInclude Include="include\Histogram_Equalization.h" />
     <ClInclude Include="include\Highlight_Removal.h" />
     <ClInclude Include="include\Histogram.h" />

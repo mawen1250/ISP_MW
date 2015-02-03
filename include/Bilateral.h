@@ -44,9 +44,9 @@ public:
     std::vector<LUT<FLType>> GR_LUT;
 
 public:
-    Bilateral2D_Data(const Plane & input, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
+    Bilateral2D_Data(const Plane &src, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
         int _algorithm = Bilateral2D_Default.algorithm, int _PBFICnum = Bilateral2D_Default.PBFICnum)
-        : PlaneCount(1), isChroma(input.isChroma()), BPS(input.BitDepth()),
+        : PlaneCount(1), isChroma(src.isChroma()), BPS(src.BitDepth()),
         sigmaS(PlaneCount, _sigmaS), sigmaR(PlaneCount, _sigmaR), process(PlaneCount), algorithm(PlaneCount, _algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, _PBFICnum),
         radius(PlaneCount), samples(PlaneCount), step(PlaneCount), GS_LUT(PlaneCount), GR_LUT(PlaneCount)
     {
@@ -62,9 +62,9 @@ public:
         GR_LUT_Init();
     }
 
-    Bilateral2D_Data(const Frame & input, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
+    Bilateral2D_Data(const Frame &src, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
         int _algorithm = Bilateral2D_Default.algorithm, int _PBFICnum = Bilateral2D_Default.PBFICnum)
-        : PlaneCount(input.PlaneCount()), isYUV(input.isYUV()), BPS(input.BitDepth()),
+        : PlaneCount(src.PlaneCount()), isYUV(src.isYUV()), BPS(src.BitDepth()),
         sigmaS(PlaneCount, _sigmaS), sigmaR(PlaneCount, _sigmaR), process(PlaneCount), algorithm(PlaneCount, _algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, _PBFICnum),
         radius(PlaneCount), samples(PlaneCount), step(PlaneCount), GS_LUT(PlaneCount), GR_LUT(PlaneCount)
     {
@@ -80,7 +80,7 @@ public:
         GR_LUT_Init();
     }
 
-    Bilateral2D_Data & Bilateral2D_0_Paras()
+    Bilateral2D_Data &Bilateral2D_0_Paras()
     {
         for (int i = 0; i < PlaneCount; i++)
         {
@@ -93,7 +93,7 @@ public:
         return *this;
     }
 
-    Bilateral2D_Data & Bilateral2D_1_Paras()
+    Bilateral2D_Data &Bilateral2D_1_Paras()
     {
         for (int i = 0; i < PlaneCount; i++)
         {
@@ -120,7 +120,7 @@ public:
         return *this;
     }
 
-    Bilateral2D_Data & Bilateral2D_2_Paras()
+    Bilateral2D_Data &Bilateral2D_2_Paras()
     {
         int orad[3];
 
@@ -152,7 +152,7 @@ public:
         return *this;
     }
 
-    Bilateral2D_Data & process_define()
+    Bilateral2D_Data &process_define()
     {
         for (int i = 0; i < PlaneCount; i++)
         {
@@ -165,7 +165,7 @@ public:
         return *this;
     }
 
-    Bilateral2D_Data & algorithm_select()
+    Bilateral2D_Data &algorithm_select()
     {
         for (int i = 0; i < PlaneCount; i++)
         {
@@ -177,7 +177,7 @@ public:
         return *this;
     }
 
-    Bilateral2D_Data & GS_LUT_Init()
+    Bilateral2D_Data &GS_LUT_Init()
     {
         for (int i = 0; i < PlaneCount; i++)
         {
@@ -194,7 +194,7 @@ public:
         return *this;
     }
 
-    Bilateral2D_Data & GR_LUT_Init()
+    Bilateral2D_Data &GR_LUT_Init()
     {
         for (int i = 0; i < PlaneCount; i++)
         {
@@ -209,49 +209,49 @@ public:
 };
 
 
-Plane & Bilateral2D(Plane & output, const Plane & input, const Plane & ref, const Bilateral2D_Data &d, int plane = 0);
-Plane & Bilateral2D_0(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane = 0);
-Plane & Bilateral2D_1(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane = 0);
-Plane & Bilateral2D_2(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane = 0);
-Plane & Bilateral2D_2(Plane & dst, const Plane & src, const Bilateral2D_Data &d, int plane = 0);
+Plane &Bilateral2D(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane = 0);
+Plane &Bilateral2D_0(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane = 0);
+Plane &Bilateral2D_1(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane = 0);
+Plane &Bilateral2D_2(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane = 0);
+Plane &Bilateral2D_2(Plane &dst, const Plane &src, const Bilateral2D_Data &d, int plane = 0);
 
 
-inline Plane Bilateral2D(const Plane & input, const Plane & ref, const Bilateral2D_Data &d)
+inline Plane Bilateral2D(const Plane &src, const Plane &ref, const Bilateral2D_Data &d)
 {
-    Plane output(input, false);
+    Plane dst(src, false);
 
-    return Bilateral2D(output, input, ref, d, 0);
+    return Bilateral2D(dst, src, ref, d, 0);
 }
 
-inline Plane Bilateral2D(const Plane & input, const Bilateral2D_Data &d)
+inline Plane Bilateral2D(const Plane &src, const Bilateral2D_Data &d)
 {
-    Plane output(input, false);
+    Plane dst(src, false);
 
-    return Bilateral2D(output, input, input, d, 0);
+    return Bilateral2D(dst, src, src, d, 0);
 }
 
-inline Frame Bilateral2D(const Frame & input, const Frame & ref, const Bilateral2D_Data &d)
+inline Frame Bilateral2D(const Frame &src, const Frame &ref, const Bilateral2D_Data &d)
 {
-    Frame output(input, false);
+    Frame dst(src, false);
 
-    for (Frame::PlaneCountType i = 0; i < input.PlaneCount(); i++)
+    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
     {
-        Bilateral2D(output.P(i), input.P(i), ref.P(i), d, i);
+        Bilateral2D(dst.P(i), src.P(i), ref.P(i), d, i);
     }
 
-    return output;
+    return dst;
 }
 
-inline Frame Bilateral2D(const Frame & input, const Bilateral2D_Data &d)
+inline Frame Bilateral2D(const Frame &src, const Bilateral2D_Data &d)
 {
-    Frame output(input, false);
+    Frame dst(src, false);
 
-    for (Frame::PlaneCountType i = 0; i < input.PlaneCount(); i++)
+    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
     {
-        Bilateral2D(output.P(i), input.P(i), input.P(i), d, i);
+        Bilateral2D(dst.P(i), src.P(i), src.P(i), d, i);
     }
 
-    return output;
+    return dst;
 }
 
 

@@ -14,7 +14,7 @@ const struct Retinex_Para
 
     double lower_thr = 0.001;
     double upper_thr = 0.001;
-    Histogram<FLType>::BinType HistBins = 4096;
+    Histogram<FLType>::BinType HistBins = 1024;
 
     double chroma_protect = 1.2;
 
@@ -26,31 +26,31 @@ const struct Retinex_Para
 } Retinex_Default;
 
 
-Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVector);
-Plane_FL Retinex_MSR(const Plane_FL & idata, const std::vector<double> & sigmaVector, double lower_thr, double upper_thr);
-Plane_FL Retinex_MSRCR_GIMP(const Plane_FL & idata, const std::vector<double> & sigmaVector, double dynamic);
+Plane_FL Retinex_MSR(const Plane_FL &idata, const std::vector<double> &sigmaVector);
+Plane_FL Retinex_MSR(const Plane_FL &idata, const std::vector<double> &sigmaVector, double lower_thr, double upper_thr);
+Plane_FL Retinex_MSRCR_GIMP(const Plane_FL &idata, const std::vector<double> &sigmaVector, double dynamic);
 
-Plane & Retinex_SSR(Plane & dst, const Plane & src, double sigma = Retinex_Default.sigma,
+Plane &Retinex_SSR(Plane &dst, const Plane &src, double sigma = Retinex_Default.sigma,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr);
-Plane & Retinex_MSR(Plane & dst, const Plane & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+Plane &Retinex_MSR(Plane &dst, const Plane &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr);
-Frame & Retinex_MSRCP(Frame & dst, const Frame & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+Frame &Retinex_MSRCP(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
     double chroma_protect = Retinex_Default.chroma_protect);
-Frame & Retinex_MSRCR(Frame & dst, const Frame & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+Frame &Retinex_MSRCR(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
     double restore = Retinex_Default.restore);
-Frame & Retinex_MSRCR_GIMP(Frame & dst, const Frame & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+Frame &Retinex_MSRCR_GIMP(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double dynamic = Retinex_Default.dynamic);
 
-inline Plane Retinex_SSR(const Plane & src, double sigma = Retinex_Default.sigma,
+inline Plane Retinex_SSR(const Plane &src, double sigma = Retinex_Default.sigma,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr)
 {
     Plane dst(src, false);
     return Retinex_SSR(dst, src, sigma, lower_thr, upper_thr);
 }
 
-inline Frame Retinex_SSR(const Frame & src, double sigma = Retinex_Default.sigma,
+inline Frame Retinex_SSR(const Frame &src, double sigma = Retinex_Default.sigma,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr)
 {
     Frame dst(src, false);
@@ -59,13 +59,13 @@ inline Frame Retinex_SSR(const Frame & src, double sigma = Retinex_Default.sigma
     return dst;
 }
 
-inline Plane Retinex_MSR(const Plane & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+inline Plane Retinex_MSR(const Plane &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr)
 {
     Plane dst(src, false);
     return Retinex_MSR(dst, src, sigmaVector, lower_thr, upper_thr);
 }
-inline Frame Retinex_MSRCP(const Frame & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+inline Frame Retinex_MSRCP(const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
     double chroma_protect = Retinex_Default.chroma_protect)
 {
@@ -73,7 +73,7 @@ inline Frame Retinex_MSRCP(const Frame & src, const std::vector<double> & sigmaV
     return Retinex_MSRCP(dst, src, sigmaVector, lower_thr, upper_thr, chroma_protect);
 }
 
-inline Frame Retinex_MSRCR(const Frame & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+inline Frame Retinex_MSRCR(const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
     double restore = Retinex_Default.restore)
 {
@@ -81,7 +81,7 @@ inline Frame Retinex_MSRCR(const Frame & src, const std::vector<double> & sigmaV
     return Retinex_MSRCR(dst, src, sigmaVector, lower_thr, upper_thr, restore);
 }
 
-inline Frame Retinex_MSRCR_GIMP(const Frame & src, const std::vector<double> & sigmaVector = Retinex_Default.sigmaVector,
+inline Frame Retinex_MSRCR_GIMP(const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
     double dynamic = Retinex_Default.dynamic)
 {
     Frame dst(src, false);

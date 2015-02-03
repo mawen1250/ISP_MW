@@ -20,18 +20,18 @@ const struct Gaussian2D_Para {
 } Gaussian2D_Default;
 
 
-Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma = Gaussian2D_Default.sigma);
-inline Plane Gaussian2D(const Plane & input, const double sigma = Gaussian2D_Default.sigma)
+Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma = Gaussian2D_Default.sigma);
+inline Plane Gaussian2D(const Plane &src, const double sigma = Gaussian2D_Default.sigma)
 {
-    Plane output(input, false);
-    return Gaussian2D(output, input, sigma);
+    Plane dst(src, false);
+    return Gaussian2D(dst, src, sigma);
 }
-inline Frame Gaussian2D(const Frame & input, const double sigma = Gaussian2D_Default.sigma)
+inline Frame Gaussian2D(const Frame &src, const double sigma = Gaussian2D_Default.sigma)
 {
-    Frame output(input, false);
-    for (Frame::PlaneCountType i = 0; i < input.PlaneCount(); i++)
-        Gaussian2D(output.P(i), input.P(i), sigma);
-    return output;
+    Frame dst(src, false);
+    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
+        Gaussian2D(dst.P(i), src.P(i), sigma);
+    return dst;
 }
 
 
@@ -77,17 +77,41 @@ public:
 };
 
 
-void Recursive_Gaussian_Parameters(const double sigma, double & B, double & B1, double & B2, double & B3);
-void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3);
-void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3);
-inline void Recursive_Gaussian2D_Vertical(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+class RecursiveGaussian
 {
-    Recursive_Gaussian2D_Vertical(data, data, B, B1, B2, B3);
-}
-inline void Recursive_Gaussian2D_Horizontal(Plane_FL & data, const FLType B, const FLType B1, const FLType B2, const FLType B3)
-{
-    Recursive_Gaussian2D_Horizontal(data, data, B, B1, B2, B3);
-}
+public:
+    typedef RecursiveGaussian _Myt;
+
+protected:
+    FLType B;
+    FLType B1;
+    FLType B2;
+    FLType B3;
+
+public:
+    _Myt(double sigma)
+    {
+        GetPara(sigma);
+    }
+
+    Plane_FL operator()(const Plane_FL &src)
+    {
+        Plane_FL dst(src, false);
+        Filter(dst, src);
+        return dst;
+    }
+
+    void GetPara(double sigma);
+
+    void FilterV(Plane_FL &dst, const Plane_FL &src);
+    void FilterV(Plane_FL &data);
+
+    void FilterH(Plane_FL &dst, const Plane_FL &src);
+    void FilterH(Plane_FL &data);
+
+    void Filter(Plane_FL &dst, const Plane_FL &src) { FilterH(dst, src); FilterV(dst); }
+    void Filter(Plane_FL &data) { FilterH(data); FilterV(data); }
+};
 
 
 inline double Gaussian_Function(double x, double sigma)
@@ -113,16 +137,110 @@ inline double Normalized_Gaussian_Function_sqr_x(double sqr_x, double sigma)
 }
 
 
+template < typename _Ty = FLType >
+class GaussianFunction
+{
+public:
+    typedef GaussianFunction<_Ty> _Myt;
+
+protected:
+    const _Ty const1_;
+
+protected:
+    _Ty BaseFunc(_Ty sqr_x)
+    {
+        return exp(sqr_x * const1_);
+    }
+
+public:
+    _Myt(_Ty sigma)
+        : const1_(_Ty(1) / (sigma * sigma * -2))
+    {}
+
+    _Ty operator()(_Ty sqr_x)
+    {
+        return BaseFunc(sqr_x);
+    }
+};
+
+template < typename _Ty = FLType >
+class NormalizedGaussianFunction
+    : protected GaussianFunction<_Ty>
+{
+public:
+    typedef NormalizedGaussianFunction<_Ty> _Myt;
+    typedef GaussianFunction<_Ty> _Mybase;
+
+protected:
+    const _Ty const2_;
+
+protected:
+    _Ty BaseFunc(_Ty sqr_x)
+    {
+        return exp(sqr_x * const1_) * const2_;
+    }
+
+public:
+    _Myt(_Ty sigma)
+        : _Mybase(sigma), const2_(_Ty(1) / (_Ty(sqrt_2Pi) * sigma))
+    {}
+
+    _Ty operator()(_Ty sqr_x)
+    {
+        return BaseFunc(sqr_x);
+    }
+};
+
+template < typename _Ty = FLType >
+class GaussianFunctionX
+    : protected GaussianFunction<_Ty>
+{
+public:
+    typedef GaussianFunctionX<_Ty> _Myt;
+    typedef GaussianFunction<_Ty> _Mybase;
+
+public:
+    _Myt(_Ty sigma)
+        : _Mybase(sigma)
+    {}
+
+    _Ty operator()(_Ty x)
+    {
+        return BaseFunc(x * x);
+    }
+};
+
+template < typename _Ty = FLType >
+class NormalizedGaussianFunctionX
+    : protected NormalizedGaussianFunction<_Ty>
+{
+public:
+    typedef NormalizedGaussianFunctionX<_Ty> _Myt;
+    typedef NormalizedGaussianFunction<_Ty> _Mybase;
+
+public:
+    _Myt(_Ty sigma)
+        : _Mybase(sigma)
+    {}
+
+    _Ty operator()(_Ty x)
+    {
+        return BaseFunc(x * x);
+    }
+};
+
+
 inline LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS)
 {
-    PCType x, y;
+    GaussianFunction<double> GFunc(sigmaS);
+
     LUT<FLType> GS_LUT(xUpper*yUpper);
 
-    for (y = 0; y < yUpper; y++)
+    for (PCType y = 0; y < yUpper; y++)
     {
-        for (x = 0; x < xUpper; x++)
+        for (PCType x = 0; x < xUpper; x++)
         {
-            GS_LUT[y*xUpper + x] = static_cast<FLType>(Gaussian_Function_sqr_x(static_cast<double>(x*x + y*y), sigmaS));
+            GS_LUT[y*xUpper + x] = static_cast<FLType>(GFunc(static_cast<double>(x*x + y*y)));
         }
     }
 
@@ -131,14 +249,16 @@ inline LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper,
 
 inline LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange, const double sigmaR)
 {
-    DType i;
+    NormalizedGaussianFunctionX<double> NGFuncX(sigmaR);
+
     DType Levels = ValueRange + 1;
     const DType upper = Min(ValueRange, static_cast<DType>(sigmaR*sigmaRMul*ValueRange + 0.5));
     LUT<FLType> GR_LUT(Levels);
 
-    for (i = 0; i <= upper; i++)
+    DType i = 0;
+    for (; i <= upper; i++)
     {
-        GR_LUT[i] = static_cast<FLType>(Normalized_Gaussian_Function(static_cast<double>(i) / ValueRange, sigmaR));
+        GR_LUT[i] = static_cast<FLType>(NGFuncX(static_cast<double>(i) / ValueRange));
     }
     // For unknown reason, when more range weights are too small or equal 0, the runtime speed gets lower - mainly in function Recursive_Gaussian2D_Horizontal.
     // To avoid this issue, we set range weights whose range values are larger than sigmaR*sigmaRMul to the Gaussian function value at sigmaR*sigmaRMul.
@@ -154,12 +274,12 @@ inline LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange
     return GR_LUT;
 }
 
-inline FLType Gaussian_Distribution2D_Spatial_LUT_Lookup(const LUT<FLType> & GS_LUT, const PCType xUpper, const PCType x, const PCType y)
+inline FLType Gaussian_Distribution2D_Spatial_LUT_Lookup(const LUT<FLType> &GS_LUT, const PCType xUpper, const PCType x, const PCType y)
 {
     return GS_LUT[y*xUpper + x];
 }
 
-inline FLType Gaussian_Distribution2D_Range_LUT_Lookup(const LUT<FLType> & GR_LUT, const DType Value1, const DType Value2)
+inline FLType Gaussian_Distribution2D_Range_LUT_Lookup(const LUT<FLType> &GR_LUT, const DType Value1, const DType Value2)
 {
     return GR_LUT[Value1 > Value2 ? Value1 - Value2 : Value2 - Value1];
 }

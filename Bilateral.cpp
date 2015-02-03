@@ -2,7 +2,7 @@
 #include "Bilateral.h"
 
 
-Plane & Bilateral2D(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane)
+Plane &Bilateral2D(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane)
 {
     // Skip processing if either sigma is not positive
     if (d.process[plane] == 0)
@@ -35,7 +35,7 @@ Plane & Bilateral2D(Plane & dst, const Plane & src, const Plane & ref, const Bil
 
 
 // Implementation of cross/joint Bilateral filter with truncated spatial window
-Plane & Bilateral2D_0(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane)
+Plane &Bilateral2D_0(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane)
 {
     int radiusx = d.radius0[plane];
     int radiusy = d.radius0[plane];
@@ -50,20 +50,20 @@ Plane & Bilateral2D_0(Plane & dst, const Plane & src, const Plane & ref, const B
 
     index0 = radiusy*src.Width();
     memcpy(dst.Data(), src.Data(), index0*sizeof(DType));
-    for (j = radiusy; j < src.Height() - radiusy; j++)
+    for (j = radiusy; j < src.Height() - radiusy; ++j)
     {
-        for (i = 0; i < radiusx; i++, index0++)
+        for (i = 0; i < radiusx; ++i, ++index0)
         {
             dst[index0] = src[index0];
         }
-        for (; i < src.Width() - radiusx; i++, index0++)
+        for (; i < src.Width() - radiusx; ++i, ++index0)
         {
             WeightSum = 0;
             Sum = 0;
-            for (y = -radiusy; y < yUpper; y++)
+            for (y = -radiusy; y < yUpper; ++y)
             {
                 index1 = index0 + y*src.Width() - radiusx;
-                for (x = -radiusx; x < xUpper; x++, index1++)
+                for (x = -radiusx; x < xUpper; ++x, ++index1)
                 {
                     Weight = Gaussian_Distribution2D_Spatial_LUT_Lookup(GS_LUT, xUpper, Abs(x), Abs(y)) * Gaussian_Distribution2D_Range_LUT_Lookup(GR_LUT, ref[index0], ref[index1]);
                     WeightSum += Weight;
@@ -72,7 +72,7 @@ Plane & Bilateral2D_0(Plane & dst, const Plane & src, const Plane & ref, const B
             }
             dst[index0] = dst.Quantize(Sum / WeightSum);
         }
-        for (; i < src.Width(); i++, index0++)
+        for (; i < src.Width(); ++i, ++index0)
         {
             dst[index0] = src[index0];
         }
@@ -84,7 +84,7 @@ Plane & Bilateral2D_0(Plane & dst, const Plane & src, const Plane & ref, const B
 
 
 // Implementation of O(1) cross/joint Bilateral filter algorithm from "Qingxiong Yang, Kar-Han Tan, Narendra Ahuja - Real-Time O(1) Bilateral Filtering"
-Plane & Bilateral2D_1(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane)
+Plane &Bilateral2D_1(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane)
 {
     int i, j, upper;
     int k;
@@ -110,43 +110,40 @@ Plane & Bilateral2D_1(Plane & dst, const Plane & src, const Plane & ref, const B
     // Generate quantized PBFICs' parameters
     DType * PBFICk = new DType[PBFICnum];
 
-    for (k = 0; k < PBFICnum; k++)
+    for (k = 0; k < PBFICnum; ++k)
     {
         PBFICk[k] = static_cast<DType>(static_cast<double>(rRange)*k / (PBFICnum - 1) + rLower + 0.5);
     }
 
-    // Generate recursive Gaussian parameters
-    FLType B, B1, B2, B3;
-    Recursive_Gaussian_Parameters(sigmaS, B, B1, B2, B3);
+    // Generate recursive Gaussian filter object
+    RecursiveGaussian GFilter(sigmaS);
 
     // Generate quantized PBFICs
     Plane_FL * PBFIC = new Plane_FL[PBFICnum];
     Plane_FL Wk(ref, false);
     Plane_FL Jk(ref, false);
     
-    for (k = 0; k < PBFICnum; k++)
+    for (k = 0; k < PBFICnum; ++k)
     {
         PBFIC[k] = Plane_FL(ref, false);
 
-        for (j = 0; j < height; j++)
+        for (j = 0; j < height; ++j)
         {
             i = stride * j;
-            for (upper = i + width; i < upper; i++)
+            for (upper = i + width; i < upper; ++i)
             {
                 Wk[i] = Gaussian_Distribution2D_Range_LUT_Lookup(GR_LUT, PBFICk[k], ref[i]);
                 Jk[i] = Wk[i] * src[i];
             }
         }
 
-        Recursive_Gaussian2D_Horizontal(Wk, B, B1, B2, B3);
-        Recursive_Gaussian2D_Vertical(Wk, B, B1, B2, B3);
-        Recursive_Gaussian2D_Horizontal(Jk, B, B1, B2, B3);
-        Recursive_Gaussian2D_Vertical(Jk, B, B1, B2, B3);
+        GFilter.Filter(Wk);
+        GFilter.Filter(Jk);
 
-        for (j = 0; j < height; j++)
+        for (j = 0; j < height; ++j)
         {
             i = stride * j;
-            for (upper = i + width; i < upper; i++)
+            for (upper = i + width; i < upper; ++i)
             {
                 PBFIC[k][i] = Wk[i] == 0 ? 0 : Jk[i] / Wk[i];
             }
@@ -154,12 +151,12 @@ Plane & Bilateral2D_1(Plane & dst, const Plane & src, const Plane & ref, const B
     }
 
     // Generate filtered result from PBFICs using linear interpolation
-    for (j = 0; j < height; j++)
+    for (j = 0; j < height; ++j)
     {
         i = stride * j;
-        for (upper = i + width; i < upper; i++)
+        for (upper = i + width; i < upper; ++i)
         {
-            for (k = 0; k < PBFICnum - 2; k++)
+            for (k = 0; k < PBFICnum - 2; ++k)
             {
                 if (ref[i] < PBFICk[k + 1] && ref[i] >= PBFICk[k]) break;
             }
@@ -185,26 +182,26 @@ void data2buff(T * dst, const T * src, int xoffset, int yoffset,
     T *dstp;
     const T *srcp;
 
-    for (y = 0; y < height; y++)
+    for (y = 0; y < height; ++y)
     {
         dstp = dst + (yoffset + y) * bufstride;
         srcp = src + y * stride;
-        for (x = 0; x < xoffset; x++)
+        for (x = 0; x < xoffset; ++x)
             dstp[x] = srcp[0];
         memcpy(dstp + xoffset, srcp, sizeof(T)*width);
-        for (x = xoffset + width; x < bufwidth; x++)
+        for (x = xoffset + width; x < bufwidth; ++x)
             dstp[x] = srcp[width - 1];
     }
 
     srcp = dst + yoffset * bufstride;
-    for (y = 0; y < yoffset; y++)
+    for (y = 0; y < yoffset; ++y)
     {
         dstp = dst + y * bufstride;
         memcpy(dstp, srcp, sizeof(T)*bufwidth);
     }
 
     srcp = dst + (yoffset + height - 1) * bufstride;
-    for (y = yoffset + height; y < bufheight; y++)
+    for (y = yoffset + height; y < bufheight; ++y)
     {
         dstp = dst + y * bufstride;
         memcpy(dstp, srcp, sizeof(T)*bufwidth);
@@ -212,7 +209,7 @@ void data2buff(T * dst, const T * src, int xoffset, int yoffset,
 }
 
 // Implementation of cross/joint Bilateral filter with truncated spatial window and sub-sampling
-Plane & Bilateral2D_2(Plane & dst, const Plane & src, const Plane & ref, const Bilateral2D_Data &d, int plane)
+Plane &Bilateral2D_2(Plane &dst, const Plane &src, const Plane &ref, const Bilateral2D_Data &d, int plane)
 {
     int i, j, x, y;
 
@@ -251,12 +248,12 @@ Plane & Bilateral2D_2(Plane & dst, const Plane & src, const Plane & ref, const B
     const int xUpper = radiusx + 1, yUpper = radiusy + 1;
 
     yoffset = samplecenter;
-    for (j = 0; j < height; j++, srcp += stride, refp += stride, dstp += stride)
+    for (j = 0; j < height; ++j, srcp += stride, refp += stride, dstp += stride)
     {
         srcbuffp1 = srcbuff + (yoffset + j) * bufstride;
         refbuffp1 = refbuff + (yoffset + j) * bufstride;
 
-        for (i = 0; i < width; i++)
+        for (i = 0; i < width; ++i)
         {
             xoffset = samplecenter + i;
             srcbuffp2 = srcbuffp1 + xoffset;
@@ -296,7 +293,7 @@ Plane & Bilateral2D_2(Plane & dst, const Plane & src, const Plane & ref, const B
 }
 
 // Implementation of Bilateral filter with truncated spatial window and sub-sampling
-Plane & Bilateral2D_2(Plane & dst, const Plane & src, const Bilateral2D_Data &d, int plane)
+Plane &Bilateral2D_2(Plane &dst, const Plane &src, const Bilateral2D_Data &d, int plane)
 {
     int i, j, x, y;
 
@@ -332,11 +329,11 @@ Plane & Bilateral2D_2(Plane & dst, const Plane & src, const Bilateral2D_Data &d,
     const int xUpper = radiusx + 1, yUpper = radiusy + 1;
 
     yoffset = samplecenter;
-    for (j = 0; j < height; j++, srcp += stride, dstp += stride)
+    for (j = 0; j < height; ++j, srcp += stride, dstp += stride)
     {
         srcbuffp1 = srcbuff + (yoffset + j) * bufstride;
 
-        for (i = 0; i < width; i++)
+        for (i = 0; i < width; ++i)
         {
             xoffset = samplecenter + i;
             srcbuffp2 = srcbuffp1 + xoffset;

@@ -132,7 +132,8 @@ protected:
     void InitValue(value_type Value, bool Init = true);
 
 public:
-    explicit Plane(value_type Value = 0, PCType _Width = 1920, PCType _Height = 1080, value_type _BitDepth = 16, bool Init = true); // Default constructor and Convertor/Constructor from value_type
+    Plane() {} // Default constructor
+    explicit Plane(value_type Value, PCType _Width = 1920, PCType _Height = 1080, value_type _BitDepth = 16, bool Init = true); // Convertor/Constructor from value_type
     Plane(value_type Value, PCType _Width, PCType _Height, value_type _BitDepth, value_type _Floor, value_type _Neutral, value_type _Ceil, TransferChar _TransferChar, bool Init = true);
 
     Plane(const _Myt &src); // Copy constructor
@@ -178,24 +179,26 @@ public:
     pointer Data() { return Data_; }
     const_pointer Data() const { return Data_; }
 
-    bool isChroma() const { return Floor_ < Neutral_; }
-    bool isPCChroma() const { return Floor_ < Neutral_ && (Floor_ + Ceil_) % 2 == 1; }
+    bool isChroma() const;
+    bool isPCChroma() const;
     value_type Min() const;
     value_type Max() const;
     void MinMax(reference min, reference max) const;
     FLType Mean() const;
     FLType Variance(FLType Mean) const;
     FLType Variance() const { return Variance(Mean()); }
+    void ValidRange(reference min, reference max, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false) const;
 
     _Myt &Width(PCType _Width) { return ReSize(_Width, Height()); }
     _Myt &Height(PCType _Height) { return ReSize(Width(), _Height); }
     _Myt &ReSize(PCType _Width, PCType _Height);
+    void ReSetChroma(bool Chroma = false);
     _Myt &ReQuantize(value_type _BitDepth = 16, QuantRange _QuantRange = QuantRange::PC, bool scale = true, bool clip = false);
     _Myt &ReQuantize(value_type _BitDepth, value_type _Floor, value_type _Neutral, value_type _Ceil, bool scale = true, bool clip = false);
     _Myt &SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
-    _Myt &From(const Plane &src);
-    _Myt &From(const Plane_FL &src);
+    _Myt &From(const Plane &src, bool clip = false);
+    _Myt &From(const Plane_FL &src, bool clip = false);
     _Myt &ConvertFrom(const Plane &src, TransferChar dstTransferChar);
     _Myt &ConvertFrom(const Plane &src) { return ConvertFrom(src, TransferChar_); }
     _Myt &YFrom(const Frame &src);
@@ -210,7 +213,7 @@ public:
     _Myt &Binarize(value_type lower_thrD, value_type upper_thrD) { return Binarize(*this, lower_thrD, upper_thrD); }
     _Myt &Binarize_ratio(const _Myt &src, double lower_thr = 0., double upper_thr = 1.);
     _Myt &Binarize_ratio(double lower_thr = 0., double upper_thr = 1.) { return Binarize_ratio(*this, lower_thr, upper_thr); }
-    _Myt &SimplestColorBalance(Plane_FL &flt, const Plane &src, double lower_thr = 0., double upper_thr = 0., int HistBins = 4096);
+    template < typename _St1 > void SimplestColorBalance(const _St1 &src, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024);
 
     template < typename T > value_type Quantize(T input) const;
 
@@ -280,7 +283,8 @@ protected:
     void InitValue(value_type Value, bool Init = true);
 
 public:
-    explicit Plane_FL(value_type Value = 0, PCType _Width = 1920, PCType _Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Default constructor and Convertor/Constructor from value_type
+    Plane_FL() {} // Default constructor
+    explicit Plane_FL(value_type Value, PCType _Width = 1920, PCType _Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Convertor/Constructor from value_type
     Plane_FL(value_type Value, PCType _Width, PCType _Height, value_type _Floor, value_type _Neutral, value_type _Ceil, TransferChar _TransferChar, bool Init = true);
 
     Plane_FL(const _Myt &src); // Copy constructor
@@ -325,21 +329,25 @@ public:
     pointer Data() { return Data_; }
     const_pointer Data() const { return Data_; }
 
-    bool isChroma() const { return Floor_ < Neutral_; }
+    bool isChroma() const;
+    bool isPCChroma() const;
     value_type Min() const;
     value_type Max() const;
     void MinMax(reference min, reference max) const;
     value_type Mean() const;
     value_type Variance(value_type Mean) const;
     value_type Variance() const { return Variance(Mean()); }
+    void ValidRange(reference min, reference max, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false) const;
 
     _Myt &Width(PCType _Width) { return ReSize(_Width, Height()); }
     _Myt &Height(PCType _Height) { return ReSize(Width(), _Height); }
     _Myt &ReSize(PCType _Width, PCType _Height);
+    void ReSetChroma(bool Chroma = false);
     _Myt &ReQuantize(value_type _Floor, value_type _Neutral, value_type _Ceil, bool scale = true, bool clip = false);
     _Myt &SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
-    _Myt &From(const Plane &src);
+    _Myt &From(const Plane &src, bool clip = false);
+    _Myt &From(const Plane_FL &src, bool clip = false);
     _Myt &ConvertFrom(const Plane_FL &src, TransferChar dstTransferChar);
     _Myt &ConvertFrom(const Plane_FL &src) { return ConvertFrom(src, TransferChar_); }
     _Myt &ConvertFrom(const Plane &src, TransferChar dstTransferChar);
@@ -351,7 +359,7 @@ public:
     _Myt &Binarize(value_type lower_thrD, value_type upper_thrD) { return Binarize(*this, lower_thrD, upper_thrD); }
     _Myt &Binarize_ratio(const _Myt &src, double lower_thr = 0., double upper_thr = 1.);
     _Myt &Binarize_ratio(double lower_thr = 0., double upper_thr = 1.) { return Binarize_ratio(*this, lower_thr, upper_thr); }
-    _Myt &SimplestColorBalance(const _Myt &flt, const _Myt &src, double lower_thr = 0., double upper_thr = 0., int HistBins = 4096);
+    template < typename _St1 > void SimplestColorBalance(const _St1 &src, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024);
 
     template < typename T > value_type Quantize(T input) const;
 
@@ -435,8 +443,9 @@ protected:
     void FreePlanes();
 
 public:
-    explicit Frame(FCType _FrameNum = 0, PixelType _PixelType = PixelType::RGB, PCType _Width = 1920, PCType _Height = 1080,
-        value_type _BitDepth = 16, bool Init = true); // Default constructor and Convertor/Constructor from FCType
+    Frame() {} // Default constructor
+    explicit Frame(FCType _FrameNum, PixelType _PixelType = PixelType::RGB, PCType _Width = 1920, PCType _Height = 1080,
+        value_type _BitDepth = 16, bool Init = true); // Convertor/Constructor from FCType
     Frame(FCType _FrameNum, PixelType _PixelType, PCType _Width, PCType _Height, value_type _BitDepth,
         QuantRange _QuantRange, ChromaPlacement _ChromaPlacement = ChromaPlacement::MPEG2, bool Init = true);
     Frame(FCType _FrameNum, PixelType _PixelType, PCType _Width, PCType _Height, value_type _BitDepth, QuantRange _QuantRange,
@@ -488,10 +497,367 @@ public:
     value_type BitDepth() const { return P_[0]->BitDepth(); }
 
     _Myt &ConvertFrom(const Frame &src, TransferChar dstTransferChar);
+
+    template < typename _St1 > void SimplestColorBalance(const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
+        double lower_thr = 0., double upper_thr = 0., int HistBins = 1024);
 };
 
 
 #include "Image_Type.hpp"
+
+
+// Inline functions for class Plane
+inline bool Plane::isChroma() const { return ::isChroma(Floor(), Neutral()); }
+inline bool Plane::isPCChroma() const { return ::isPCChroma(Floor(), Neutral(), Ceil()); }
+inline void Plane::ValidRange(reference min, reference max, double lower_thr, double upper_thr, int HistBins, bool protect) const
+{
+    ::ValidRange(*this, min, max, lower_thr, upper_thr, HistBins, protect);
+}
+inline void Plane::ReSetChroma(bool Chroma) { ::ReSetChroma(Floor_, Neutral_, Ceil_, Chroma); }
+
+
+// Inline functions for class Plane_FL
+inline bool Plane_FL::isChroma() const { return ::isChroma(Floor(), Neutral()); }
+inline bool Plane_FL::isPCChroma() const { return ::isPCChroma(Floor(), Neutral(), Ceil()); }
+inline void Plane_FL::ValidRange(reference min, reference max, double lower_thr, double upper_thr, int HistBins, bool protect) const
+{
+    ::ValidRange(*this, min, max, lower_thr, upper_thr, HistBins, protect);
+}
+inline void Plane_FL::ReSetChroma(bool Chroma) { ::ReSetChroma(Floor_, Neutral_, Ceil_, Chroma); }
+
+
+// Template functions for class Plane
+template < typename _St1 > inline
+void Plane::SimplestColorBalance(const _St1 &src, double lower_thr, double upper_thr, int HistBins)
+{
+    ::SimplestColorBalance(*this, src, lower_thr, upper_thr, HistBins);
+}
+
+
+template < typename T > inline
+Plane::value_type Plane::Quantize(T input) const
+{
+    T input_up = input + T(0.5);
+    return input <= Floor_ ? Floor_ : input_up >= Ceil_ ? Ceil_ : static_cast<Plane::value_type>(input_up);
+}
+
+
+template < typename _Fn1 > inline
+void Plane::for_each(_Fn1 _Func) const
+{
+    FOR_EACH(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane::for_each(_Fn1 _Func)
+{
+    FOR_EACH(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane::transform(_Fn1 _Func)
+{
+    TRANSFORM(*this, _Func);
+}
+
+template < typename _St1, typename _Fn1 > inline
+void Plane::transform(const _St1 &src, _Fn1 _Func)
+{
+    TRANSFORM(*this, src, _Func);
+}
+
+template < typename _St1, typename _St2, typename _Fn1 > inline
+void Plane::transform(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
+{
+    TRANSFORM(*this, src1, src2, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+void Plane::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
+{
+    TRANSFORM(*this, src1, src2, src3, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+void Plane::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
+{
+    TRANSFORM(*this, src1, src2, src3, src4, _Func);
+}
+
+template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
+void Plane::convolute(const _St1 &src, _Fn1 _Func)
+{
+    CONVOLUTE<VRad, HRad>(*this, src, _Func);
+}
+
+
+template < typename _Fn1 > inline
+void Plane::for_each_PPL(_Fn1 _Func) const
+{
+    FOR_EACH_PPL(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane::for_each_PPL(_Fn1 _Func)
+{
+    FOR_EACH_PPL(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane::transform_PPL(_Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, _Func);
+}
+
+template < typename _St1, typename _Fn1 > inline
+void Plane::transform_PPL(const _St1 &src, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src, _Func);
+}
+
+template < typename _St1, typename _St2, typename _Fn1 > inline
+void Plane::transform_PPL(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src1, src2, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+void Plane::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src1, src2, src3, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+void Plane::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src1, src2, src3, src4, _Func);
+}
+
+template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
+void Plane::convolute_PPL(const _St1 &src, _Fn1 _Func)
+{
+    CONVOLUTE_PPL<VRad, HRad>(*this, src, _Func);
+}
+
+
+template < typename _Fn1 > inline
+void Plane::for_each_AMP(_Fn1 _Func) const
+{
+    FOR_EACH_AMP(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane::for_each_AMP(_Fn1 _Func)
+{
+    FOR_EACH_AMP(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane::transform_AMP(_Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, _Func);
+}
+
+template < typename _St1, typename _Fn1 > inline
+void Plane::transform_AMP(const _St1 &src, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src, _Func);
+}
+
+template < typename _St1, typename _St2, typename _Fn1 > inline
+void Plane::transform_AMP(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src1, src2, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+void Plane::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src1, src2, src3, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+void Plane::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src1, src2, src3, src4, _Func);
+}
+
+template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
+void Plane::convolute_AMP(const _St1 &src, _Fn1 _Func)
+{
+    CONVOLUTE_AMP<VRad, HRad>(*this, src, _Func);
+}
+
+
+// Template functions for class Plane_FL
+template < typename _St1 > inline
+void Plane_FL::SimplestColorBalance(const _St1 &src, double lower_thr, double upper_thr, int HistBins)
+{
+    ::SimplestColorBalance(*this, src, lower_thr, upper_thr, HistBins);
+}
+
+
+template < typename T > inline
+Plane_FL::value_type Plane_FL::Quantize(T input) const
+{
+    return input <= Floor_ ? Floor_ : input >= Ceil_ ? Ceil_ : input;
+}
+
+
+template < typename _Fn1 > inline
+void Plane_FL::for_each(_Fn1 _Func) const
+{
+    FOR_EACH(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane_FL::for_each(_Fn1 _Func)
+{
+    FOR_EACH(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane_FL::transform(_Fn1 _Func)
+{
+    TRANSFORM(*this, _Func);
+}
+
+template < typename _St1, typename _Fn1 > inline
+void Plane_FL::transform(const _St1 &src, _Fn1 _Func)
+{
+    TRANSFORM(*this, src, _Func);
+}
+
+template < typename _St1, typename _St2, typename _Fn1 > inline
+void Plane_FL::transform(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
+{
+    TRANSFORM(*this, src1, src2, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+void Plane_FL::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
+{
+    TRANSFORM(*this, src1, src2, src3, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+void Plane_FL::transform(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
+{
+    TRANSFORM(*this, src1, src2, src3, src4, _Func);
+}
+
+template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
+void Plane_FL::convolute(const _St1 &src, _Fn1 _Func)
+{
+    CONVOLUTE<VRad, HRad>(*this, src, _Func);
+}
+
+
+template < typename _Fn1 > inline
+void Plane_FL::for_each_PPL(_Fn1 _Func) const
+{
+    FOR_EACH_PPL(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane_FL::for_each_PPL(_Fn1 _Func)
+{
+    FOR_EACH_PPL(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane_FL::transform_PPL(_Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, _Func);
+}
+
+template < typename _St1, typename _Fn1 > inline
+void Plane_FL::transform_PPL(const _St1 &src, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src, _Func);
+}
+
+template < typename _St1, typename _St2, typename _Fn1 > inline
+void Plane_FL::transform_PPL(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src1, src2, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+void Plane_FL::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src1, src2, src3, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+void Plane_FL::transform_PPL(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
+{
+    TRANSFORM_PPL(*this, src1, src2, src3, src4, _Func);
+}
+
+template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
+void Plane_FL::convolute_PPL(const _St1 &src, _Fn1 _Func)
+{
+    CONVOLUTE_PPL<VRad, HRad>(*this, src, _Func);
+}
+
+
+template < typename _Fn1 > inline
+void Plane_FL::for_each_AMP(_Fn1 _Func) const
+{
+    FOR_EACH_AMP(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane_FL::for_each_AMP(_Fn1 _Func)
+{
+    FOR_EACH_AMP(*this, _Func);
+}
+
+template < typename _Fn1 > inline
+void Plane_FL::transform_AMP(_Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, _Func);
+}
+
+template < typename _St1, typename _Fn1 > inline
+void Plane_FL::transform_AMP(const _St1 &src, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src, _Func);
+}
+
+template < typename _St1, typename _St2, typename _Fn1 > inline
+void Plane_FL::transform_AMP(const _St1 &src1, const _St2 &src2, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src1, src2, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+void Plane_FL::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src1, src2, src3, _Func);
+}
+
+template < typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+void Plane_FL::transform_AMP(const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 _Func)
+{
+    TRANSFORM_AMP(*this, src1, src2, src3, src4, _Func);
+}
+
+template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
+void Plane_FL::convolute_AMP(const _St1 &src, _Fn1 _Func)
+{
+    CONVOLUTE_AMP<VRad, HRad>(*this, src, _Func);
+}
+
+
+// Template functions for class Frame
+template < typename _St1 > inline
+void Frame::SimplestColorBalance(const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
+    double lower_thr, double upper_thr, int HistBins)
+{
+    ::SimplestColorBalance(R(), G(), B(), srcR, srcG, srcB, lower_thr, upper_thr, HistBins);
+}
 
 
 #endif

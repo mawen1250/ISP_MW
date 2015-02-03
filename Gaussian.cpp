@@ -3,29 +3,26 @@
 
 
 // Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
-Plane & Gaussian2D(Plane & output, const Plane & input, const double sigma)
+Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
 {
     if (sigma <= 0)
     {
-        output = input;
-        return output;
+        dst = src;
+        return dst;
     }
 
-    FLType B, B1, B2, B3;
-    Recursive_Gaussian_Parameters(sigma, B, B1, B2, B3);
+    Plane_FL data(src);
+    RecursiveGaussian GFilter(sigma);
 
-    Plane_FL data(input);
-
-    Recursive_Gaussian2D_Horizontal(data, B, B1, B2, B3);
-    Recursive_Gaussian2D_Vertical(data, B, B1, B2, B3);
+    GFilter.Filter(data);
+    dst.From(data);
     
-    output.From(data);
-    
-    return output;
+    return dst;
 }
 
 
-void Recursive_Gaussian_Parameters(const double sigma, FLType & B, FLType & B1, FLType & B2, FLType & B3)
+// Member functions of class RecursiveGaussian
+void RecursiveGaussian::GetPara(double sigma)
 {
     const double q = sigma < 2.5 ? 3.97156 - 4.14554*sqrt(1 - 0.26891*sigma) : 0.98711*sigma - 0.96330;
 
@@ -40,61 +37,23 @@ void Recursive_Gaussian_Parameters(const double sigma, FLType & B, FLType & B1, 
     B3 = static_cast<FLType>(b3 / b0);
 }
 
-/*void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
-{
-    PCType i, j, lower, upper;
-    PCType height = input.Height();
-    PCType width = input.Width();
-    PCType stride = input.Width();
-    PCType pcount = stride * height;
-    FLType P0, P1, P2, P3;
 
-    for (j = 0; j < width; j++)
-    {
-        lower = j;
-        upper = pcount;
-
-        i = lower;
-        output[i] = P3 = P2 = P1 = input[i];
-
-        for (i += stride; i < upper; i += stride)
-        {
-            P0 = B*input[i] + B1*P1 + B2*P2 + B3*P3;
-            P3 = P2;
-            P2 = P1;
-            P1 = P0;
-            output[i] = P0;
-        }
-
-        i -= stride;
-        P3 = P2 = P1 = output[i];
-        
-        for (i -= stride; i >= lower; i -= stride)
-        {
-            P0 = B*output[i] + B1*P1 + B2*P2 + B3*P3;
-            P3 = P2;
-            P2 = P1;
-            P1 = P0;
-            output[i] = P0;
-        }
-    }
-}*/
-void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
 {
     PCType i0, i1, i2, i3, j, lower, upper;
-    PCType height = input.Height();
-    PCType width = input.Width();
-    PCType stride = input.Width();
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Width();
     FLType P0, P1, P2, P3;
 
-    if (output.Data() != input.Data())
+    if (dst.Data() != src.Data())
     {
-        memcpy(output.Data(), input.Data(), sizeof(FLType) * width);
+        memcpy(dst.Data(), src.Data(), sizeof(FLType) * width);
     }
 
-    for (j = 0; j < height; j++)
+    for (j = 0; j < height; ++j)
     {
-        lower = stride * j;
+        lower = j * stride;
         upper = lower + width;
 
         i0 = lower;
@@ -102,19 +61,19 @@ void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, co
         i2 = j < 2 ? i1 : i1 - stride;
         i3 = j < 3 ? i2 : i2 - stride;
 
-        for (; i0 < upper; i0++, i1++, i2++, i3++)
+        for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
-            P3 = output[i3];
-            P2 = output[i2];
-            P1 = output[i1];
-            P0 = input[i0];
-            output[i0] = B*P0 + B1*P1 + B2*P2 + B3*P3;
+            P3 = dst[i3];
+            P2 = dst[i2];
+            P1 = dst[i1];
+            P0 = src[i0];
+            dst[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
         }
     }
 
-    for (j = height - 1; j >= 0; j--)
+    for (j = height - 1; j >= 0; --j)
     {
-        lower = stride * j;
+        lower = j * stride;
         upper = lower + width;
 
         i0 = lower;
@@ -122,52 +81,141 @@ void Recursive_Gaussian2D_Vertical(Plane_FL & output, const Plane_FL & input, co
         i2 = j >= height - 2 ? i1 : i1 + stride;
         i3 = j >= height - 3 ? i2 : i2 + stride;
 
-        for (; i0 < upper; i0++, i1++, i2++, i3++)
+        for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
-            P3 = output[i3];
-            P2 = output[i2];
-            P1 = output[i1];
-            P0 = output[i0];
-            output[i0] = B*P0 + B1*P1 + B2*P2 + B3*P3;
+            P3 = dst[i3];
+            P2 = dst[i2];
+            P1 = dst[i1];
+            P0 = dst[i0];
+            dst[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
         }
     }
 }
 
-void Recursive_Gaussian2D_Horizontal(Plane_FL & output, const Plane_FL & input, const FLType B, const FLType B1, const FLType B2, const FLType B3)
+void RecursiveGaussian::FilterV(Plane_FL &data)
+{
+    PCType i0, i1, i2, i3, j, lower, upper;
+    PCType height = data.Height();
+    PCType width = data.Width();
+    PCType stride = data.Width();
+    FLType P0, P1, P2, P3;
+
+    for (j = 0; j < height; ++j)
+    {
+        lower = j * stride;
+        upper = lower + width;
+
+        i0 = lower;
+        i1 = j < 1 ? i0 : i0 - stride;
+        i2 = j < 2 ? i1 : i1 - stride;
+        i3 = j < 3 ? i2 : i2 - stride;
+
+        for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
+        {
+            P3 = data[i3];
+            P2 = data[i2];
+            P1 = data[i1];
+            P0 = data[i0];
+            data[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
+        }
+    }
+
+    for (j = height - 1; j >= 0; --j)
+    {
+        lower = j * stride;
+        upper = lower + width;
+
+        i0 = lower;
+        i1 = j >= height - 1 ? i0 : i0 + stride;
+        i2 = j >= height - 2 ? i1 : i1 + stride;
+        i3 = j >= height - 3 ? i2 : i2 + stride;
+
+        for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
+        {
+            P3 = data[i3];
+            P2 = data[i2];
+            P1 = data[i1];
+            P0 = data[i0];
+            data[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
+        }
+    }
+}
+
+
+void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
 {
     PCType i, j, lower, upper;
-    PCType height = input.Height();
-    PCType width = input.Width();
-    PCType stride = input.Width();
+    PCType height = src.Height();
+    PCType width = src.Width();
+    PCType stride = src.Width();
     FLType P0, P1, P2, P3;
     
-    for (j = 0; j < height; j++)
+    for (j = 0; j < height; ++j)
     {
-        lower = stride * j;
+        lower = j * stride;
         upper = lower + width;
 
         i = lower;
-        output[i] = P3 = P2 = P1 = input[i];
+        dst[i] = P3 = P2 = P1 = src[i];
 
-        for (i++; i < upper; i++)
+        for (++i; i < upper; ++i)
         {
-            P0 = B*input[i] + B1*P1 + B2*P2 + B3*P3;
+            P0 = B * src[i] + B1 * P1 + B2 * P2 + B3 * P3;
             P3 = P2;
             P2 = P1;
             P1 = P0;
-            output[i] = P0;
+            dst[i] = P0;
         }
         
-        i--;
-        P3 = P2 = P1 = output[i];
+        --i;
+        P3 = P2 = P1 = dst[i];
 
-        for (i--; i >= lower; i--)
+        for (--i; i >= lower; --i)
         {
-            P0 = B*output[i] + B1*P1 + B2*P2 + B3*P3;
+            P0 = B * dst[i] + B1 * P1 + B2 * P2 + B3 * P3;
             P3 = P2;
             P2 = P1;
             P1 = P0;
-            output[i] = P0;
+            dst[i] = P0;
+        }
+    }
+}
+
+void RecursiveGaussian::FilterH(Plane_FL &data)
+{
+    PCType i, j, lower, upper;
+    PCType height = data.Height();
+    PCType width = data.Width();
+    PCType stride = data.Width();
+    FLType P0, P1, P2, P3;
+
+    for (j = 0; j < height; ++j)
+    {
+        lower = j * stride;
+        upper = lower + width;
+
+        i = lower;
+        P3 = P2 = P1 = data[i];
+
+        for (++i; i < upper; ++i)
+        {
+            P0 = B * data[i] + B1 * P1 + B2 * P2 + B3 * P3;
+            P3 = P2;
+            P2 = P1;
+            P1 = P0;
+            data[i] = P0;
+        }
+
+        --i;
+        P3 = P2 = P1 = data[i];
+
+        for (--i; i >= lower; --i)
+        {
+            P0 = B * data[i] + B1 * P1 + B2 * P2 + B3 * P3;
+            P3 = P2;
+            P2 = P1;
+            P1 = P0;
+            data[i] = P0;
         }
     }
 }

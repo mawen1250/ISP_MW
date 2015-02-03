@@ -37,4 +37,21 @@ enum class STAT {
 };
 
 
+template < typename T >
+class ClassChecker
+{
+public:
+    typedef struct { char c[2]; } Yes;
+    typedef struct { char c[1]; } No;
+    static Yes _CheckVal(T t);
+    static No _CheckVal(...);
+};
+
+#define TypeCheckerVal(T, i) ((sizeof (ClassChecker<T>::_CheckVal(i))) == 2 ? true : false)
+#define TypeChecker(T1, T2) ((sizeof (ClassChecker<T1>::_CheckVal(T2(0)))) == 2 ? true : false)
+
+//#define isFloat(T) (TypeChecker(T, float) || TypeChecker(T, double) || TypeChecker(T, long double))
+#define isFloat(T) (typeid(T) == typeid(float) || typeid(T) == typeid(double) || typeid(T) == typeid(long double))
+
+
 #endif

@@ -27,6 +27,7 @@
 #include "AWB.h"
 #include "NLMeans.h"
 #include "BM3D.h"
+#include "Haze_Removal.h"
 
 
 int Filtering(const int argc, char ** argv);

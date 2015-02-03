@@ -53,14 +53,12 @@ public:
     Plane process(const Plane &src, const Plane &ref)
     {
         Plane dst(src, false);
-
         return process(dst, src, ref);
     }
 
     Plane process(const Plane &src)
     {
         Plane dst(src, false);
-
         return process(dst, src, src);
     }
 
@@ -69,14 +67,12 @@ public:
     Frame process(const Frame &src, const Frame &ref)
     {
         Frame dst(src, false);
-
         return process(dst, src, ref);
     }
 
     Frame process(const Frame &src)
     {
         Frame dst(src, false);
-
         return process(dst, src, src);
     }
 

@@ -9,19 +9,20 @@
 //#define Test_Other
 //#define Test_Write
 
-//#define Convolution
+//#define Convolution_
 //#define EdgeDetect_
-//#define Gaussian
-//#define Bilateral
+//#define Gaussian_
+//#define Bilateral_
 //#define Transpose_
 //#define Specular_Highlight_Removal_
-//#define Tone_Mapping
+//#define Tone_Mapping_
 //#define Retinex_MSRCP_
 //#define Retinex_MSRCR_
 //#define Retinex_MSRCR_GIMP_
 //#define Histogram_Equalization_
 //#define AWB_
-#define NLMeans_
+//#define NLMeans_
+#define Haze_Removal_
 
 
 #if defined(Test)
@@ -94,22 +95,22 @@ int main()
         });
     }*/
 #elif defined(Test_Write) // Test_Other
-    Frame IFrame = ImageReader("D:\\Test Images\\Noise\\03.0Source.png");
+    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150126_131557.jpg");
     Frame PFrame;
-#if defined(Convolution)
+#if defined(Convolution_)
     PFrame = Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
 #elif defined(EdgeDetect_)
     PFrame = EdgeDetect(IFrame, EdgeKernel::Laplace1);
-#elif defined(Gaussian)
+#elif defined(Gaussian_)
     PFrame = Gaussian2D(IFrame, 5.0);
-#elif defined(Bilateral)
+#elif defined(Bilateral_)
     Bilateral2D_Data bldata(IFrame, 3.0, 0.02, 0);
     PFrame = Bilateral2D(IFrame, bldata);
 #elif defined(Transpose_)
     PFrame = Transpose(IFrame);
 #elif defined(Specular_Highlight_Removal_)
     PFrame = Specular_Highlight_Removal(IFrame);
-#elif defined(Tone_Mapping)
+#elif defined(Tone_Mapping_)
     PFrame = Adaptive_Global_Tone_Mapping(IFrame);
 #elif defined(Retinex_MSRCP_)
     PFrame = Retinex_MSRCP(IFrame);
@@ -122,28 +123,31 @@ int main()
     PFrame = AWBObj.process();
 #elif defined(NLMeans_)
     PFrame = NLMeans(IFrame);
+#elif defined(Haze_Removal_)
+    Haze_Removal_Retinex HRRObj;
+    PFrame = HRRObj.process(IFrame);
 #else
     PFrame = IFrame;
 #endif
-    ImageWriter(PFrame, "D:\\Test Images\\Noise\\03.0.png");
+    ImageWriter(PFrame, "D:\\Test Images\\Haze\\20150126_131557.0.png");
     system("pause");
 #else // Test_Write
-    const int Loop = 10;
+    const int Loop = 5;
 
-    Frame IFrame = ImageReader("D:\\Test Images\\01.bmp");
-    const Plane& srcR = IFrame.R();
+    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150126_131557.jpg");
+    const Plane &srcR = IFrame.R();
     Plane dstR(srcR, false);
 
     for (int l = 0; l < Loop; l++)
     {
-#if defined(Convolution)
+#if defined(Convolution_)
         Convolution3V(IFrame, 1, 2, 1);
         //Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
 #elif defined(EdgeDetect_)
         EdgeDetect(IFrame, EdgeKernel::Laplace2);
-#elif defined(Gaussian)
+#elif defined(Gaussian_)
         Gaussian2D(IFrame, 5.0);
-#elif defined(Bilateral)
+#elif defined(Bilateral_)
         Bilateral2D_Data bldata(IFrame, 3.0, 0.08, 1);
         Bilateral2D(IFrame, bldata);
 #elif defined(Transpose_)
@@ -161,6 +165,9 @@ int main()
 #elif defined(NLMeans_)
         NLMeans filter;
         filter.process(IFrame);
+#elif defined(Haze_Removal_)
+        Haze_Removal_Retinex HRRObj;
+        HRRObj.process(IFrame);
 #else
         //DType count = 0;
         //srcR.for_each([&count](DType x){ count += x; });
@@ -257,6 +264,10 @@ int Filtering(const int argc, char ** argv)
     else if (FilterName == "--nlm" || FilterName == "--nlmeans" || FilterName == "--nonlocalmeans")
     {
         FilterObj = new NLMeans_IO(argc2, args);
+    }
+    else if (FilterName == "--hrr" || FilterName == "--haze_removal" || FilterName == "--haze_removal_retinex")
+    {
+        FilterObj = new Haze_Removal_Retinex_IO(argc2, args);
     }
     else
     {
