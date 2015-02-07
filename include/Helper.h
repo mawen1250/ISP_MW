@@ -166,7 +166,6 @@ inline T Abs(T input)
     return input < 0 ? -input : input;
 }
 
-
 template < typename T >
 inline T AbsSub(T a, T b)
 {

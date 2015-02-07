@@ -129,9 +129,10 @@ private:
 protected:
     void DefaultPara(bool Chroma, value_type _BitDepth = 16, QuantRange _QuantRange = QuantRange::PC);
     void CopyParaFrom(const _Myt &src);
-    void InitValue(value_type Value, bool Init = true);
 
 public:
+    void InitValue(value_type Value, bool Init = true);
+
     Plane() {} // Default constructor
     explicit Plane(value_type Value, PCType _Width = 1920, PCType _Height = 1080, value_type _BitDepth = 16, bool Init = true); // Convertor/Constructor from value_type
     Plane(value_type Value, PCType _Width, PCType _Height, value_type _BitDepth, value_type _Floor, value_type _Neutral, value_type _Ceil, TransferChar _TransferChar, bool Init = true);
@@ -280,9 +281,10 @@ private:
 protected:
     void DefaultPara(bool Chroma, value_type range = 1);
     void CopyParaFrom(const _Myt &src);
-    void InitValue(value_type Value, bool Init = true);
 
 public:
+    void InitValue(value_type Value, bool Init = true);
+
     Plane_FL() {} // Default constructor
     explicit Plane_FL(value_type Value, PCType _Width = 1920, PCType _Height = 1080, bool RGB = true, bool Chroma = false, bool Init = true); // Convertor/Constructor from value_type
     Plane_FL(value_type Value, PCType _Width, PCType _Height, value_type _Floor, value_type _Neutral, value_type _Ceil, TransferChar _TransferChar, bool Init = true);

@@ -12,8 +12,6 @@ class FilterIO
 public:
     typedef FilterIO _Myt;
 
-    static const std::string _MyTag;
-
 private:
     static const int DRIVELEN = 16;
     static const int PATHLEN = 256;
@@ -38,7 +36,7 @@ private:
     void processIO()
     {
         const Frame src = ImageReader(IPath);
-        Frame dst = processFrame(src);
+        Frame dst = process(src);
         ImageWriter(dst, OPath);
     }
 
@@ -74,15 +72,26 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src) = 0;
+    virtual Frame process(const Frame &src) = 0;
 
 public:
-    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = "")
-        : argc(_argc), args(_args), Tag(std::move(_Tag)) {}
+    _Myt(std::string _Tag = "")
+        : Tag(std::move(_Tag)) {}
 
     virtual ~FilterIO() {}
 
-    void process(std::string _IPath = "", std::string _OPath = "")
+    void SetArgs(int _argc, const std::vector<std::string> &_args)
+    {
+        argc = _argc;
+        args = _args;
+    }
+
+    void SetTag(std::string _Tag)
+    {
+        Tag = std::move(_Tag);
+    }
+
+    void operator()(std::string _IPath = "", std::string _OPath = "")
     {
         arguments_process();
         if(_IPath != "") IPath = std::move(_IPath);
@@ -91,11 +100,10 @@ public:
         processIO();
     }
 
-    _Myt() = delete;
     _Myt(const _Myt &src) = default;
-    _Myt & operator=(const _Myt &src) = default;
+    _Myt &operator=(const _Myt &src) = default;
     _Myt(_Myt &&src) = delete;
-    _Myt & operator=(_Myt &&src) = delete;
+    _Myt &operator=(_Myt &&src) = delete;
 };
 
 

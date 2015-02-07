@@ -8,9 +8,9 @@ void NLMeans::WeightedAverage(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy>
 {
     PCType GroupSize = static_cast<PCType>(posPairCode.size());
     // When GroupSizeMax > 0, limit GroupSize up to GroupSizeMax
-    if (GroupSizeMax > 0 && GroupSize > GroupSizeMax)
+    if (para.GroupSizeMax > 0 && GroupSize > para.GroupSizeMax)
     {
-        GroupSize = GroupSizeMax;
+        GroupSize = para.GroupSizeMax;
     }
 
     if (GroupSize < 2)
@@ -25,7 +25,7 @@ void NLMeans::WeightedAverage(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy>
 
     Block<_Ty, _FTy> sumX1(refBlock, true, 0);
 
-    double exponentMul = -1 / (strength * strength);
+    double exponentMul = -1 / (para.strength * para.strength);
     double weightSum = 0;
     double weight;
 
@@ -69,9 +69,9 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block
 {
     PCType GroupSize = static_cast<PCType>(posPairCode.size());
     // When GroupSizeMax > 0, limit GroupSize up to GroupSizeMax
-    if (GroupSizeMax > 0 && GroupSize > GroupSizeMax)
+    if (para.GroupSizeMax > 0 && GroupSize > para.GroupSizeMax)
     {
-        GroupSize = GroupSizeMax;
+        GroupSize = para.GroupSizeMax;
     }
 
     if (GroupSize < 2)
@@ -87,7 +87,7 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block
     Block<_Ty, _FTy> sumX1(refBlock, true, 0);
     Block<_Ty, _FTy> sumX2(refBlock, true, 0);
 
-    double exponentMul = -1 / (strength * strength);
+    double exponentMul = -1 / (para.strength * para.strength);
     double weightSum = 0;
     double weight;
     double temp;
@@ -115,10 +115,10 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block
         }
     }
 
-    double _sigma = sigma * src.ValueRange() / 255.; // _sigma is converted from 8bit-scale to fit the src range
+    double sigma = para.sigma * src.ValueRange() / 255.; // sigma is converted from 8bit-scale to fit the src range
 
     double X, EX, VarX;
-    double VarN = _sigma * _sigma;
+    double VarN = sigma * sigma;
     double weightSumRec = 1 / weightSum;
 
     auto dstp = dstBlock.Data();
@@ -148,7 +148,8 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block
 // Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
 Plane &NLMeans::process(Plane &dst, const Plane &src, const Plane &ref)
 {
-    if (strength <= 0 || GroupSizeMax == 1 || BlockSize <= 0 || BMrange <= 0 || BMrange < BMstep || thMSE <= 0)
+    if (para.strength <= 0 || para.GroupSizeMax == 1 || para.BlockSize <= 0
+        || para.BMrange <= 0 || para.BMrange < para.BMstep || para.thMSE <= 0)
     {
         dst = src;
         return dst;
@@ -159,13 +160,13 @@ Plane &NLMeans::process(Plane &dst, const Plane &src, const Plane &ref)
 
     typedef Block<double, double> BlockT;
 
-    PCType BlockStep = BlockSize - Overlap;
-    PCType RightBlockPos = width - BlockSize;
-    PCType BottomBlockPos = height - BlockSize;
+    PCType BlockStep = para.BlockSize - para.Overlap;
+    PCType RightBlockPos = width - para.BlockSize;
+    PCType BottomBlockPos = height - para.BlockSize;
 
-    BlockT dstSlidingWindow(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT srcSlidingWindow(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT refSlidingWindow(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT dstSlidingWindow(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT refSlidingWindow(para.BlockSize, para.BlockSize, Pos(0, 0), false);
 
     Plane_FL ResNum(dst, true, 0);
     Plane_FL ResDen(dst, true, 0);
@@ -181,11 +182,11 @@ Plane &NLMeans::process(Plane &dst, const Plane &src, const Plane &ref)
             refSlidingWindow.From(ref, Pos(j, i));
 
             // Form a group by block matching between reference block and its neighborhood in Plane ref
-            auto matchedPosPairGroup = refSlidingWindow.BlockMatchingMulti(ref, BMrange, BMstep, thMSE);
+            auto matchedPosPairGroup = refSlidingWindow.BlockMatchingMulti(ref, para.BMrange, para.BMstep, para.thMSE);
 
             // Get the filtered block through weighted averaging of matched blocks in Plane src
             // A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm
-            if (correction)
+            if (para.correction)
             {
                 WeightedAverage_Correction(dstSlidingWindow, srcSlidingWindow, src, matchedPosPairGroup);
             }
@@ -247,7 +248,8 @@ Plane &NLMeans::process(Plane &dst, const Plane &src, const Plane &ref)
 // Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
 Frame &NLMeans::process(Frame &dst, const Frame &src, const Frame &ref)
 {
-    if (strength <= 0 || GroupSizeMax == 1 || BlockSize <= 0 || BMrange <= 0 || BMrange < BMstep || thMSE <= 0)
+    if (para.strength <= 0 || para.GroupSizeMax == 1 || para.BlockSize <= 0
+        || para.BMrange <= 0 || para.BMrange < para.BMstep || para.thMSE <= 0)
     {
         dst = src;
         return dst;
@@ -268,17 +270,17 @@ Frame &NLMeans::process(Frame &dst, const Frame &src, const Frame &ref)
 
     typedef Block<double, double> BlockT;
 
-    PCType BlockStep = BlockSize - Overlap;
-    PCType RightBlockPos = width - BlockSize;
-    PCType BottomBlockPos = height - BlockSize;
+    PCType BlockStep = para.BlockSize - para.Overlap;
+    PCType RightBlockPos = width - para.BlockSize;
+    PCType BottomBlockPos = height - para.BlockSize;
 
-    BlockT dstSlidingWindow0(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT dstSlidingWindow1(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT dstSlidingWindow2(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT srcSlidingWindow0(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT srcSlidingWindow1(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT srcSlidingWindow2(BlockSize, BlockSize, Pos(0, 0), false);
-    BlockT refSlidingWindowY(BlockSize, BlockSize, Pos(0, 0), false);
+    BlockT dstSlidingWindow0(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT dstSlidingWindow1(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT dstSlidingWindow2(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow0(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow1(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT srcSlidingWindow2(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    BlockT refSlidingWindowY(para.BlockSize, para.BlockSize, Pos(0, 0), false);
 
     Plane_FL ResNum0(dst0, true, 0);
     Plane_FL ResNum1(dst1, true, 0);
@@ -298,11 +300,11 @@ Frame &NLMeans::process(Frame &dst, const Frame &src, const Frame &ref)
             srcSlidingWindow2.From(src2, Pos(j, i));
 
             // Form a group by block matching between reference block and its neighborhood in Plane ref
-            auto matchedPosPairGroup = refSlidingWindowY.BlockMatchingMulti(refY, BMrange, BMstep, thMSE);
+            auto matchedPosPairGroup = refSlidingWindowY.BlockMatchingMulti(refY, para.BMrange, para.BMstep, para.thMSE);
 
             // Get the filtered block through weighted averaging of matched blocks in Plane src
             // A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm
-            if (correction)
+            if (para.correction)
             {
                 WeightedAverage_Correction(dstSlidingWindow0, srcSlidingWindow0, src0, matchedPosPairGroup);
                 WeightedAverage_Correction(dstSlidingWindow1, srcSlidingWindow1, src1, matchedPosPairGroup);

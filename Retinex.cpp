@@ -3,9 +3,16 @@
 #include "Gaussian.h"
 
 
-Plane &Retinex_SSR(Plane &dst, const Plane &src, double sigma, double lower_thr, double upper_thr)
+// Functions of class Retinex
+Plane_FL &Retinex::Kernel(Plane_FL &dst, const Plane_FL &src)
 {
-    if (sigma <= 0)
+    size_t s, scount = para.sigmaVector.size();
+
+    for (s = 0; s < scount; ++s)
+    {
+        if (para.sigmaVector[s] > 0) break;
+    }
+    if (s >= scount)
     {
         dst = src;
         return dst;
@@ -16,152 +23,141 @@ Plane &Retinex_SSR(Plane &dst, const Plane &src, double sigma, double lower_thr,
     PCType width = src.Width();
     PCType stride = src.Stride();
 
-    Plane_FL data(src);
-    RecursiveGaussian GFilter(sigma);
-    Plane_FL gauss = GFilter(data);
+    Plane_FL gauss(src, false);
 
-    for (j = 0; j < height; ++j)
+    if (scount == 1 && para.sigmaVector[0] > 0) // single-scale Gaussian filter
     {
-        i = j * stride;
-        for (upper = i + width; i < upper; ++i)
+        RecursiveGaussian GFilter(para.sigmaVector[0]);
+        Plane_FL gauss = GFilter(src);
+
+        for (j = 0; j < height; ++j)
         {
-            data[i] = gauss[i] <= 0 ? 0 : log(data[i] / gauss[i] + 1);
+            i = j * stride;
+            for (upper = i + width; i < upper; ++i)
+            {
+                dst[i] = gauss[i] <= 0 ? 0 : log(src[i] / gauss[i] + 1);
+            }
         }
     }
-    
-    dst.SimplestColorBalance(data, lower_thr, upper_thr, Retinex_Default.HistBins);
+    /*else if (scount == 2 && para.sigmaVector[0] > 0 && para.sigmaVector[1] > 0) // double-scale Gaussian filter
+    {
+
+    }
+    else if (scount == 3 && para.sigmaVector[0] > 0 && para.sigmaVector[1] > 0
+        && para.sigmaVector[2] > 0) // triple-scale Gaussian filter
+    {
+
+    }*/
+    else // multi-scale Gaussian filter
+    {
+        if (dst.Data() == src.Data())
+        {
+            const char *FunctionName = "Retinex::Kernel";
+            std::cerr << FunctionName << ": Data of Plane_FL \"dst\" and Plane_FL \"src\" can not be of the same address for multi-scale.\n";
+            exit(EXIT_FAILURE);
+        }
+
+        dst.InitValue(1);
+
+        for (s = 0; s < scount; ++s)
+        {
+            if (para.sigmaVector[s] > 0)
+            {
+                RecursiveGaussian GFilter(para.sigmaVector[s]);
+                GFilter.Filter(gauss, src);
+
+                for (j = 0; j < height; ++j)
+                {
+                    i = j * stride;
+                    for (upper = i + width; i < upper; ++i)
+                    {
+                        if (gauss[i] > 0)
+                        {
+                            dst[i] *= src[i] / gauss[i] + 1;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (j = 0; j < height; ++j)
+                {
+                    i = j * stride;
+                    for (upper = i + width; i < upper; ++i)
+                    {
+                        dst[i] *= FLType(2);
+                    }
+                }
+            }
+        }
+
+        FLType scountRec = 1 / static_cast<FLType>(scount);
+
+        for (j = 0; j < height; ++j)
+        {
+            i = j * stride;
+            for (upper = i + width; i < upper; ++i)
+            {
+                dst[i] = log(dst[i]) * scountRec;
+            }
+        }
+    }
 
     return dst;
 }
 
 
-Plane_FL Retinex_MSR(const Plane_FL &idata, const std::vector<double> &sigmaVector)
+// Functions of class Retinex_SSR
+Plane_FL &Retinex_SSR::process(Plane_FL &dst, const Plane_FL &src)
 {
-    size_t s, scount = sigmaVector.size();
+    Kernel(dst, src);
 
-    for (s = 0; s < scount; ++s)
-    {
-        if (sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        Plane_FL odata(idata);
-        return odata;
-    }
+    dst.SimplestColorBalance(dst, para.lower_thr, para.upper_thr, para.HistBins);
 
-    PCType i, j, upper;
-    PCType height = idata.Height();
-    PCType width = idata.Width();
-    PCType stride = idata.Stride();
-
-    Plane_FL odata(idata, true, 1);
-    Plane_FL gauss(idata, false);
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (sigmaVector[s] > 0)
-        {
-            RecursiveGaussian GFilter(sigmaVector[s]);
-            GFilter.Filter(gauss, idata);
-            
-            for (j = 0; j < height; ++j)
-            {
-                i = j * stride;
-                for (upper = i + width; i < upper; ++i)
-                {
-                    if (gauss[i] > 0)
-                    {
-                        odata[i] *= idata[i] / gauss[i] + 1;
-                    }
-                }
-            }
-        }
-        else
-        {
-            for (j = 0; j < height; ++j)
-            {
-                i = j * stride;
-                for (upper = i + width; i < upper; ++i)
-                {
-                    odata[i] *= FLType(2);
-                }
-            }
-        }
-    }
-
-    FLType scountRec = 1 / static_cast<FLType>(scount);
-
-    for (j = 0; j < height; ++j)
-    {
-        i = j * stride;
-        for (upper = i + width; i < upper; ++i)
-        {
-            odata[i] = log(odata[i]) * scountRec;
-        }
-    }
-
-    return odata;
+    return dst;
 }
 
-Plane_FL Retinex_MSR(const Plane_FL &idata, const std::vector<double> &sigmaVector, double lower_thr, double upper_thr)
+Plane &Retinex_SSR::process(Plane &dst, const Plane &src)
 {
-    size_t s, scount = sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        Plane_FL odata(idata);
-        return odata;
-    }
-
-    Plane_FL odata = Retinex_MSR(idata, sigmaVector);
+    Plane_FL data(src);
     
-    odata.SimplestColorBalance(odata, lower_thr, upper_thr, Retinex_Default.HistBins);
+    Kernel(data, data);
+    
+    dst.SimplestColorBalance(data, para.lower_thr, para.upper_thr, para.HistBins);
 
-    return odata;
+    return dst;
 }
 
-Plane_FL Retinex_MSRCR_GIMP(const Plane_FL &idata, const std::vector<double> &sigmaVector, double dynamic)
+
+// Functions of class Retinex_MSR
+Plane_FL &Retinex_MSR::process(Plane_FL &dst, const Plane_FL &src)
 {
-    size_t s, scount = sigmaVector.size();
+    size_t s, scount = para.sigmaVector.size();
 
     for (s = 0; s < scount; ++s)
     {
-        if (sigmaVector[s] > 0) break;
+        if (para.sigmaVector[s] > 0) break;
     }
     if (s >= scount)
     {
-        Plane_FL odata(idata);
-        return odata;
+        dst = src;
+        return dst;
     }
 
-    Plane_FL odata = Retinex_MSR(idata, sigmaVector);
+    Kernel(dst, src);
+    
+    dst.SimplestColorBalance(dst, para.lower_thr, para.upper_thr, para.HistBins);
 
-    FLType min, max;
-    FLType mean, var;
-
-    mean = odata.Mean();
-    var = odata.Variance(mean);
-    min = mean - dynamic * var;
-    max = mean + dynamic * var;
-
-    odata.ReQuantize(min, min, max, false);
-    odata.ReQuantize(idata.Floor(), idata.Neutral(), idata.Ceil(), true, true);
-
-    return odata;
+    return dst;
 }
 
-
-Plane &Retinex_MSR(Plane &dst, const Plane &src, const std::vector<double> &sigmaVector, double lower_thr, double upper_thr)
+Plane &Retinex_MSR::process(Plane &dst, const Plane &src)
 {
-    size_t s, scount = sigmaVector.size();
+    size_t s, scount = para.sigmaVector.size();
 
     for (s = 0; s < scount; ++s)
     {
-        if (sigmaVector[s] > 0) break;
+        if (para.sigmaVector[s] > 0) break;
     }
     if (s >= scount)
     {
@@ -170,20 +166,77 @@ Plane &Retinex_MSR(Plane &dst, const Plane &src, const std::vector<double> &sigm
     }
 
     Plane_FL idata(src);
-    Plane_FL odata = Retinex_MSR(idata, sigmaVector);
+    Plane_FL odata = Kernel(idata);
 
-    dst.SimplestColorBalance(odata, lower_thr, upper_thr, Retinex_Default.HistBins);
+    dst.SimplestColorBalance(odata, para.lower_thr, para.upper_thr, para.HistBins);
 
     return dst;
 }
 
-Frame &Retinex_MSRCP(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector, double lower_thr, double upper_thr, double chroma_protect)
+
+// Functions of class Retinex_MSRCR_GIMP
+Plane_FL &Retinex_MSRCR_GIMP::process(Plane_FL &dst, const Plane_FL &src)
 {
-    size_t s, scount = sigmaVector.size();
+    size_t s, scount = para.sigmaVector.size();
 
     for (s = 0; s < scount; ++s)
     {
-        if (sigmaVector[s] > 0) break;
+        if (para.sigmaVector[s] > 0) break;
+    }
+    if (s >= scount)
+    {
+        dst = src;
+        return dst;
+    }
+
+    Kernel(dst, src);
+
+    FLType mean = dst.Mean();
+    FLType var = dst.Variance(mean);
+    FLType min = mean - para.dynamic * var;
+    FLType max = mean + para.dynamic * var;
+
+    RangeConvert(dst, dst, dst.Floor(), dst.Neutral(), dst.Ceil(), min, min, max, true);
+
+    return dst;
+}
+
+Plane &Retinex_MSRCR_GIMP::process(Plane &dst, const Plane &src)
+{
+    size_t s, scount = para.sigmaVector.size();
+
+    for (s = 0; s < scount; ++s)
+    {
+        if (para.sigmaVector[s] > 0) break;
+    }
+    if (s >= scount)
+    {
+        dst = src;
+        return dst;
+    }
+
+    Plane_FL idata(src);
+    Plane_FL odata = Kernel(idata);
+
+    FLType mean = odata.Mean();
+    FLType var = odata.Variance(mean);
+    FLType min = mean - para.dynamic * var;
+    FLType max = mean + para.dynamic * var;
+
+    RangeConvert(dst, odata, dst.Floor(), dst.Neutral(), dst.Ceil(), min, min, max, true);
+
+    return dst;
+}
+
+
+// Functions of class Retinex_MSRCP
+Frame &Retinex_MSRCP::process(Frame &dst, const Frame &src)
+{
+    size_t s, scount = para.sigmaVector.size();
+
+    for (s = 0; s < scount; ++s)
+    {
+        if (para.sigmaVector[s] > 0) break;
     }
     if (s >= scount)
     {
@@ -212,17 +265,14 @@ Frame &Retinex_MSRCP(Frame &dst, const Frame &src, const std::vector<double> &si
         FLType dRangeFL = static_cast<FLType>(dstY.ValueRange());
 
         Plane_FL idata(srcY);
-        Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
+        Plane_FL odata = operator()(idata);
 
-        FLType chroma_protect_mul1 = static_cast<FLType>(chroma_protect - 1);
-        FLType chroma_protect_mul2 = static_cast<FLType>(1 / log(chroma_protect));
+        FLType chroma_protect_mul1 = static_cast<FLType>(para.chroma_protect - 1);
+        FLType chroma_protect_mul2 = static_cast<FLType>(1 / log(para.chroma_protect));
 
         sint32 Uval, Vval;
-        if (dstU.isPCChroma())
-            offset = dstU.Neutral() + FLType(0.499999);
-        else
-            offset = dstU.Neutral() + FLType(0.5);
         FLType offsetY = dstY.Floor() + FLType(0.5);
+        offset = dstU.Neutral() + FLType(dstU.isPCChroma() ? 0.499999 : 0.5);
 
         for (j = 0; j < height; ++j)
         {
@@ -231,7 +281,7 @@ Frame &Retinex_MSRCP(Frame &dst, const Frame &src, const std::vector<double> &si
             {
                 Uval = srcU[i] - sNeutral;
                 Vval = srcV[i] - sNeutral;
-                if (chroma_protect > 1)
+                if (para.chroma_protect > 1)
                     gain = idata[i] <= 0 ? 1 : log(odata[i] / idata[i] * chroma_protect_mul1 + 1) * chroma_protect_mul2;
                 else
                     gain = idata[i] <= 0 ? 1 : odata[i] / idata[i];
@@ -257,7 +307,7 @@ Frame &Retinex_MSRCP(Frame &dst, const Frame &src, const std::vector<double> &si
         Plane_FL idata(srcR, false);
         idata.YFrom(src, ColorMatrix::Average);
         
-        Plane_FL odata = Retinex_MSR(idata, sigmaVector, lower_thr, upper_thr);
+        Plane_FL odata = operator()(idata);
         
         DType Rval, Gval, Bval;
         offset = dstR.Floor() + FLType(0.5);
@@ -282,13 +332,15 @@ Frame &Retinex_MSRCP(Frame &dst, const Frame &src, const std::vector<double> &si
     return dst;
 }
 
-Frame &Retinex_MSRCR(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector, double lower_thr, double upper_thr, double restore)
+
+// Functions of class Retinex_MSRCR
+Frame &Retinex_MSRCR::process(Frame &dst, const Frame &src)
 {
-    size_t s, scount = sigmaVector.size();
+    size_t s, scount = para.sigmaVector.size();
 
     for (s = 0; s < scount; ++s)
     {
-        if (sigmaVector[s] > 0) break;
+        if (para.sigmaVector[s] > 0) break;
     }
     if (s >= scount)
     {
@@ -317,11 +369,11 @@ Frame &Retinex_MSRCR(Frame &dst, const Frame &src, const std::vector<double> &si
         Plane_FL idata(srcR, false);
 
         idata.From(srcR);
-        Plane_FL odataR = Retinex_MSR(idata, sigmaVector);
+        Plane_FL odataR = Kernel(idata);
         idata.From(srcG);
-        Plane_FL odataG = Retinex_MSR(idata, sigmaVector);
+        Plane_FL odataG = Kernel(idata);
         idata.From(srcB);
-        Plane_FL odataB = Retinex_MSR(idata, sigmaVector);
+        Plane_FL odataB = Kernel(idata);
 
         DType Rval, Gval, Bval;
         FLType temp;
@@ -335,67 +387,19 @@ Frame &Retinex_MSRCR(Frame &dst, const Frame &src, const std::vector<double> &si
                 Gval = srcG[i] - sFloor;
                 Bval = srcB[i] - sFloor;
                 temp = Rval + Gval + Bval;
-                temp = temp <= 0 ? 0 : restore / temp;
+                temp = temp <= 0 ? 0 : para.restore / temp;
                 odataR[i] *= log(Rval * temp + 1);
                 odataG[i] *= log(Gval * temp + 1);
                 odataB[i] *= log(Bval * temp + 1);
             }
         }
 
-        dstR.SimplestColorBalance(odataR, lower_thr, upper_thr, Retinex_Default.HistBins);
-        dstG.SimplestColorBalance(odataG, lower_thr, upper_thr, Retinex_Default.HistBins);
-        dstB.SimplestColorBalance(odataB, lower_thr, upper_thr, Retinex_Default.HistBins);
+        dst.SimplestColorBalance(odataR, odataG, odataB, para.lower_thr, para.upper_thr, para.HistBins);
     }
     else
     {
-        const char * FunctionName = "Retinex_MSRCR";
+        const char *FunctionName = "Retinex_MSRCR::process";
         std::cerr << FunctionName << ": invalid PixelType of Frame \"src\", should be RGB.\n";
-        exit(EXIT_FAILURE);
-    }
-
-    return dst;
-}
-
-Frame &Retinex_MSRCR_GIMP(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector, double dynamic)
-{
-    size_t s, scount = sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        dst = src;
-        return dst;
-    }
-
-    if (src.isRGB())
-    {
-        const Plane &srcR = src.R();
-        const Plane &srcG = src.G();
-        const Plane &srcB = src.B();
-        Plane &dstR = dst.R();
-        Plane &dstG = dst.G();
-        Plane &dstB = dst.B();
-
-        Plane_FL idata(srcR, false);
-        Plane_FL odata(dstR, false);
-
-        idata.From(srcR);
-        odata = Retinex_MSRCR_GIMP(idata, sigmaVector, dynamic);
-        dstR.From(odata);
-        idata.From(srcG);
-        odata = Retinex_MSRCR_GIMP(idata, sigmaVector, dynamic);
-        dstG.From(odata);
-        idata.From(srcB);
-        odata = Retinex_MSRCR_GIMP(idata, sigmaVector, dynamic);
-        dstB.From(odata);
-    }
-    else
-    {
-        const char * FunctionName = "Retinex_MSRCR_GIMP";
-        std::cerr << FunctionName << ": invalid PixelType of Frame \"src=\", should be RGB.\n";
         exit(EXIT_FAILURE);
     }
 

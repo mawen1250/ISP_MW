@@ -25,24 +25,12 @@ const struct NLMeans_Para
 // Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
 class NLMeans
 {
-private:
-    bool correction;
-    double sigma;
-    double strength;
-    PCType GroupSizeMax;
-    PCType BlockSize;
-    PCType Overlap;
-    PCType BMrange;
-    PCType BMstep;
-    double thMSE;
+protected:
+    NLMeans_Para para;
 
 public:
-    NLMeans(bool _correction = NLMeans_Default.correction, double _sigma = NLMeans_Default.sigma, double _strength = NLMeans_Default.strength,
-        PCType _GroupSizeMax = NLMeans_Default.GroupSizeMax, PCType _BlockSize = NLMeans_Default.BlockSize, PCType _Overlap = NLMeans_Default.Overlap,
-        PCType _BMrange = NLMeans_Default.BMrange, PCType _BMstep = NLMeans_Default.BMstep, double _thMSE = NLMeans_Default.thMSE)
-        : correction(_correction), sigma(_sigma), strength(_strength),
-        GroupSizeMax(_GroupSizeMax), BlockSize(_BlockSize), Overlap(_Overlap),
-        BMrange(_BMrange), BMstep(_BMstep), thMSE(_thMSE)
+    NLMeans(const NLMeans_Para &_para = NLMeans_Default)
+        : para(_para)
     {}
 
     ~NLMeans()
@@ -50,13 +38,13 @@ public:
 
     Plane &process(Plane &dst, const Plane &src, const Plane &ref);
 
-    Plane process(const Plane &src, const Plane &ref)
+    Plane operator()(const Plane &src, const Plane &ref)
     {
         Plane dst(src, false);
         return process(dst, src, ref);
     }
 
-    Plane process(const Plane &src)
+    Plane operator()(const Plane &src)
     {
         Plane dst(src, false);
         return process(dst, src, src);
@@ -64,13 +52,13 @@ public:
 
     Frame &process(Frame &dst, const Frame &src, const Frame &ref);
 
-    Frame process(const Frame &src, const Frame &ref)
+    Frame operator()(const Frame &src, const Frame &ref)
     {
         Frame dst(src, false);
         return process(dst, src, ref);
     }
 
-    Frame process(const Frame &src)
+    Frame operator()(const Frame &src)
     {
         Frame dst(src, false);
         return process(dst, src, src);
@@ -90,17 +78,13 @@ protected:
 class NLMeans_IO
     : public FilterIO
 {
+public:
+    typedef NLMeans_IO _Myt;
+    typedef FilterIO _Mybase;
+
 protected:
+    NLMeans_Para para;
     std::string RPath;
-    bool correction = NLMeans_Default.correction;
-    double sigma = NLMeans_Default.sigma;
-    double strength = NLMeans_Default.strength;
-    PCType GroupSizeMax = NLMeans_Default.GroupSizeMax;
-    PCType BlockSize = NLMeans_Default.BlockSize;
-    PCType Overlap = NLMeans_Default.Overlap;
-    PCType BMrange = NLMeans_Default.BMrange;
-    PCType BMstep = NLMeans_Default.BMstep;
-    double thMSE = NLMeans_Default.thMSE;
 
     virtual void arguments_process()
     {
@@ -120,48 +104,48 @@ protected:
             }
             if (args[i] == "-C" || args[i] == "--correction")
             {
-                ArgsObj.GetPara(i, correction);
+                ArgsObj.GetPara(i, para.correction);
                 continue;
             }
             if (args[i] == "-S" || args[i] == "--sigma")
             {
-                ArgsObj.GetPara(i, sigma);
+                ArgsObj.GetPara(i, para.sigma);
                 continue;
             }
             if (args[i] == "-H" || args[i] == "--strength")
             {
-                ArgsObj.GetPara(i, strength);
+                ArgsObj.GetPara(i, para.strength);
                 strength_def = true;
                 continue;
             }
             if (args[i] == "-GSM" || args[i] == "--GroupSizeMax")
             {
-                ArgsObj.GetPara(i, GroupSizeMax);
+                ArgsObj.GetPara(i, para.GroupSizeMax);
                 continue;
             }
             if (args[i] == "-B" || args[i] == "--BlockSize")
             {
-                ArgsObj.GetPara(i, BlockSize);
+                ArgsObj.GetPara(i, para.BlockSize);
                 continue;
             }
             if (args[i] == "-O" || args[i] == "--Overlap")
             {
-                ArgsObj.GetPara(i, Overlap);
+                ArgsObj.GetPara(i, para.Overlap);
                 continue;
             }
             if (args[i] == "-MR" || args[i] == "--BMrange")
             {
-                ArgsObj.GetPara(i, BMrange);
+                ArgsObj.GetPara(i, para.BMrange);
                 continue;
             }
             if (args[i] == "-MS" || args[i] == "--BMstep")
             {
-                ArgsObj.GetPara(i, BMstep);
+                ArgsObj.GetPara(i, para.BMstep);
                 continue;
             }
             if (args[i] == "-TH" || args[i] == "--thMSE")
             {
-                ArgsObj.GetPara(i, thMSE);
+                ArgsObj.GetPara(i, para.thMSE);
                 thMSE_def = true;
                 continue;
             }
@@ -174,30 +158,28 @@ protected:
 
         ArgsObj.Check();
 
-        if (!strength_def) strength = correction ? sigma * 5 : sigma * 1.5;
-        if (!thMSE_def) thMSE = correction ? sigma * 50 : sigma * 25;
+        if (!strength_def) para.strength = para.correction ? para.sigma * 5 : para.sigma * 1.5;
+        if (!thMSE_def) para.thMSE = para.correction ? para.sigma * 50 : para.sigma * 25;
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
-        NLMeans filter(correction, sigma, strength, GroupSizeMax, BlockSize, Overlap, BMrange, BMstep, thMSE);
+        NLMeans filter(para);
 
         if (RPath.size() == 0)
         {
-            return filter.process(src);
+            return filter(src);
         }
         else
         {
             const Frame ref = ImageReader(RPath);
-            return filter.process(src, ref);
+            return filter(src, ref);
         }
     }
 
 public:
-    NLMeans_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".NLMeans")
-        : FilterIO(_argc, _args, _Tag) {}
-
-    ~NLMeans_IO() {}
+    _Myt(std::string _Tag = ".NLMeans")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 

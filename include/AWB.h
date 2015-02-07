@@ -11,8 +11,11 @@
 #include "Gaussian.h"
 
 
-const struct AWB1_Para {
-} AWB1_Default;
+const struct AWB1_Para
+{} AWB1_Default;
+
+const struct AWB2_Para
+{} AWB2_Default;
 
 
 class AWB
@@ -63,7 +66,7 @@ protected:
 public:
     AWB(const Frame &_src) 
         : src(_src), srcR(src.R()), srcG(src.G()), srcB(src.B()), dst(_src, false), dstR(dst.R()), dstG(dst.G()), dstB(dst.B()),
-        height(src.Height()), width(src.Width()), stride(src.Width()),
+        height(src.Height()), width(src.Width()), stride(src.Stride()),
         sFloor(srcR.Floor()), sCeil(srcR.Ceil()), dFloor(dstR.Floor()), dCeil(dstR.Ceil()), dFloorFL(dFloor), dCeilFL(dCeil)
     {
         if (!src.isRGB())
@@ -76,7 +79,7 @@ public:
 
     virtual ~AWB() {}
 
-    Frame process();
+    Frame &process();
 };
 
 
@@ -84,7 +87,7 @@ class AWB1
     : public AWB
 {
 protected:
-    virtual void kernel();
+    void kernel();
 
 public:
     AWB1(const Frame &_src)
@@ -97,7 +100,7 @@ class AWB2
     : public AWB
 {
 protected:
-    virtual void kernel();
+    void kernel();
 
 public:
     AWB2(const Frame &_src)
@@ -109,62 +112,71 @@ public:
 class AWB_IO
     : public FilterIO
 {
+public:
+    typedef AWB_IO _Myt;
+    typedef FilterIO _Mybase;
+
 protected:
     virtual void arguments_process()
     {
         FilterIO::arguments_process();
     }
 
-    virtual Frame processFrame(const Frame &src) = 0;
+    virtual Frame process(const Frame &src) = 0;
 
 public:
-    AWB_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".AWB")
-        : FilterIO(_argc, _args, _Tag)
-    {}
+    _Myt(std::string _Tag = ".AWB")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
 class AWB1_IO
     : public AWB_IO
 {
+public:
+    typedef AWB1_IO _Myt;
+    typedef AWB_IO _Mybase;
+
 protected:
     virtual void arguments_process()
     {
         AWB_IO::arguments_process();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
         AWB1 Filter(src);
         return Filter.process();
     }
 
 public:
-    AWB1_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".AWB1")
-        : AWB_IO(_argc, _args, _Tag)
-    {}
+    _Myt(std::string _Tag = ".AWB1")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
 class AWB2_IO
     : public AWB_IO
 {
+public:
+    typedef AWB2_IO _Myt;
+    typedef AWB_IO _Mybase;
+
 protected:
     virtual void arguments_process()
     {
         AWB_IO::arguments_process();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
         AWB2 Filter(src);
         return Filter.process();
     }
 
 public:
-    AWB2_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".AWB2")
-        : AWB_IO(_argc, _args, _Tag)
-    {}
+    _Myt(std::string _Tag = ".AWB2")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 

@@ -5,40 +5,47 @@
 
 
 // Implementation of specular highilght removal algorithm from "Qingxiong Yang, ShengnanWang, and Narendra Ahuja - Real-Time Specular Highlight Removal Using Bilateral Filtering"
-Frame & Specular_Highlight_Removal(Frame & output, const Frame & input, const double thr, const double sigmaS, const double sigmaR, const DType PBFICnum)
+Frame &Specular_Highlight_Removal(Frame &dst, const Frame &src, const double thr, const double sigmaS, const double sigmaR, const DType PBFICnum)
 {
-    if (!(input.isRGB() && output.isRGB()))
+    if (!(src.isRGB() && dst.isRGB()))
     {
         std::cerr <<
-            "Frame & Specular_Highlight_Removal(Frame & output, const Frame & input...) :\n"
+            "Frame &Specular_Highlight_Removal(Frame &dst, const Frame &src...) :\n"
             "    only Frame of RGB PixelType is supported.\n";
         exit(EXIT_FAILURE);
     }
 
-    PCType i, flag = 1;
-    PCType pcount = input.PixelCount();
-    DType ValueRange = input.R().ValueRange();
+    const Plane &srcR = src.R();
+    const Plane &srcG = src.G();
+    const Plane &srcB = src.B();
+    Plane &dstR = dst.R();
+    Plane &dstG = dst.G();
+    Plane &dstB = dst.B();
+
+    PCType i;
+    PCType pcount = srcR.PixelCount();
+    DType ValueRange = srcR.ValueRange();
 
     DType R, G, B;
     FLType RGBsum, sigma_R, sigma_G, sigma_B, sigmaMax, sigmaMin;
-    Plane PsigmaMax(input.R(), false);
-    Plane PlambdaMax(input.R(), false);
-    Plane PsigmaMaxF(input.R(), false);
+    Plane PsigmaMax(srcR, false);
+    Plane PlambdaMax(srcR, false);
+    Plane PsigmaMaxF(srcR, false);
 
-    PsigmaMax.ReQuantize(input.R().BitDepth(), 0, 0, ValueRange);
-    PlambdaMax.ReQuantize(input.R().BitDepth(), 0, 0, ValueRange);
-    PsigmaMaxF.ReQuantize(input.R().BitDepth(), 0, 0, ValueRange);
+    PsigmaMax.ReQuantize(srcR.BitDepth(), 0, 0, ValueRange);
+    PlambdaMax.ReQuantize(srcR.BitDepth(), 0, 0, ValueRange);
+    PsigmaMaxF.ReQuantize(srcR.BitDepth(), 0, 0, ValueRange);
 
-    DType diffthr = (DType)(thr * ValueRange + 0.5);
+    DType diffthr = static_cast<DType>(thr * ValueRange + 0.5);
     FLType specular_component;
 
-    // Compute σ_max at every pixel using the input image and store it as a grayscale image.
-    // Compute λ_max at every pixel using the input image and store it as a grayscale image.
+    // Compute σ_max at every pixel using the src image and store it as a grayscale image.
+    // Compute λ_max at every pixel using the src image and store it as a grayscale image.
     for (i = 0; i < pcount; i++)
     {
-        R = input.R()[i];
-        G = input.G()[i];
-        B = input.B()[i];
+        R = srcR[i];
+        G = srcG[i];
+        B = srcB[i];
 
         RGBsum = (FLType)(R + G + B);
         if (RGBsum == 0)
@@ -60,11 +67,16 @@ Frame & Specular_Highlight_Removal(Frame & output, const Frame & input, const do
     }
 
     // repeat until σ_maxF − σ_max < 0.03 at every pixel.
+    PCType flag = 1;
+
     while (flag)
     {
         // Apply joint bilateral filter to image σmax using λ_max as the guidance image, store the filtered image as σF σ_maxF
-        Bilateral2D_Data bldata(PlambdaMax, sigmaS, sigmaR);
-        Bilateral2D(PsigmaMaxF, PsigmaMax, PlambdaMax, bldata);
+        Bilateral2D_Para blPara;
+        blPara.sigmaS = sigmaS;
+        blPara.sigmaR = sigmaR;
+        Bilateral2D_Data blData(PlambdaMax, blPara);
+        Bilateral2D(PsigmaMaxF, PsigmaMax, PlambdaMax, blData);
 
         // For each pixel p, σ_max(p) = max(σ_max(p), σ_maxF(p))
         for (i = 0, flag = 0; i < pcount; i++)
@@ -84,32 +96,32 @@ Frame & Specular_Highlight_Removal(Frame & output, const Frame & input, const do
     // Compute diffuse component
     for (i = 0; i < pcount; i++)
     {
-        R = input.R()[i];
-        G = input.G()[i];
-        B = input.B()[i];
+        R = srcR[i];
+        G = srcG[i];
+        B = srcB[i];
         sigmaMax = (FLType)PsigmaMax[i] / ValueRange;
 
         if (PsigmaMax[i] * 3 <= ValueRange)
         {
-            output.R()[i] = R;
-            output.G()[i] = G;
-            output.B()[i] = B;
+            dstR[i] = R;
+            dstG[i] = G;
+            dstB[i] = B;
         }
         else
         {
             specular_component = (Max(Max(R, G), B) - sigmaMax*(R + G + B)) / (1 - 3 * sigmaMax);
-            output.R()[i] = output.R().Quantize(R - specular_component);
-            output.G()[i] = output.G().Quantize(G - specular_component);
-            output.B()[i] = output.B().Quantize(B - specular_component);
+            dstR[i] = dstR.Quantize(R - specular_component);
+            dstG[i] = dstG.Quantize(G - specular_component);
+            dstB[i] = dstB.Quantize(B - specular_component);
         }
-        /*output.R()[i] = PsigmaMax[i];
-        output.G()[i] = PsigmaMax[i];
-        output.B()[i] = PsigmaMax[i];*/
-        /*output.R()[i] = PlambdaMax[i];
-        output.G()[i] = PlambdaMax[i];
-        output.B()[i] = PlambdaMax[i];*/
+        /*dst.R()[i] = PsigmaMax[i];
+        dst.G()[i] = PsigmaMax[i];
+        dst.B()[i] = PsigmaMax[i];*/
+        /*dst.R()[i] = PlambdaMax[i];
+        dst.G()[i] = PlambdaMax[i];
+        dst.B()[i] = PlambdaMax[i];*/
     }
 
     // Output
-    return output;
+    return dst;
 }

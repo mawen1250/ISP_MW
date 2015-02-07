@@ -13,13 +13,12 @@ const struct Haze_Removal_Para
     FLType ALmax = 1;
     FLType tMapMin = 0.1;
     FLType strength = 0.65;
-
-    std::vector<double> sigmaVector;
-
     int ppmode = 3;
     double lower_thr = 0.02;
     double upper_thr = 0.01;
     Histogram<FLType>::BinType HistBins = 1024;
+
+    std::vector<double> sigmaVector;
 
     Haze_Removal_Para() : sigmaVector({ 25.0, 250.0 }) {}
 } Haze_Removal_Default;
@@ -30,15 +29,8 @@ class Haze_Removal
 public:
     typedef Haze_Removal _Myt;
 
-private:
-    double tMap_thr;
-    FLType ALmax;
-    FLType tMapMin;
-    FLType strength;
-    int ppmode;
-    double lower_thr;
-    double upper_thr;
-    Histogram<FLType>::BinType HistBins;
+protected:
+    Haze_Removal_Para para;
 
 protected:
     Plane_FL dataR;
@@ -54,14 +46,13 @@ protected:
     FLType AL_B;
 
 public:
-    _Myt(const Haze_Removal_Para &Para = Haze_Removal_Default)
-        : tMap_thr(Para.tMap_thr), ALmax(Para.ALmax), tMapMin(Para.tMapMin), strength(Para.strength),
-        ppmode(Para.ppmode), lower_thr(Para.lower_thr), upper_thr(Para.upper_thr), HistBins(Para.HistBins)
+    _Myt(const Haze_Removal_Para &_para = Haze_Removal_Default)
+        : para(_para)
     {}
 
     Frame &process(Frame &dst, const Frame &src);
 
-    Frame process(const Frame &src)
+    Frame operator()(const Frame &src)
     {
         Frame dst(src, false);
         return process(dst, src);
@@ -75,7 +66,10 @@ protected:
     void GetAirLight();
 
     // Generate the haze-free image
-    void GetHazeFree(Frame &dst);
+    void RemoveHaze();
+
+    // Store the filtered result to a Frame with range scaling
+    void StoreResult(Frame &dst);
 };
 
 
@@ -86,17 +80,14 @@ public:
     typedef Haze_Removal_Retinex _Myt;
     typedef Haze_Removal _Mybase;
 
-private:
-    std::vector<double> sigmaVector;
-
 public:
-    _Myt(const Haze_Removal_Para &Para = Haze_Removal_Default)
-        : _Mybase(Para), sigmaVector(Para.sigmaVector)
+    _Myt(const Haze_Removal_Para &_para = Haze_Removal_Default)
+        : _Mybase(_para)
     {}
 
 protected:
     // Generate the Inverted Transmission Map from intensity image
-    void GetTMapInv(const Frame &src);
+    virtual void GetTMapInv(const Frame &src);
 };
 
 
@@ -108,7 +99,7 @@ public:
     typedef FilterIO _Mybase;
 
 protected:
-    Haze_Removal_Para Para;
+    Haze_Removal_Para para;
 
     virtual void arguments_process()
     {
@@ -120,42 +111,42 @@ protected:
         {
             if (args[i] == "--tMap_thr")
             {
-                ArgsObj.GetPara(i, Para.tMap_thr);
+                ArgsObj.GetPara(i, para.tMap_thr);
                 continue;
             }
             if (args[i] == "--ALmax")
             {
-                ArgsObj.GetPara(i, Para.ALmax);
+                ArgsObj.GetPara(i, para.ALmax);
                 continue;
             }
             if (args[i] == "--tMapMin")
             {
-                ArgsObj.GetPara(i, Para.tMapMin);
+                ArgsObj.GetPara(i, para.tMapMin);
                 continue;
             }
             if (args[i] == "-S" || args[i] == "--strength")
             {
-                ArgsObj.GetPara(i, Para.strength);
+                ArgsObj.GetPara(i, para.strength);
                 continue;
             }
             if (args[i] == "-PP" || args[i] == "--ppmode")
             {
-                ArgsObj.GetPara(i, Para.ppmode);
+                ArgsObj.GetPara(i, para.ppmode);
                 continue;
             }
             if (args[i] == "-L" || args[i] == "--lower_thr")
             {
-                ArgsObj.GetPara(i, Para.lower_thr);
+                ArgsObj.GetPara(i, para.lower_thr);
                 continue;
             }
             if (args[i] == "-U" || args[i] == "--upper_thr")
             {
-                ArgsObj.GetPara(i, Para.upper_thr);
+                ArgsObj.GetPara(i, para.upper_thr);
                 continue;
             }
             if (args[i] == "-HB" || args[i] == "--HistBins")
             {
-                ArgsObj.GetPara(i, Para.HistBins);
+                ArgsObj.GetPara(i, para.HistBins);
                 continue;
             }
             if (args[i][0] == '-')
@@ -168,11 +159,11 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src) = 0;
+    virtual Frame process(const Frame &src) = 0;
 
 public:
-    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".Haze_Removal")
-        : _Mybase(_argc, _args, _Tag) {}
+    _Myt(std::string _Tag = ".Haze_Removal")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
@@ -190,14 +181,14 @@ protected:
 
         Args ArgsObj(argc, args);
         double sigma;
-        Para.sigmaVector.clear();
+        para.sigmaVector.clear();
 
         for (int i = 0; i < argc; i++)
         {
             if (args[i] == "-S" || args[i] == "--sigma")
             {
                 ArgsObj.GetPara(i, sigma);
-                Para.sigmaVector.push_back(sigma);
+                para.sigmaVector.push_back(sigma);
                 continue;
             }
             if (args[i][0] == '-')
@@ -209,21 +200,21 @@ protected:
 
         ArgsObj.Check();
 
-        if (Para.sigmaVector.size() == 0)
+        if (para.sigmaVector.size() == 0)
         {
-            Para.sigmaVector = Haze_Removal_Default.sigmaVector;
+            para.sigmaVector = Haze_Removal_Default.sigmaVector;
         }
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
-        Haze_Removal_Retinex filter(Para);
-        return filter.process(src);
+        Haze_Removal_Retinex filter(para);
+        return filter(src);
     }
 
 public:
-    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".Haze_Removal_Retinex")
-        : _Mybase(_argc, _args, _Tag) {}
+    _Myt(std::string _Tag = ".Haze_Removal_Retinex")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 

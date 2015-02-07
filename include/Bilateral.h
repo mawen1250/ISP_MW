@@ -44,10 +44,10 @@ public:
     std::vector<LUT<FLType>> GR_LUT;
 
 public:
-    Bilateral2D_Data(const Plane &src, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
-        int _algorithm = Bilateral2D_Default.algorithm, int _PBFICnum = Bilateral2D_Default.PBFICnum)
+    Bilateral2D_Data(const Plane &src, const Bilateral2D_Para &para = Bilateral2D_Default)
         : PlaneCount(1), isChroma(src.isChroma()), BPS(src.BitDepth()),
-        sigmaS(PlaneCount, _sigmaS), sigmaR(PlaneCount, _sigmaR), process(PlaneCount), algorithm(PlaneCount, _algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, _PBFICnum),
+        sigmaS(PlaneCount, para.sigmaS), sigmaR(PlaneCount, para.sigmaR), process(PlaneCount),
+        algorithm(PlaneCount, para.algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, para.PBFICnum),
         radius(PlaneCount), samples(PlaneCount), step(PlaneCount), GS_LUT(PlaneCount), GR_LUT(PlaneCount)
     {
         process_define();
@@ -62,10 +62,10 @@ public:
         GR_LUT_Init();
     }
 
-    Bilateral2D_Data(const Frame &src, double _sigmaS = Bilateral2D_Default.sigmaS, double _sigmaR = Bilateral2D_Default.sigmaR,
-        int _algorithm = Bilateral2D_Default.algorithm, int _PBFICnum = Bilateral2D_Default.PBFICnum)
+    Bilateral2D_Data(const Frame &src, const Bilateral2D_Para &para = Bilateral2D_Default)
         : PlaneCount(src.PlaneCount()), isYUV(src.isYUV()), BPS(src.BitDepth()),
-        sigmaS(PlaneCount, _sigmaS), sigmaR(PlaneCount, _sigmaR), process(PlaneCount), algorithm(PlaneCount, _algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, _PBFICnum),
+        sigmaS(PlaneCount, para.sigmaS), sigmaR(PlaneCount, para.sigmaR), process(PlaneCount),
+        algorithm(PlaneCount, para.algorithm), radius0(PlaneCount), PBFICnum(PlaneCount, para.PBFICnum),
         radius(PlaneCount), samples(PlaneCount), step(PlaneCount), GS_LUT(PlaneCount), GR_LUT(PlaneCount)
     {
         process_define();
@@ -258,11 +258,13 @@ inline Frame Bilateral2D(const Frame &src, const Bilateral2D_Data &d)
 class Bilateral2D_IO
     : public FilterIO
 {
+public:
+    typedef Bilateral2D_IO _Myt;
+    typedef FilterIO _Mybase;
+
 protected:
+    Bilateral2D_Para para;
     std::string RPath;
-    double sigmaS = Bilateral2D_Default.sigmaS;
-    double sigmaR = Bilateral2D_Default.sigmaR;
-    int algorithm = Bilateral2D_Default.algorithm;
 
     virtual void arguments_process()
     {
@@ -279,17 +281,22 @@ protected:
             }
             if (args[i] == "-S" || args[i] == "--sigmaS")
             {
-                ArgsObj.GetPara(i, sigmaS);
+                ArgsObj.GetPara(i, para.sigmaS);
                 continue;
             }
             if (args[i] == "-R" || args[i] == "--sigmaR")
             {
-                ArgsObj.GetPara(i, sigmaR);
+                ArgsObj.GetPara(i, para.sigmaR);
                 continue;
             }
             if (args[i] == "-A" || args[i] == "--algorithm")
             {
-                ArgsObj.GetPara(i, algorithm);
+                ArgsObj.GetPara(i, para.algorithm);
+                continue;
+            }
+            if (args[i] == "-N" || args[i] == "--PBFICnum")
+            {
+                ArgsObj.GetPara(i, para.PBFICnum);
                 continue;
             }
             if (args[i][0] == '-')
@@ -302,26 +309,24 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
         if (RPath.size() == 0)
         {
-            Bilateral2D_Data data(src, sigmaS, sigmaR, algorithm);
+            Bilateral2D_Data data(src, para);
             return Bilateral2D(src, data);
         }
         else
         {
             const Frame ref = ImageReader(RPath);
-            Bilateral2D_Data data(ref, sigmaS, sigmaR, algorithm);
+            Bilateral2D_Data data(ref, para);
             return Bilateral2D(src, ref, data);
         }
     }
 
 public:
-    Bilateral2D_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".Bilateral")
-        : FilterIO(_argc, _args, _Tag) {}
-
-    ~Bilateral2D_IO() {}
+    _Myt(std::string _Tag = ".Bilateral")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 

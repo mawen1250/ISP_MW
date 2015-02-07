@@ -659,10 +659,10 @@ void Plane_FL::InitValue(value_type Value, bool Init)
     if (Init)
     {
         Value = Quantize(Value);
-        for (PCType i = 0; i < PixelCount(); i++)
+        for_each([&](value_type &x)
         {
-            Data_[i] = Value;
-        }
+            x = Value;
+        });
     }
 }
 
@@ -817,10 +817,10 @@ Plane_FL::value_type Plane_FL::Min() const
 {
     value_type min = value_type_MAX;
 
-    for (PCType i = 0; i < PixelCount(); i++)
+    for_each([&](value_type x)
     {
-        min = ::Min(min, Data_[i]);
-    }
+        if (min > x) min = x;
+    });
 
     return min;
 }
@@ -829,10 +829,10 @@ Plane_FL::value_type Plane_FL::Max() const
 {
     value_type max = -value_type_MAX;
 
-    for (PCType i = 0; i < PixelCount(); i++)
+    for_each([&](value_type x)
     {
-        max = ::Max(max, Data_[i]);
-    }
+        if (max < x) max = x;
+    });
 
     return max;
 }
@@ -842,21 +842,21 @@ void Plane_FL::MinMax(reference min, reference max) const
     min = value_type_MAX;
     max = -value_type_MAX;
 
-    for (PCType i = 0; i < PixelCount(); i++)
+    for_each([&](value_type x)
     {
-        min = ::Min(min, Data_[i]);
-        max = ::Max(max, Data_[i]);
-    }
+        if (min > x) min = x;
+        if (max < x) max = x;
+    });
 }
 
 Plane_FL::value_type Plane_FL::Mean() const
 {
     value_type Sum = 0;
 
-    for (PCType i = 0; i < PixelCount(); i++)
+    for_each([&](value_type x)
     {
-        Sum += Data_[i];
-    }
+        Sum += x;
+    });
 
     return Sum / PixelCount();
 }
@@ -866,11 +866,11 @@ Plane_FL::value_type Plane_FL::Variance(value_type Mean) const
     value_type diff;
     value_type Sum = 0;
 
-    for (PCType i = 0; i < PixelCount(); i++)
+    for_each([&](value_type x)
     {
-        diff = Data_[i] - Mean;
+        diff = x - Mean;
         Sum += diff * diff;
-    }
+    });
 
     return Sum / PixelCount();
 }

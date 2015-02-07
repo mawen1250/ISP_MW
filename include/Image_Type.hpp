@@ -295,14 +295,14 @@ void RangeConvert(_Dt1 &dst, const _St1 &src,
 
             dst.transform(src, [&](srcType x)
             {
-                return static_cast<dstType>(Clip(x * gain + offset, lowerL, upperL));
+                return static_cast<dstType>(Clip(static_cast<FLType>(x) * gain + offset, lowerL, upperL));
             });
         }
         else
         {
             dst.transform(src, [&](srcType x)
             {
-                return static_cast<dstType>(x * gain + offset);
+                return static_cast<dstType>(static_cast<FLType>(x) * gain + offset);
             });
         }
     }
@@ -451,6 +451,7 @@ void SimplestColorBalance(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, 
         dstR.Floor(), dstR.Neutral(), dstR.Ceil(), min, min, max,
         lower_thr > 0 || upper_thr > 0);
 }
+
 
 // Template functions of algorithm
 template < typename _St1, typename _Fn1 > inline

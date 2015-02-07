@@ -101,9 +101,9 @@ Histogram<T>::Histogram(const Plane &src)
     Data_ = new CountType[Bins_];
     memset(Data_, 0, sizeof(CountType) * Bins_);
 
-    for (i = 0; i < Count_; i++)
+    for (i = 0; i < Count_; ++i)
     {
-        Data_[ToBinType(src[i] - Lower_)]++;
+        ++Data_[ToBinType(src[i] - Lower_)];
     }
 }
 
@@ -129,16 +129,16 @@ Histogram<T>::Histogram(const Plane &src, T Lower, T Upper, BinType Bins)
 
     if (Scale_ == 1)
     {
-        for (i = 0; i < Count_; i++)
+        for (i = 0; i < Count_; ++i)
         {
-            Data_[ToBinType(src[i] - Lower_)]++;
+            ++Data_[ToBinType(src[i] - Lower_)];
         }
     }
     else
     {
-        for (i = 0; i < Count_; i++)
+        for (i = 0; i < Count_; ++i)
         {
-            Data_[ToBinType((src[i] - Lower_) * Scale_)]++;
+            ++Data_[ToBinType((src[i] - Lower_) * Scale_)];
         }
     }
 }
@@ -159,16 +159,16 @@ Histogram<T>::Histogram(const Plane_FL &src, T Lower, T Upper, BinType Bins)
 
     if (Scale_ == 1)
     {
-        for (i = 0; i < Count_; i++)
+        for (i = 0; i < Count_; ++i)
         {
-            Data_[ToBinType(src[i] - Lower_)]++;
+            ++Data_[ToBinType(src[i] - Lower_)];
         }
     }
     else
     {
-        for (i = 0; i < Count_; i++)
+        for (i = 0; i < Count_; ++i)
         {
-            Data_[ToBinType((src[i] - Lower_) * Scale_)]++;
+            ++Data_[ToBinType((src[i] - Lower_) * Scale_)];
         }
     }
 }
@@ -183,9 +183,9 @@ Histogram<T>::Histogram(const T *src, CountType size, T Lower, T Upper)
     memset(Data_, 0, sizeof(CountType) * Bins_);
 
     BinType BinUpper = Bins_ - 1;
-    for (i = 0; i < Count_; i++)
+    for (i = 0; i < Count_; ++i)
     {
-        Data_[Clip(ToBinType(src[i] - Lower_), 0, BinUpper)]++;
+        ++Data_[Clip(ToBinType(src[i] - Lower_), 0, BinUpper)];
     }
 }
 
@@ -201,16 +201,16 @@ Histogram<T>::Histogram(const T *src, CountType size, T Lower, T Upper, BinType 
     BinType BinUpper = Bins_ - 1;
     if (Scale_ == 1)
     {
-        for (i = 0; i < Count_; i++)
+        for (i = 0; i < Count_; ++i)
         {
-            Data_[Clip(ToBinType(src[i] - Lower_), 0, BinUpper)]++;
+            ++Data_[Clip(ToBinType(src[i] - Lower_), 0, BinUpper)];
         }
     }
     else
     {
-        for (i = 0; i < Count_; i++)
+        for (i = 0; i < Count_; ++i)
         {
-            Data_[Clip(ToBinType((src[i] - Lower_) * Scale_), 0, BinUpper)]++;
+            ++Data_[Clip(ToBinType((src[i] - Lower_) * Scale_), 0, BinUpper)];
         }
     }
 }
@@ -284,9 +284,9 @@ T Histogram<T>::Min(double ratio) const
 
     BinType i;
     CountType Count = 0;
-    CountType MaxCount = static_cast<CountType>(Count_*ratio + 0.5);
+    CountType MaxCount = static_cast<CountType>(Count_ * ratio + 0.5);
 
-    for (i = 0; i < Bins_; i++)
+    for (i = 0; i < Bins_; ++i)
     {
         Count += Data_[i];
         if (Count > MaxCount) break;
@@ -307,7 +307,7 @@ T Histogram<T>::Max(double ratio) const
 
     BinType i;
     CountType Count = 0;
-    CountType MaxCount = static_cast<CountType>(Count_*ratio + 0.5);
+    CountType MaxCount = static_cast<CountType>(Count_ * ratio + 0.5);
 
     for (i = Bins_ - 1; i >= 0; i--)
     {
@@ -340,7 +340,7 @@ inline LUT<DType> Histogram<DType>::Equalization_LUT(const Plane &dst, const Pla
         scale2 = static_cast<FLType>(dRange) / sRange * weight2;
         offset = static_cast<FLType>(dFloor)+FLType(0.5);
 
-        for (BinType i = 0; i < Bins_; i++)
+        for (BinType i = 0; i < Bins_; ++i)
         {
             Sum += Data_[i];
             _LUT[i] = static_cast<DType>(Sum * scale1 + i * scale2 + offset);
@@ -355,7 +355,7 @@ inline LUT<DType> Histogram<DType>::Equalization_LUT(const Plane &dst, const Pla
         scale2 = static_cast<FLType>(dRange) / (Bins_ - 1) * weight2;
         offset = static_cast<FLType>(dFloor);
 
-        for (BinType i = 0; i < Bins_; i++)
+        for (BinType i = 0; i < Bins_; ++i)
         {
             Sum += Data_[i];
             temp[i] = Sum * scale1 + i * scale2 + offset;
@@ -366,7 +366,7 @@ inline LUT<DType> Histogram<DType>::Equalization_LUT(const Plane &dst, const Pla
         DType val_lower_upper = Bins_ - 2;
         scale1 = static_cast<FLType>(Bins_ - 1) / sRange;
 
-        for (LUT<DType>::LevelType i = 0; i < LUT_Levels; i++)
+        for (LUT<DType>::LevelType i = 0; i < LUT_Levels; ++i)
         {
             val = i * scale1;
             val_lower = ::Min(static_cast<DType>(val), val_lower_upper);
@@ -399,7 +399,7 @@ inline LUT<FLType> Histogram<DType>::Equalization_LUT_Gain(const Plane &dst, con
         scale1 = static_cast<FLType>(dRange) / Count_ * weight1;
         scale2 = static_cast<FLType>(dRange) / sRange * weight2;
 
-        for (BinType i = 0; i < Bins_; i++)
+        for (BinType i = 0; i < Bins_; ++i)
         {
             Sum += Data_[i];
             _LUT[i] = Sum * scale1 / i + scale2;
@@ -413,7 +413,7 @@ inline LUT<FLType> Histogram<DType>::Equalization_LUT_Gain(const Plane &dst, con
         scale1 = static_cast<FLType>(dRange) / Count_ * weight1;
         scale2 = static_cast<FLType>(dRange) / (Bins_ - 1) * weight2;
 
-        for (BinType i = 0; i < Bins_; i++)
+        for (BinType i = 0; i < Bins_; ++i)
         {
             Sum += Data_[i];
             temp[i] = Sum * scale1 + i * scale2;
@@ -424,7 +424,7 @@ inline LUT<FLType> Histogram<DType>::Equalization_LUT_Gain(const Plane &dst, con
         DType val_lower_upper = Bins_ - 2;
         scale1 = static_cast<FLType>(Bins_ - 1) / sRange;
 
-        for (LUT<DType>::LevelType i = 0; i < LUT_Levels; i++)
+        for (LUT<DType>::LevelType i = 0; i < LUT_Levels; ++i)
         {
             val = i * scale1;
             val_lower = ::Min(static_cast<DType>(val), val_lower_upper);

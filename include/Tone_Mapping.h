@@ -13,8 +13,8 @@ const struct AGTM_Para {
 } AGTM_Default;
 
 
-Frame & Adaptive_Global_Tone_Mapping(Frame & dst, const Frame & src);
-inline Frame Adaptive_Global_Tone_Mapping(const Frame & src)
+Frame &Adaptive_Global_Tone_Mapping(Frame &dst, const Frame &src);
+inline Frame Adaptive_Global_Tone_Mapping(const Frame &src)
 {
     Frame dst(src, false);
     return Adaptive_Global_Tone_Mapping(dst, src);
@@ -24,26 +24,28 @@ inline Frame Adaptive_Global_Tone_Mapping(const Frame & src)
 class Adaptive_Global_Tone_Mapping_IO
     : public FilterIO
 {
+public:
+    typedef Adaptive_Global_Tone_Mapping_IO _Myt;
+    typedef FilterIO _Mybase;
+
 protected:
     virtual void arguments_process()
     {
         FilterIO::arguments_process();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
         return Adaptive_Global_Tone_Mapping(src);
     }
 
 public:
-    Adaptive_Global_Tone_Mapping_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".AGTM")
-        : FilterIO(_argc, _args, _Tag) {}
-
-    ~Adaptive_Global_Tone_Mapping_IO() {}
+    _Myt(std::string _Tag = ".AGTM")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
-LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & src);
+LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane &src);
 
 
 #endif

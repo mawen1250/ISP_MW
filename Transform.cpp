@@ -1,7 +1,7 @@
 #include "Transform.h"
 
 
-Plane & Transpose(Plane & output, const Plane & input)
+Plane &Transpose(Plane &output, const Plane &input)
 {
     PCType i, j, k;
     PCType sw = input.Width();
@@ -24,7 +24,7 @@ Plane & Transpose(Plane & output, const Plane & input)
 }
 
 
-Plane_FL & Transpose(Plane_FL & output, const Plane_FL & input)
+Plane_FL &Transpose(Plane_FL &output, const Plane_FL &input)
 {
     PCType i, j, k;
     PCType sw = input.Width();
@@ -47,7 +47,7 @@ Plane_FL & Transpose(Plane_FL & output, const Plane_FL & input)
 }
 
 
-void Transpose(FLType * output, const FLType * const input, const PCType sw, const PCType sh)
+void Transpose(FLType *output, const FLType *const input, const PCType sw, const PCType sh)
 {
     PCType i, j, k;
     PCType pcount = sw*sh;

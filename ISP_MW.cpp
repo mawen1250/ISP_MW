@@ -104,7 +104,11 @@ int main()
 #elif defined(Gaussian_)
     PFrame = Gaussian2D(IFrame, 5.0);
 #elif defined(Bilateral_)
-    Bilateral2D_Data bldata(IFrame, 3.0, 0.02, 0);
+    Bilateral2D_Para para;
+    para.sigmaS = 3.0;
+    para.sigmaR = 0.02;
+    para.algorithm = 0;
+    Bilateral2D_Data bldata(IFrame, para);
     PFrame = Bilateral2D(IFrame, bldata);
 #elif defined(Transpose_)
     PFrame = Transpose(IFrame);
@@ -122,19 +126,20 @@ int main()
     AWB1 AWBObj(IFrame);
     PFrame = AWBObj.process();
 #elif defined(NLMeans_)
-    PFrame = NLMeans(IFrame);
+    NLMeans filter;
+    PFrame = filter(IFrame);
 #elif defined(Haze_Removal_)
-    Haze_Removal_Retinex HRRObj;
-    PFrame = HRRObj.process(IFrame);
+    Haze_Removal_Retinex filter;
+    PFrame = filter(IFrame);
 #else
     PFrame = IFrame;
 #endif
     ImageWriter(PFrame, "D:\\Test Images\\Haze\\20150126_131557.0.png");
     system("pause");
 #else // Test_Write
-    const int Loop = 5;
+    const int Loop = 20;
 
-    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150126_131557.jpg");
+    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\2\\1 tz WDR=on 2.png");
     const Plane &srcR = IFrame.R();
     Plane dstR(srcR, false);
 
@@ -148,26 +153,33 @@ int main()
 #elif defined(Gaussian_)
         Gaussian2D(IFrame, 5.0);
 #elif defined(Bilateral_)
-        Bilateral2D_Data bldata(IFrame, 3.0, 0.08, 1);
+        Bilateral2D_Para para;
+        para.sigmaS = 3.0;
+        para.sigmaR = 0.08;
+        para.algorithm = 1;
+        Bilateral2D_Data bldata(IFrame, para);
         Bilateral2D(IFrame, bldata);
 #elif defined(Transpose_)
         Transpose(IFrame);
 #elif defined(Specular_Highlight_Removal_)
         Specular_Highlight_Removal(IFrame);
 #elif defined(Retinex_MSRCP_)
-        Retinex_MSRCP(IFrame);
+        Retinex_MSRCP filter;
+        filter(IFrame);
 #elif defined(Retinex_MSRCR_)
-        Retinex_MSRCR(IFrame);
+        Retinex_MSRCR filter;
+        filter(IFrame);
 #elif defined(Retinex_MSRCR_GIMP_)
-        Retinex_MSRCR_GIMP(IFrame);
+        Retinex_MSRCR_GIMP filter;
+        filter(IFrame);
 #elif defined(Histogram_Equalization_)
         Histogram_Equalization(IFrame, 1.0, false);
 #elif defined(NLMeans_)
         NLMeans filter;
-        filter.process(IFrame);
+        filter(IFrame);
 #elif defined(Haze_Removal_)
-        Haze_Removal_Retinex HRRObj;
-        HRRObj.process(IFrame);
+        Haze_Removal_Retinex filter;
+        filter(IFrame);
 #else
         //DType count = 0;
         //srcR.for_each([&count](DType x){ count += x; });
@@ -219,65 +231,66 @@ int Filtering(const int argc, char ** argv)
         args[i] = argv[i + 2];
     }
 
-    FilterIO *FilterObj = nullptr;
+    FilterIO *filterIOPtr = nullptr;
 
     if (FilterName == "--gaussian")
     {
-        FilterObj = new Gaussian2D_IO(argc2, args);
+        filterIOPtr = new Gaussian2D_IO;
     }
     else if (FilterName == "--bilateral")
     {
-        FilterObj = new Bilateral2D_IO(argc2, args);
+        filterIOPtr = new Bilateral2D_IO;
     }
     else if (FilterName == "--agtm" || FilterName == "--adaptive_global_tone_mapping")
     {
-        FilterObj = new Adaptive_Global_Tone_Mapping_IO(argc2, args);
+        filterIOPtr = new Adaptive_Global_Tone_Mapping_IO;
     }
     else if (FilterName == "--retinex_msrcp" || FilterName == "--msrcp" || FilterName == "--retinex_msr" || FilterName == "--msr" || FilterName == "--retinex")
     {
-        FilterObj = new Retinex_MSRCP_IO(argc2, args);
+        filterIOPtr = new Retinex_MSRCP_IO;
     }
     else if (FilterName == "--retinex_msrcr" || FilterName == "--msrcr")
     {
-        FilterObj = new Retinex_MSRCR_IO(argc2, args);
+        filterIOPtr = new Retinex_MSRCR_IO;
     }
     else if (FilterName == "--retinex_msrcr_gimp" || FilterName == "--msrcr_gimp")
     {
-        FilterObj = new Retinex_MSRCR_GIMP_IO(argc2, args);
+        filterIOPtr = new Retinex_MSRCR_GIMP_IO;
     }
     else if (FilterName == "--he" || FilterName == "--histogram_equalization")
     {
-        FilterObj = new Histogram_Equalization_IO(argc2, args);
+        filterIOPtr = new Histogram_Equalization_IO;
     }
     else if (FilterName == "--awb1")
     {
-        FilterObj = new AWB1_IO(argc2, args);
+        filterIOPtr = new AWB1_IO;
     }
     else if (FilterName == "--awb2")
     {
-        FilterObj = new AWB2_IO(argc2, args);
+        filterIOPtr = new AWB2_IO;
     }
     else if (FilterName == "--ed" || FilterName == "--edgedetect")
     {
-        FilterObj = new EdgeDetect_IO(argc2, args);
+        filterIOPtr = new EdgeDetect_IO;
     }
     else if (FilterName == "--nlm" || FilterName == "--nlmeans" || FilterName == "--nonlocalmeans")
     {
-        FilterObj = new NLMeans_IO(argc2, args);
+        filterIOPtr = new NLMeans_IO;
     }
     else if (FilterName == "--hrr" || FilterName == "--haze_removal" || FilterName == "--haze_removal_retinex")
     {
-        FilterObj = new Haze_Removal_Retinex_IO(argc2, args);
+        filterIOPtr = new Haze_Removal_Retinex_IO;
     }
     else
     {
         return 1;
     }
 
-    if (FilterObj)
+    if (filterIOPtr)
     {
-        FilterObj->process();
-        delete FilterObj;
+        filterIOPtr->SetArgs(argc2, args);
+        filterIOPtr->operator()();
+        delete filterIOPtr;
     }
 
     return 0;

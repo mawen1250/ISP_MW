@@ -3,7 +3,7 @@
 #include "LUT.h"
 
 
-Frame ImageReader(const std::string& filename, const FCType FrameNum, const DType BitDepth)
+Frame ImageReader(const std::string &filename, const FCType FrameNum, const DType BitDepth)
 {
     cv::Mat image = cv::imread(filename, cv::IMREAD_COLOR);
 
@@ -24,13 +24,13 @@ Frame ImageReader(const std::string& filename, const FCType FrameNum, const DTyp
     Frame src(FrameNum, PixelType::RGB, sw, sh, BitDepth, false);
 
     PCType i, j;
-    Plane& R = src.R();
-    Plane& G = src.G();
-    Plane& B = src.B();
+    Plane &R = src.R();
+    Plane &G = src.G();
+    Plane &B = src.B();
 
     if (image.isContinuous())
     {
-        uchar * p = image.ptr<uchar>(0);
+        uchar *p = image.ptr<uchar>(0);
 
         if (R.Floor() == 0 && R.Ceil() == 65535)
         {
@@ -78,18 +78,18 @@ Frame ImageReader(const std::string& filename, const FCType FrameNum, const DTyp
 }
 
 
-bool ImageWriter(const Frame& src, const std::string& filename, int _type)
+bool ImageWriter(const Frame &src, const std::string &filename, int _type)
 {
     cv::Mat image(src.Height(), src.Width(), _type);
 
     PCType i, j;
-    const Plane& R = src.R();
-    const Plane& G = src.G();
-    const Plane& B = src.B();
+    const Plane &R = src.R();
+    const Plane &G = src.G();
+    const Plane &B = src.B();
     PCType pcount = src.PixelCount();
 
     if (image.isContinuous()) {
-        uchar * p = image.ptr<uchar>(0);
+        uchar *p = image.ptr<uchar>(0);
 
         if (R.Floor() == 0 && R.Ceil() == 65535)
         {

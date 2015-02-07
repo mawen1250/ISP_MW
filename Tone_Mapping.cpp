@@ -4,11 +4,11 @@
 #include "Specification.h"
 
 
-Frame & Adaptive_Global_Tone_Mapping(Frame & dst, const Frame & src)
+Frame &Adaptive_Global_Tone_Mapping(Frame &dst, const Frame &src)
 {
     if (src.isYUV())
     {
-        const Plane & srcY = src.Y();
+        const Plane &srcY = src.Y();
 
         LUT<FLType> _LUT = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(srcY);
 
@@ -28,7 +28,7 @@ Frame & Adaptive_Global_Tone_Mapping(Frame & dst, const Frame & src)
 }
 
 
-LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane & src)
+LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane &src)
 {
     PCType pcount = src.PixelCount();
 

@@ -7,7 +7,8 @@
 #include "Histogram.h"
 
 
-const struct HE_Para {
+const struct HE_Para
+{
     FLType strength = 1.0;
     bool separate = false;
 } HE_Default;
@@ -31,9 +32,12 @@ inline Frame Histogram_Equalization(const Frame &src, FLType strength = HE_Defau
 class Histogram_Equalization_IO
     : public FilterIO
 {
+public:
+    typedef Histogram_Equalization_IO _Myt;
+    typedef FilterIO _Mybase;
+
 protected:
-    FLType strength = HE_Default.strength;
-    bool separate = HE_Default.separate;
+    HE_Para para;
 
     virtual void arguments_process()
     {
@@ -45,12 +49,12 @@ protected:
         {
             if (args[i] == "-STR" || args[i] == "--strength")
             {
-                ArgsObj.GetPara(i, strength);
+                ArgsObj.GetPara(i, para.strength);
                 continue;
             }
             if (args[i] == "-SEP" || args[i] == "--separate")
             {
-                ArgsObj.GetPara(i, separate);
+                ArgsObj.GetPara(i, para.separate);
                 continue;
             }
             if (args[i][0] == '-')
@@ -63,16 +67,14 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
-        return Histogram_Equalization(src, strength, separate);
+        return Histogram_Equalization(src, para.strength, para.separate);
     }
 
 public:
-    Histogram_Equalization_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".HE")
-        : FilterIO(_argc, _args, _Tag) {}
-
-    ~Histogram_Equalization_IO() {}
+    _Myt(std::string _Tag = ".HE")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 

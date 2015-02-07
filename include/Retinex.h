@@ -26,67 +26,158 @@ const struct Retinex_Para
 } Retinex_Default;
 
 
-Plane_FL Retinex_MSR(const Plane_FL &idata, const std::vector<double> &sigmaVector);
-Plane_FL Retinex_MSR(const Plane_FL &idata, const std::vector<double> &sigmaVector, double lower_thr, double upper_thr);
-Plane_FL Retinex_MSRCR_GIMP(const Plane_FL &idata, const std::vector<double> &sigmaVector, double dynamic);
-
-Plane &Retinex_SSR(Plane &dst, const Plane &src, double sigma = Retinex_Default.sigma,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr);
-Plane &Retinex_MSR(Plane &dst, const Plane &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr);
-Frame &Retinex_MSRCP(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
-    double chroma_protect = Retinex_Default.chroma_protect);
-Frame &Retinex_MSRCR(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
-    double restore = Retinex_Default.restore);
-Frame &Retinex_MSRCR_GIMP(Frame &dst, const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double dynamic = Retinex_Default.dynamic);
-
-inline Plane Retinex_SSR(const Plane &src, double sigma = Retinex_Default.sigma,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr)
+class Retinex
 {
-    Plane dst(src, false);
-    return Retinex_SSR(dst, src, sigma, lower_thr, upper_thr);
-}
+public:
+    typedef Retinex _Myt;
 
-inline Frame Retinex_SSR(const Frame &src, double sigma = Retinex_Default.sigma,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr)
-{
-    Frame dst(src, false);
-    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
-        Retinex_SSR(dst.P(i), src.P(i), sigma, lower_thr, upper_thr);
-    return dst;
-}
+protected:
+    Retinex_Para para;
 
-inline Plane Retinex_MSR(const Plane &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr)
-{
-    Plane dst(src, false);
-    return Retinex_MSR(dst, src, sigmaVector, lower_thr, upper_thr);
-}
-inline Frame Retinex_MSRCP(const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
-    double chroma_protect = Retinex_Default.chroma_protect)
-{
-    Frame dst(src, false);
-    return Retinex_MSRCP(dst, src, sigmaVector, lower_thr, upper_thr, chroma_protect);
-}
+public:
+    _Myt(const Retinex_Para _para = Retinex_Default)
+        : para(_para)
+    {}
 
-inline Frame Retinex_MSRCR(const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double lower_thr = Retinex_Default.lower_thr, double upper_thr = Retinex_Default.upper_thr,
-    double restore = Retinex_Default.restore)
-{
-    Frame dst(src, false);
-    return Retinex_MSRCR(dst, src, sigmaVector, lower_thr, upper_thr, restore);
-}
+    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src) = 0;
 
-inline Frame Retinex_MSRCR_GIMP(const Frame &src, const std::vector<double> &sigmaVector = Retinex_Default.sigmaVector,
-    double dynamic = Retinex_Default.dynamic)
+    Plane_FL operator()(const Plane_FL &src)
+    {
+        Plane_FL dst(src, false);
+        return process(dst, src);
+    }
+
+    virtual Plane &process(Plane &dst, const Plane &src) = 0;
+
+    Plane operator()(const Plane &src)
+    {
+        Plane dst(src, false);
+        return process(dst, src);
+    }
+
+    virtual Frame &process(Frame &dst, const Frame &src)
+    {
+        if (src.isRGB())
+        {
+            for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
+            {
+                process(dst.P(i), src.P(i));
+            }
+        }
+        else
+        {
+            const char *FunctionName = "Retinex::process";
+            std::cerr << FunctionName << ": invalid PixelType of Frame \"src=\", should be RGB.\n";
+            exit(EXIT_FAILURE);
+        }
+
+        return dst;
+    }
+
+    Frame operator()(const Frame &src)
+    {
+        Frame dst(src, false);
+        return process(dst, src);
+    }
+
+protected:
+    Plane_FL &Kernel(Plane_FL &dst, const Plane_FL &src);
+
+    Plane_FL Kernel(const Plane_FL &src)
+    {
+        Plane_FL dst(src, false);
+        return Kernel(dst, src);
+    }
+};
+
+
+class Retinex_SSR
+    : public Retinex
 {
-    Frame dst(src, false);
-    return Retinex_MSRCR_GIMP(dst, src, sigmaVector, dynamic);
-}
+public:
+    typedef Retinex_SSR _Myt;
+    typedef Retinex _Mybase;
+
+public:
+    _Myt(const Retinex_Para _para = Retinex_Default)
+        : _Mybase(_para)
+    {
+        para.sigmaVector.clear();
+        para.sigmaVector.push_back(para.sigma);
+    }
+
+    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src);
+
+    virtual Plane &process(Plane &dst, const Plane &src);
+};
+
+
+class Retinex_MSR
+    : public Retinex
+{
+public:
+    typedef Retinex_MSR _Myt;
+    typedef Retinex _Mybase;
+
+public:
+    _Myt(const Retinex_Para _para = Retinex_Default)
+        : _Mybase(_para)
+    {}
+
+    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src);
+
+    virtual Plane &process(Plane &dst, const Plane &src);
+};
+
+
+class Retinex_MSRCR_GIMP
+    : public Retinex_MSR
+{
+public:
+    typedef Retinex_MSRCR_GIMP _Myt;
+    typedef Retinex_MSR _Mybase;
+
+public:
+    _Myt(const Retinex_Para _para = Retinex_Default)
+        : _Mybase(_para)
+    {}
+
+    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src);
+
+    virtual Plane &process(Plane &dst, const Plane &src);
+};
+
+
+class Retinex_MSRCP
+    : public Retinex_MSR
+{
+public:
+    typedef Retinex_MSRCP _Myt;
+    typedef Retinex_MSR _Mybase;
+
+public:
+    _Myt(const Retinex_Para _para = Retinex_Default)
+        : _Mybase(_para)
+    {}
+
+    virtual Frame &process(Frame &dst, const Frame &src);
+};
+
+
+class Retinex_MSRCR
+    : public Retinex_MSR
+{
+public:
+    typedef Retinex_MSRCR _Myt;
+    typedef Retinex_MSR _Mybase;
+
+public:
+    _Myt(const Retinex_Para _para = Retinex_Default)
+        : _Mybase(_para)
+    {}
+
+    virtual Frame &process(Frame &dst, const Frame &src);
+};
 
 
 class Retinex_MSR_IO
@@ -97,9 +188,7 @@ public:
     typedef FilterIO _Mybase;
 
 protected:
-    std::vector<double> sigmaVector = Retinex_Default.sigmaVector;
-    double lower_thr = Retinex_Default.lower_thr;
-    double upper_thr = Retinex_Default.upper_thr;
+    Retinex_Para para;
 
     virtual void arguments_process()
     {
@@ -107,24 +196,24 @@ protected:
 
         Args ArgsObj(argc, args);
         double sigma;
-        sigmaVector.clear();
+        para.sigmaVector.clear();
 
         for (int i = 0; i < argc; i++)
         {
             if (args[i] == "-S" || args[i] == "--sigma")
             {
                 ArgsObj.GetPara(i, sigma);
-                sigmaVector.push_back(sigma);
+                para.sigmaVector.push_back(sigma);
                 continue;
             }
             if (args[i] == "-L" || args[i] == "--lower_thr")
             {
-                ArgsObj.GetPara(i, lower_thr);
+                ArgsObj.GetPara(i, para.lower_thr);
                 continue;
             }
             if (args[i] == "-U" || args[i] == "--upper_thr")
             {
-                ArgsObj.GetPara(i, upper_thr);
+                ArgsObj.GetPara(i, para.upper_thr);
                 continue;
             }
             if (args[i][0] == '-')
@@ -136,17 +225,17 @@ protected:
 
         ArgsObj.Check();
 
-        if (sigmaVector.size() == 0)
+        if (para.sigmaVector.size() == 0)
         {
-            sigmaVector = Retinex_Default.sigmaVector;
+            para.sigmaVector = Retinex_Default.sigmaVector;
         }
     }
 
-    virtual Frame processFrame(const Frame &src) = 0;
+    virtual Frame process(const Frame &src) = 0;
 
 public:
-    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".MSR")
-        : _Mybase(_argc, _args, _Tag) {}
+    _Myt(std::string _Tag = ".MSR")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
@@ -158,8 +247,6 @@ public:
     typedef Retinex_MSR_IO _Mybase;
 
 protected:
-    double chroma_protect = Retinex_Default.chroma_protect;
-
     virtual void arguments_process()
     {
         _Mybase::arguments_process();
@@ -170,7 +257,7 @@ protected:
         {
             if (args[i] == "-CP" || args[i] == "--chroma_protect")
             {
-                ArgsObj.GetPara(i, chroma_protect);
+                ArgsObj.GetPara(i, para.chroma_protect);
                 continue;
             }
             if (args[i][0] == '-')
@@ -183,14 +270,15 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
-        return Retinex_MSRCP(src, sigmaVector, lower_thr, upper_thr, chroma_protect);
+        Retinex_MSRCP filter(para);
+        return filter(src);
     }
 
 public:
-    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".MSRCP")
-        : _Mybase(_argc, _args, _Tag) {}
+    _Myt(std::string _Tag = ".MSRCP")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
@@ -202,8 +290,6 @@ public:
     typedef Retinex_MSR_IO _Mybase;
 
 protected:
-    double restore = Retinex_Default.restore;
-
     virtual void arguments_process()
     {
         _Mybase::arguments_process();
@@ -214,7 +300,7 @@ protected:
         {
             if (args[i] == "-R" || args[i] == "--restore")
             {
-                ArgsObj.GetPara(i, restore);
+                ArgsObj.GetPara(i, para.restore);
                 continue;
             }
             if (args[i][0] == '-')
@@ -227,14 +313,15 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
-        return Retinex_MSRCR(src, sigmaVector, lower_thr, upper_thr, restore);
+        Retinex_MSRCR filter(para);
+        return filter(src);
     }
 
 public:
-    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".MSRCR")
-        : _Mybase(_argc, _args, _Tag) {}
+    _Myt(std::string _Tag = ".MSRCR")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
@@ -246,8 +333,6 @@ public:
     typedef Retinex_MSR_IO _Mybase;
 
 protected:
-    double dynamic = Retinex_Default.dynamic;
-
     virtual void arguments_process()
     {
         _Mybase::arguments_process();
@@ -258,7 +343,7 @@ protected:
         {
             if (args[i] == "-D" || args[i] == "--dynamic")
             {
-                ArgsObj.GetPara(i, dynamic);
+                ArgsObj.GetPara(i, para.dynamic);
                 continue;
             }
             if (args[i][0] == '-')
@@ -271,14 +356,15 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
-        return Retinex_MSRCR_GIMP(src, sigmaVector, dynamic);
+        Retinex_MSRCR_GIMP filter(para);
+        return filter(src);
     }
 
 public:
-    _Myt(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".MSRCR_GIMP")
-        : _Mybase(_argc, _args, _Tag) {}
+    _Myt(std::string _Tag = ".MSRCR_GIMP")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 

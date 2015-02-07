@@ -165,7 +165,7 @@ void AWB::apply_gain() const
 }
 
 
-Frame AWB::process()
+Frame &AWB::process()
 {
     kernel();
 

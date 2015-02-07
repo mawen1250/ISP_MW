@@ -15,7 +15,8 @@ const double sigmaSMul = 2.;
 const double sigmaRMul = sizeof(FLType) < 8 ? 8. : 32.; // 8. when FLType is float, 32. when FLType is double
 
 
-const struct Gaussian2D_Para {
+const struct Gaussian2D_Para
+{
     double sigma = 3.0;
 } Gaussian2D_Default;
 
@@ -38,8 +39,12 @@ inline Frame Gaussian2D(const Frame &src, const double sigma = Gaussian2D_Defaul
 class Gaussian2D_IO
     : public FilterIO
 {
+public:
+    typedef Gaussian2D_IO _Myt;
+    typedef FilterIO _Mybase;
+
 protected:
-    double sigma = Gaussian2D_Default.sigma;
+    Gaussian2D_Para para = Gaussian2D_Default;
 
     virtual void arguments_process()
     {
@@ -51,7 +56,7 @@ protected:
         {
             if (args[i] == "-S" || args[i] == "--sigma")
             {
-                ArgsObj.GetPara(i, sigma);
+                ArgsObj.GetPara(i, para.sigma);
                 continue;
             }
             if (args[i][0] == '-')
@@ -64,16 +69,14 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
-        return Gaussian2D(src, sigma);
+        return Gaussian2D(src, para.sigma);
     }
 
 public:
-    Gaussian2D_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".Gaussian")
-        : FilterIO(_argc, _args, _Tag) {}
-
-    ~Gaussian2D_IO() {}
+    _Myt(std::string _Tag = ".Gaussian")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
@@ -112,29 +115,6 @@ public:
     void Filter(Plane_FL &dst, const Plane_FL &src) { FilterH(dst, src); FilterV(dst); }
     void Filter(Plane_FL &data) { FilterH(data); FilterV(data); }
 };
-
-
-inline double Gaussian_Function(double x, double sigma)
-{
-    x /= sigma;
-    return exp(x*x / -2);
-}
-
-inline double Gaussian_Function_sqr_x(double sqr_x, double sigma)
-{
-    return exp(sqr_x / (sigma*sigma*-2));
-}
-
-inline double Normalized_Gaussian_Function(double x, double sigma)
-{
-    x /= sigma;
-    return exp(x*x / -2) / (sqrt_2Pi*sigma);
-}
-
-inline double Normalized_Gaussian_Function_sqr_x(double sqr_x, double sigma)
-{
-    return exp(sqr_x / (sigma*sigma*-2)) / (sqrt_2Pi*sigma);
-}
 
 
 template < typename _Ty = FLType >

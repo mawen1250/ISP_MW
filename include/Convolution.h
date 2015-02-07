@@ -26,7 +26,7 @@ Plane & Convolution3V(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType
 Plane & Convolution3H(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType K2, bool norm = true);
 Plane & Convolution3(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType K2, FLType K3, FLType K4, FLType K5, FLType K6, FLType K7, FLType K8, bool norm = true);
 Plane & FirstOrderDerivative3(Plane &dst, const Plane &src, FLType K0, FLType K1, FLType K2, FLType K6, FLType K7, FLType K8, bool norm = true);
-Plane & EdgeDetect(Plane &dst, const Plane &src, EdgeKernel Kernel = EdgeKernel::Sobel);
+Plane & EdgeDetect(Plane &dst, const Plane &src, EdgeKernel Kernel = ED_Default.Kernel);
 
 
 inline Plane Convolution3V(const Plane &src, FLType K0, FLType K1, FLType K2, bool norm = true)
@@ -47,7 +47,7 @@ inline Plane Convolution3(const Plane &src, FLType K0, FLType K1, FLType K2, FLT
     return Convolution3(dst, src, K0, K1, K2, K3, K4, K5, K6, K7, K8, norm);
 }
 
-inline Plane EdgeDetect(const Plane &src, EdgeKernel Kernel = EdgeKernel::Sobel)
+inline Plane EdgeDetect(const Plane &src, EdgeKernel Kernel = ED_Default.Kernel)
 {
     Plane dst(src, false);
     return EdgeDetect(dst, src, Kernel);
@@ -90,7 +90,7 @@ inline Frame Convolution3(const Frame &src, FLType K0, FLType K1, FLType K2, FLT
     return dst;
 }
 
-inline Frame EdgeDetect(const Frame &src, EdgeKernel Kernel = EdgeKernel::Sobel)
+inline Frame EdgeDetect(const Frame &src, EdgeKernel Kernel = ED_Default.Kernel)
 {
     Frame dst(src, false);
 
@@ -106,6 +106,10 @@ inline Frame EdgeDetect(const Frame &src, EdgeKernel Kernel = EdgeKernel::Sobel)
 class EdgeDetect_IO
     : public FilterIO
 {
+public:
+    typedef EdgeDetect_IO _Myt;
+    typedef FilterIO _Mybase;
+
 protected:
     EdgeKernel Kernel = ED_Default.Kernel;
 
@@ -145,16 +149,14 @@ protected:
         ArgsObj.Check();
     }
 
-    virtual Frame processFrame(const Frame &src)
+    virtual Frame process(const Frame &src)
     {
         return EdgeDetect(src, Kernel);
     }
 
 public:
-    EdgeDetect_IO(int _argc, const std::vector<std::string> &_args, std::string _Tag = ".EdgeDetect")
-        : FilterIO(_argc, _args, _Tag) {}
-
-    ~EdgeDetect_IO() {}
+    _Myt(std::string _Tag = ".EdgeDetect")
+        : _Mybase(std::move(_Tag)) {}
 };
 
 
