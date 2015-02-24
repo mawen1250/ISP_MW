@@ -63,7 +63,9 @@ enum class ColorMatrix {
     YCgCo = 8,
     bt2020nc = 9,
     bt2020c = 10,
-    Average = 100
+    Average = 100,
+    Minimum,
+    Maximum
 };
 
 

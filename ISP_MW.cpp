@@ -29,7 +29,7 @@
 int main()
 {
 #ifdef Test_Other
-    const int Loop = 1;// 81600;
+    const int Loop = 1;
 
     const PCType BlockSize = 16;
     typedef Block<double, double> BlockT;
@@ -38,50 +38,21 @@ int main()
     Plane &IR = IFrame.R();
     
     /*std::vector<Pos> matchedPos;
-    for (PCType l = 0; l < Loop; ++l)
+    
+    BlockT ref(IR, BlockSize, BlockSize, Pos(1060, 765));
+    //std::cout << ref;
+
+    //matchedPos.push_back(ref.BlockMatching(IR, true, 48, 2));
+    //BlockT matched(IR, BlockSize, BlockSize, matchedPos);
+    //std::cout << matched;
+
+    auto matchedPosCode = ref.BlockMatchingMulti(IR, 48, 2);
+    for (auto i = matchedPosCode.begin(); i != matchedPosCode.end(); ++i)
     {
-        BlockT ref(IR, BlockSize, BlockSize, Pos(1060, 765));
-        //std::cout << ref;
-
-        matchedPos.push_back(ref.BlockMatching(IR, true, 48, 2));
-        //BlockT matched(IR, BlockSize, BlockSize, matchedPos);
-        //std::cout << matched;
+        std::cout << i->first << " " << i->second << std::endl;
     }
-
-    //auto matchedPosCode = ref.BlockMatchingMulti(IR, 48, 2);
-    //for (auto i = matchedPosCode.begin(); i != matchedPosCode.end(); ++i)
-    //{
-    //    std::cout << i->first << " " << i->second << std::endl;
-    //}
 
     system("pause");*/
-
-    //std::vector<Pos> matchedPos;
-    for (PCType j = 0; j < IR.Height() - BlockSize + 1; j += BlockSize)
-    {
-        for (PCType i = 0; i < IR.Width() - BlockSize + 1; i += BlockSize)
-        {
-            BlockT ref(IR, BlockSize, BlockSize, Pos(j, i));
-
-            //matchedPos.push_back(ref.BlockMatching(IR, 48, 2));
-            auto matchedPosCode = ref.BlockMatchingMulti(IR, 48, 2);
-        }
-    }
-
-    /*std::vector<float> src(1280 * 720, 5.f);
-    std::vector<float> dst(1280 * 720);
-
-    for (int l = 0; l < Loop; l++)
-    {
-        concurrency::parallel_for(0, 720, [&](int j)
-        {
-            int i = 720 * j;
-            for (int upper = i + 1280; i < upper; i++)
-            {
-                dst[i] = exp(log(src[i]));
-            }
-        });
-    }*/
 
     /*concurrency::array_view<float, 1> srcv(1280 * 720, src);
     concurrency::array_view<float, 1> dstv(1280 * 720, dst);
@@ -137,7 +108,7 @@ int main()
     ImageWriter(PFrame, "D:\\Test Images\\Haze\\20150126_131557.0.png");
     system("pause");
 #else // Test_Write
-    const int Loop = 20;
+    const int Loop = 50;
 
     Frame IFrame = ImageReader("D:\\Test Images\\Haze\\2\\1 tz WDR=on 2.png");
     const Plane &srcR = IFrame.R();
@@ -181,21 +152,71 @@ int main()
         Haze_Removal_Retinex filter;
         filter(IFrame);
 #else
-        //DType count = 0;
-        //srcR.for_each([&count](DType x){ count += x; });
+        const PCType pzero = 0;
+        const PCType pcount = dstR.PixelCount();
+        const PCType height = dstR.Height();
+        const PCType width = dstR.Width();
+        const PCType stride = dstR.Stride();
 
-        //dstR.transform(srcR, [](DType x){ return static_cast<DType>(log(x) + 0.5); });
-        //dstR.transform_PPL(srcR, [](DType x){ return static_cast<DType>(log(x) + 0.5); });
-        dstR.transform_AMP(srcR, [](DType x) restrict(amp)
+        /*for (PCType i = pzero; i < pcount; ++i)
         {
-            return static_cast<DType>(concurrency::fast_math::log(static_cast<float>(x)) + 0.5f);
-        });
+            dstR[i] = static_cast<DType>(srcR[i] * srcR[i] * 0.1 + 0.5);
+        }*/
 
-        /*dstR.convolute<1, 1>(srcR, [](DType (*srcb2D)[3])->DType
+        /*concurrency::parallel_for(pzero, pcount, [&](PCType i)
         {
-            return (srcb2D[0][0] + 2 * srcb2D[0][1] + srcb2D[0][2]
-                + 2 * srcb2D[1][0] + 4 * srcb2D[1][1] + 2 * srcb2D[1][2]
-                + srcb2D[2][0] + 2 * srcb2D[2][1] + srcb2D[2][2]) / 16;
+            dstR[i] = static_cast<DType>(srcR[i] * srcR[i] * 0.1 + 0.5);
+        });*/
+
+        /*for (PCType j = pzero; j < height; ++j)
+        {
+            const PCType lower = j * stride;
+            const PCType upper = lower + width;
+
+            for (PCType i = lower; i < upper; ++i)
+            {
+                dstR[i] = static_cast<DType>(srcR[i] * srcR[i] * 0.1 + 0.5);
+            }
+        }*/
+
+        /*for (PCType j = pzero; j < height; ++j)
+        {
+            const PCType lower = j * stride;
+            const PCType upper = lower + width;
+
+            concurrency::parallel_for(lower, upper, [&](PCType i)
+            {
+                dstR[i] = static_cast<DType>(srcR[i] * srcR[i] * 0.1 + 0.5);
+            });
+        }*/
+
+        /*concurrency::parallel_for(pzero, height, [&](PCType j)
+        {
+            const PCType lower = j * stride;
+            const PCType upper = lower + width;
+
+            for (PCType i = lower; i < upper; ++i)
+            {
+                dstR[i] = static_cast<DType>(srcR[i] * srcR[i] * 0.1 + 0.5);
+            }
+        });*/
+
+        /*const PCType pNum = (height + PPL_HP - 1) / PPL_HP;
+
+        concurrency::parallel_for(PCType(0), pNum, [&](PCType p)
+        {
+            const PCType lower = p * PPL_HP;
+            const PCType upper = Min(height, lower + PPL_HP);
+
+            for (PCType j = lower; j < upper; ++j)
+            {
+                PCType i = j * stride;
+
+                for (const PCType upper = i + width; i < upper; ++i)
+                {
+                    dstR[i] = static_cast<DType>(srcR[i] * srcR[i] * 0.1 + 0.5);
+                }
+            }
         });*/
 #endif
     }

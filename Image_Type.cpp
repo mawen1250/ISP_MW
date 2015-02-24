@@ -343,18 +343,6 @@ Plane &Plane::ReQuantize(value_type _BitDepth, value_type _Floor, value_type _Ne
 }
 
 
-Plane &Plane::From(const Plane &src, bool clip)
-{
-    RangeConvert(*this, src, clip);
-    return *this;
-}
-
-Plane &Plane::From(const Plane_FL &src, bool clip)
-{
-    RangeConvert(*this, src, clip);
-    return *this;
-}
-
 Plane &Plane::ConvertFrom(const Plane &src, TransferChar dstTransferChar)
 {
     auto &dst = *this;
@@ -487,45 +475,6 @@ Plane &Plane::ConvertFrom(const Plane &src, TransferChar dstTransferChar)
     return *this;
 }
 
-Plane &Plane::YFrom(const Frame &src, ColorMatrix dstColorMatrix)
-{
-    if (src.isRGB())
-    {
-        FLType Kr, Kg, Kb;
-
-        auto &dstY = *this;
-        auto &srcR = src.R();
-        auto &srcG = src.G();
-        auto &srcB = src.B();
-
-        ReSize(src.Width(), src.Height());
-
-        ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
-
-        FLType gain = static_cast<FLType>(ValueRange()) / srcR.ValueRange();
-        FLType offset = Floor() - srcR.Floor() * gain + FLType(0.5);
-        Kr *= gain;
-        Kg *= gain;
-        Kb *= gain;
-
-        dstY.transform(srcR, srcG, srcB, [&](value_type x, value_type y, value_type z)
-        {
-            return static_cast<value_type>(Kr*x + Kg*y + Kb*z + offset);
-        });
-    }
-    else if (src.isYUV())
-    {
-        From(src.Y());
-    }
-
-    return *this;
-}
-
-Plane &Plane::YFrom(const Frame &src)
-{
-    return YFrom(src, src.GetColorMatrix());
-}
-
 
 Plane &Plane::Binarize(const _Myt &src, value_type lower_thrD, value_type upper_thrD)
 {
@@ -586,44 +535,6 @@ Plane &Plane::Binarize_ratio(const _Myt &src, double lower_thr, double upper_thr
 
     return *this;
 }
-
-/*Plane &Plane::SimplestColorBalance(Plane_FL &src, double lower_thr, double upper_thr, int HistBins)
-{
-    typedef Plane_FL::value_type srcType;
-    typedef Plane::value_type dstType;
-
-    auto &dst = *this;
-
-    auto dFloor = dst.Floor();
-    auto dCeil = dst.Ceil();
-    auto dRange = dst.ValueRange();
-
-    srcType min, max;
-    src.ValidRange(min, max, lower_thr, upper_thr, HistBins);
-
-    srcType gain = dRange / (max - min);
-    srcType offset = dFloor - min * gain + srcType(0.5);
-
-    if (lower_thr > 0 || upper_thr > 0)
-    {
-        srcType FloorFL = static_cast<srcType>(dFloor);
-        srcType CeilFL = static_cast<srcType>(dCeil);
-        
-        dst.transform(src, [&](srcType x)
-        {
-            return static_cast<dstType>(Clip(x * gain + offset, FloorFL, CeilFL));
-        });
-    }
-    else
-    {
-        dst.transform(src, [&](srcType x)
-        {
-            return static_cast<dstType>(x * gain + offset);
-        });
-    }
-
-    return *this;
-}*/
 
 
 // Functions of class Plane_FL
@@ -939,18 +850,6 @@ Plane_FL &Plane_FL::ReQuantize(value_type _Floor, value_type _Neutral, value_typ
 }
 
 
-Plane_FL &Plane_FL::From(const Plane &src, bool clip)
-{
-    RangeConvert(*this, src, clip);
-    return *this;
-}
-
-Plane_FL &Plane_FL::From(const Plane_FL &src, bool clip)
-{
-    RangeConvert(*this, src, clip);
-    return *this;
-}
-
 Plane_FL &Plane_FL::ConvertFrom(const Plane_FL &src, TransferChar dstTransferChar)
 {
     PCType i;
@@ -1211,71 +1110,6 @@ Plane_FL &Plane_FL::ConvertFrom(const Plane &src, TransferChar dstTransferChar)
     return *this;
 }
 
-Plane_FL &Plane_FL::YFrom(const Frame &src, ColorMatrix dstColorMatrix)
-{
-    if (src.isRGB())
-    {
-        PCType i, j, upper;
-
-        PCType height = src.Height();
-        PCType width = src.Width();
-        PCType stride = src.Stride();
-
-        auto &srcR = src.R();
-        auto &srcG = src.G();
-        auto &srcB = src.B();
-
-        if (isChroma()) DefaultPara(false);
-        ReSize(src.Width(), src.Height());
-
-        if (dstColorMatrix == ColorMatrix::Average)
-        {
-            value_type gain = ValueRange() / (srcR.ValueRange() * 3);
-            value_type offset = Floor() - srcR.Floor() * 3 * gain;
-
-            for (j = 0; j < height; j++)
-            {
-                i = j * stride;
-                for (upper = i + width; i < upper; i++)
-                {
-                    Data_[i] = (srcR[i] + srcG[i] + srcB[i]) * gain + offset;
-                }
-            }
-        }
-        else
-        {
-            value_type Kr, Kg, Kb;
-            ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
-
-            value_type gain = ValueRange() / srcR.ValueRange();
-            value_type offset = Floor() - srcR.Floor() * gain;
-            Kr *= gain;
-            Kg *= gain;
-            Kb *= gain;
-
-            for (j = 0; j < height; j++)
-            {
-                i = j * stride;
-                for (upper = i + width; i < upper; i++)
-                {
-                    Data_[i] = Kr * srcR[i] + Kg * srcG[i] + Kb * srcB[i] + offset;
-                }
-            }
-        }
-    }
-    else if (src.isYUV())
-    {
-        From(src.Y());
-    }
-
-    return *this;
-}
-
-Plane_FL &Plane_FL::YFrom(const Frame &src)
-{
-    return YFrom(src, src.GetColorMatrix());
-}
-
 
 Plane_FL &Plane_FL::Binarize(const _Myt &src, value_type lower_thrD, value_type upper_thrD)
 {
@@ -1360,44 +1194,6 @@ Plane_FL &Plane_FL::Binarize_ratio(const _Myt &src, double lower_thr, double upp
 
     return Binarize(src, lower_thrD, upper_thrD);
 }
-
-/*Plane_FL &Plane_FL::SimplestColorBalance(Plane_FL &src, double lower_thr, double upper_thr, int HistBins)
-{
-    typedef Plane_FL::value_type srcType;
-    typedef Plane_FL::value_type dstType;
-
-    auto &dst = *this;
-
-    auto dFloor = dst.Floor();
-    auto dCeil = dst.Ceil();
-    auto dRange = dst.ValueRange();
-
-    value_type min, max;
-    src.ValidRange(min, max, lower_thr, upper_thr, HistBins);
-
-    srcType gain = dRange / (max - min);
-    srcType offset = dFloor - min * gain;
-
-    if (lower_thr > 0 || upper_thr > 0)
-    {
-        srcType FloorFL = static_cast<srcType>(dFloor);
-        srcType CeilFL = static_cast<srcType>(dCeil);
-
-        dst.transform(src, [&](srcType x)
-        {
-            return static_cast<dstType>(Clip(x * gain + offset, FloorFL, CeilFL));
-        });
-    }
-    else
-    {
-        dst.transform(src, [&](srcType x)
-        {
-            return static_cast<dstType>(x * gain + offset);
-        });
-    }
-
-    return *this;
-}*/
 
 
 // Functions of class Frame

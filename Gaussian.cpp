@@ -1,3 +1,6 @@
+#define ENABLE_PPL
+
+
 #include "Gaussian.h"
 #include "Transform.h"
 
@@ -40,26 +43,23 @@ void RecursiveGaussian::GetPara(double sigma)
 
 void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
 {
-    PCType i0, i1, i2, i3, j, lower, upper;
-    PCType height = src.Height();
-    PCType width = src.Width();
-    PCType stride = src.Width();
-    FLType P0, P1, P2, P3;
+    const PCType height = dst.Height();
+    const PCType width = dst.Width();
+    const PCType stride = dst.Stride();
 
     if (dst.Data() != src.Data())
     {
         memcpy(dst.Data(), src.Data(), sizeof(FLType) * width);
     }
 
-    for (j = 0; j < height; ++j)
+    LOOP_H_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
     {
-        lower = j * stride;
-        upper = lower + width;
+        PCType i0 = lower;
+        PCType i1 = j < 1 ? i0 : i0 - stride;
+        PCType i2 = j < 2 ? i1 : i1 - stride;
+        PCType i3 = j < 3 ? i2 : i2 - stride;
 
-        i0 = lower;
-        i1 = j < 1 ? i0 : i0 - stride;
-        i2 = j < 2 ? i1 : i1 - stride;
-        i3 = j < 3 ? i2 : i2 - stride;
+        FLType P0, P1, P2, P3;
 
         for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
@@ -69,17 +69,16 @@ void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
             P0 = src[i0];
             dst[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
         }
-    }
+    });
 
-    for (j = height - 1; j >= 0; --j)
+    LOOP_Hinv_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
     {
-        lower = j * stride;
-        upper = lower + width;
+        PCType i0 = lower;
+        PCType i1 = j >= height - 1 ? i0 : i0 + stride;
+        PCType i2 = j >= height - 2 ? i1 : i1 + stride;
+        PCType i3 = j >= height - 3 ? i2 : i2 + stride;
 
-        i0 = lower;
-        i1 = j >= height - 1 ? i0 : i0 + stride;
-        i2 = j >= height - 2 ? i1 : i1 + stride;
-        i3 = j >= height - 3 ? i2 : i2 + stride;
+        FLType P0, P1, P2, P3;
 
         for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
@@ -89,26 +88,23 @@ void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
             P0 = dst[i0];
             dst[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
         }
-    }
+    });
 }
 
 void RecursiveGaussian::FilterV(Plane_FL &data)
 {
-    PCType i0, i1, i2, i3, j, lower, upper;
-    PCType height = data.Height();
-    PCType width = data.Width();
-    PCType stride = data.Width();
-    FLType P0, P1, P2, P3;
+    const PCType height = data.Height();
+    const PCType width = data.Width();
+    const PCType stride = data.Stride();
 
-    for (j = 0; j < height; ++j)
+    LOOP_H_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
     {
-        lower = j * stride;
-        upper = lower + width;
+        PCType i0 = lower;
+        PCType i1 = j < 1 ? i0 : i0 - stride;
+        PCType i2 = j < 2 ? i1 : i1 - stride;
+        PCType i3 = j < 3 ? i2 : i2 - stride;
 
-        i0 = lower;
-        i1 = j < 1 ? i0 : i0 - stride;
-        i2 = j < 2 ? i1 : i1 - stride;
-        i3 = j < 3 ? i2 : i2 - stride;
+        FLType P0, P1, P2, P3;
 
         for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
@@ -118,17 +114,16 @@ void RecursiveGaussian::FilterV(Plane_FL &data)
             P0 = data[i0];
             data[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
         }
-    }
+    });
 
-    for (j = height - 1; j >= 0; --j)
+    LOOP_Hinv_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
     {
-        lower = j * stride;
-        upper = lower + width;
+        PCType i0 = lower;
+        PCType i1 = j >= height - 1 ? i0 : i0 + stride;
+        PCType i2 = j >= height - 2 ? i1 : i1 + stride;
+        PCType i3 = j >= height - 3 ? i2 : i2 + stride;
 
-        i0 = lower;
-        i1 = j >= height - 1 ? i0 : i0 + stride;
-        i2 = j >= height - 2 ? i1 : i1 + stride;
-        i3 = j >= height - 3 ? i2 : i2 + stride;
+        FLType P0, P1, P2, P3;
 
         for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
@@ -138,24 +133,24 @@ void RecursiveGaussian::FilterV(Plane_FL &data)
             P0 = data[i0];
             data[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
         }
-    }
+    });
 }
 
 
 void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
 {
-    PCType i, j, lower, upper;
-    PCType height = src.Height();
-    PCType width = src.Width();
-    PCType stride = src.Width();
-    FLType P0, P1, P2, P3;
+    const PCType height = dst.Height();
+    const PCType width = dst.Width();
+    const PCType stride = dst.Stride();
     
-    for (j = 0; j < height; ++j)
+    LOOP_V_PPL(height, [&](PCType j)
     {
-        lower = j * stride;
-        upper = lower + width;
+        const PCType lower = j * stride;
+        const PCType upper = lower + width;
 
-        i = lower;
+        PCType i = lower;
+
+        FLType P0, P1, P2, P3;
         dst[i] = P3 = P2 = P1 = src[i];
 
         for (++i; i < upper; ++i)
@@ -178,23 +173,23 @@ void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
             P1 = P0;
             dst[i] = P0;
         }
-    }
+    });
 }
 
 void RecursiveGaussian::FilterH(Plane_FL &data)
 {
-    PCType i, j, lower, upper;
-    PCType height = data.Height();
-    PCType width = data.Width();
-    PCType stride = data.Width();
-    FLType P0, P1, P2, P3;
+    const PCType height = data.Height();
+    const PCType width = data.Width();
+    const PCType stride = data.Stride();
 
-    for (j = 0; j < height; ++j)
+    LOOP_V_PPL(height, [&](PCType j)
     {
-        lower = j * stride;
-        upper = lower + width;
+        const PCType lower = j * stride;
+        const PCType upper = lower + width;
 
-        i = lower;
+        PCType i = lower;
+
+        FLType P0, P1, P2, P3;
         P3 = P2 = P1 = data[i];
 
         for (++i; i < upper; ++i)
@@ -217,5 +212,5 @@ void RecursiveGaussian::FilterH(Plane_FL &data)
             P1 = P0;
             data[i] = P0;
         }
-    }
+    });
 }

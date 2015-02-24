@@ -6,7 +6,8 @@
 // Functions of class Retinex
 Plane_FL &Retinex::Kernel(Plane_FL &dst, const Plane_FL &src)
 {
-    size_t s, scount = para.sigmaVector.size();
+    const size_t scount = para.sigmaVector.size();
+    size_t s;
 
     for (s = 0; s < scount; ++s)
     {
@@ -39,15 +40,6 @@ Plane_FL &Retinex::Kernel(Plane_FL &dst, const Plane_FL &src)
             }
         }
     }
-    /*else if (scount == 2 && para.sigmaVector[0] > 0 && para.sigmaVector[1] > 0) // double-scale Gaussian filter
-    {
-
-    }
-    else if (scount == 3 && para.sigmaVector[0] > 0 && para.sigmaVector[1] > 0
-        && para.sigmaVector[2] > 0) // triple-scale Gaussian filter
-    {
-
-    }*/
     else // multi-scale Gaussian filter
     {
         if (dst.Data() == src.Data())
@@ -132,18 +124,6 @@ Plane &Retinex_SSR::process(Plane &dst, const Plane &src)
 // Functions of class Retinex_MSR
 Plane_FL &Retinex_MSR::process(Plane_FL &dst, const Plane_FL &src)
 {
-    size_t s, scount = para.sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (para.sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        dst = src;
-        return dst;
-    }
-
     Kernel(dst, src);
     
     dst.SimplestColorBalance(dst, para.lower_thr, para.upper_thr, para.HistBins);
@@ -153,18 +133,6 @@ Plane_FL &Retinex_MSR::process(Plane_FL &dst, const Plane_FL &src)
 
 Plane &Retinex_MSR::process(Plane &dst, const Plane &src)
 {
-    size_t s, scount = para.sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (para.sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        dst = src;
-        return dst;
-    }
-
     Plane_FL idata(src);
     Plane_FL odata = Kernel(idata);
 
@@ -177,18 +145,6 @@ Plane &Retinex_MSR::process(Plane &dst, const Plane &src)
 // Functions of class Retinex_MSRCR_GIMP
 Plane_FL &Retinex_MSRCR_GIMP::process(Plane_FL &dst, const Plane_FL &src)
 {
-    size_t s, scount = para.sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (para.sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        dst = src;
-        return dst;
-    }
-
     Kernel(dst, src);
 
     FLType mean = dst.Mean();
@@ -203,18 +159,6 @@ Plane_FL &Retinex_MSRCR_GIMP::process(Plane_FL &dst, const Plane_FL &src)
 
 Plane &Retinex_MSRCR_GIMP::process(Plane &dst, const Plane &src)
 {
-    size_t s, scount = para.sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (para.sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        dst = src;
-        return dst;
-    }
-
     Plane_FL idata(src);
     Plane_FL odata = Kernel(idata);
 
@@ -232,18 +176,6 @@ Plane &Retinex_MSRCR_GIMP::process(Plane &dst, const Plane &src)
 // Functions of class Retinex_MSRCP
 Frame &Retinex_MSRCP::process(Frame &dst, const Frame &src)
 {
-    size_t s, scount = para.sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (para.sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        dst = src;
-        return dst;
-    }
-
     PCType i, j, upper;
     PCType height = src.Height();
     PCType width = src.Width();
@@ -336,18 +268,6 @@ Frame &Retinex_MSRCP::process(Frame &dst, const Frame &src)
 // Functions of class Retinex_MSRCR
 Frame &Retinex_MSRCR::process(Frame &dst, const Frame &src)
 {
-    size_t s, scount = para.sigmaVector.size();
-
-    for (s = 0; s < scount; ++s)
-    {
-        if (para.sigmaVector[s] > 0) break;
-    }
-    if (s >= scount)
-    {
-        dst = src;
-        return dst;
-    }
-
     PCType i, j, upper;
     PCType height = src.Height();
     PCType width = src.Width();

@@ -15,6 +15,10 @@
 //#define ENABLE_AMP
 
 
+#define LOOP_V _Loop_V
+#define LOOP_H _Loop_H
+#define LOOP_Hinv _Loop_Hinv
+#define LOOP_VH _Loop_VH
 #define FOR_EACH _For_each
 #define TRANSFORM _Transform
 #define CONVOLUTE _Convolute
@@ -22,10 +26,20 @@
 #ifdef ENABLE_PPL
 #include <ppl.h>
 #include <ppltasks.h>
+#define LOOP_V_PPL _Loop_V_PPL
+#define LOOP_H_PPL _Loop_H_PPL
+#define LOOP_Hinv_PPL _Loop_Hinv_PPL
+#define LOOP_VH_PPL _Loop_VH_PPL
 #define FOR_EACH_PPL _For_each_PPL
 #define TRANSFORM_PPL _Transform_PPL
 #define CONVOLUTE_PPL _Convolute_PPL
+const PCType PPL_HP = 256; // Height piece size for PPL
+const PCType PPL_WP = 256; // Width piece size for PPL
 #else
+#define LOOP_V_PPL _Loop_V
+#define LOOP_H_PPL _Loop_H
+#define LOOP_Hinv_PPL _Loop_Hinv
+#define LOOP_VH_PPL _Loop_VH
 #define FOR_EACH_PPL FOR_EACH
 #define TRANSFORM_PPL TRANSFORM
 #define CONVOLUTE_PPL CONVOLUTE
@@ -36,11 +50,9 @@
 #include <amp_math.h>
 #define FOR_EACH_AMP _For_each_AMP
 #define TRANSFORM_AMP _Transform_AMP
-#define CONVOLUTE_AMP _Convolute_AMP
 #else
 #define FOR_EACH_AMP FOR_EACH
 #define TRANSFORM_AMP TRANSFORM
-#define CONVOLUTE_AMP CONVOLUTE
 #endif
 
 
@@ -52,7 +64,7 @@ bool isValueFloat(const _St1 &src)
 }
 
 
-template < typename _Ty > inline
+template < typename _Ty >
 void Quantize_Value(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, _Ty BitDepth, QuantRange _QuantRange, bool Chroma)
 {
     if (Chroma)
@@ -109,7 +121,7 @@ bool isPCChroma(long double Floor, long double Neutral, long double Ceil)
     return isPCChromaFloat(Floor, Neutral, Ceil);
 }
 
-template < typename _Ty > inline
+template < typename _Ty >
 void ReSetChromaInt(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
 {
     const bool srcChroma = isChroma(Floor, Neutral);
@@ -123,7 +135,7 @@ void ReSetChromaInt(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
         Neutral = Floor;
     }
 }
-template < typename _Ty > inline
+template < typename _Ty >
 void ReSetChromaFloat(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
 {
     const bool srcChroma = isChroma(Floor, Neutral);
@@ -165,7 +177,7 @@ void ReSetChroma(long double &Floor, long double &Neutral, long double &Ceil, bo
 }
 
 
-template < typename _St1 > inline
+template < typename _St1 >
 void ValidRange(const _St1 &src, typename _St1::reference min, typename _St1::reference max, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false)
 {
     typedef typename _St1::value_type dataType;
@@ -185,7 +197,7 @@ void ValidRange(const _St1 &src, typename _St1::reference min, typename _St1::re
     }
 }
 
-template < typename _Dt1, typename _St1 > inline
+template < typename _Dt1, typename _St1 >
 void RangeConvert(_Dt1 &dst, const _St1 &src,
     typename _Dt1::value_type dFloor, typename _Dt1::value_type dNeutral, typename _Dt1::value_type dCeil,
     typename _St1::value_type sFloor, typename _St1::value_type sNeutral, typename _St1::value_type sCeil,
@@ -223,6 +235,10 @@ void RangeConvert(_Dt1 &dst, const _St1 &src,
 
     dst.ReSize(src.Width(), src.Height());
 
+    const PCType height = dst.Height();
+    const PCType width = dst.Width();
+    const PCType stride = dst.Stride();
+
     const auto sRange = sCeil - sFloor;
     const auto dRange = dCeil - dFloor;
 
@@ -244,17 +260,17 @@ void RangeConvert(_Dt1 &dst, const _St1 &src,
             {
                 const srcType lowerL = static_cast<srcType>(dFloor);
                 const srcType upperL = static_cast<srcType>(dCeil);
-
-                dst.transform(src, [&](srcType x)
+                
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
                 {
-                    return static_cast<dstType>(Clip(x + offset, lowerL, upperL));
+                    dst[i] = static_cast<dstType>(Clip(src[i] + offset, lowerL, upperL));
                 });
             }
             else
             {
-                dst.transform(src, [&](srcType x)
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
                 {
-                    return static_cast<dstType>(x + offset);
+                    dst[i] = static_cast<dstType>(src[i] + offset);
                 });
             }
         }
@@ -265,16 +281,16 @@ void RangeConvert(_Dt1 &dst, const _St1 &src,
                 const srcType lowerL = static_cast<srcType>(dFloor);
                 const srcType upperL = static_cast<srcType>(dCeil);
 
-                dst.transform(src, [&](srcType x)
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
                 {
-                    return static_cast<dstType>(Clip(x, lowerL, upperL));
+                    dst[i] = static_cast<dstType>(Clip(src[i], lowerL, upperL));
                 });
             }
             else
             {
-                dst.transform(src, [&](srcType x)
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
                 {
-                    return static_cast<dstType>(x);
+                    dst[i] = static_cast<dstType>(src[i]);
                 });
             }
         }
@@ -293,22 +309,22 @@ void RangeConvert(_Dt1 &dst, const _St1 &src,
             const FLType lowerL = static_cast<FLType>(dFloor);
             const FLType upperL = static_cast<FLType>(dCeil);
 
-            dst.transform(src, [&](srcType x)
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
             {
-                return static_cast<dstType>(Clip(static_cast<FLType>(x) * gain + offset, lowerL, upperL));
+                dst[i] = static_cast<dstType>(Clip(static_cast<FLType>(src[i]) * gain + offset, lowerL, upperL));
             });
         }
         else
         {
-            dst.transform(src, [&](srcType x)
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
             {
-                return static_cast<dstType>(static_cast<FLType>(x) * gain + offset);
+                dst[i] = static_cast<dstType>(static_cast<FLType>(src[i]) * gain + offset);
             });
         }
     }
 }
 
-template < typename _Dt1, typename _St1 > inline
+template < typename _Dt1, typename _St1 >
 void RangeConvert(_Dt1 &dst, const _St1 &src, bool clip = false)
 {
     typedef typename _St1::value_type srcType;
@@ -329,7 +345,7 @@ void RangeConvert(_Dt1 &dst, const _St1 &src, bool clip = false)
     RangeConvert(dst, src, dst.Floor(), dst.Neutral(), dst.Ceil(), src.Floor(), src.Neutral(), src.Ceil(), clip);
 }
 
-template < typename _Dt1, typename _St1 > inline
+template < typename _Dt1, typename _St1 >
 void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
     typename _Dt1::value_type dFloor, typename _Dt1::value_type dNeutral, typename _Dt1::value_type dCeil,
     typename _St1::value_type sFloor, typename _St1::value_type sNeutral, typename _St1::value_type sCeil,
@@ -368,10 +384,9 @@ void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _S
     dstG.ReSize(srcG.Width(), srcG.Height());
     dstB.ReSize(srcB.Width(), srcB.Height());
 
-    PCType i, j, upper;
-    PCType height = dstR.Height();
-    PCType width = dstR.Width();
-    PCType stride = dstR.Stride();
+    const PCType height = dstR.Height();
+    const PCType width = dstR.Width();
+    const PCType stride = dstR.Stride();
 
     const auto sRange = sCeil - sFloor;
     const auto dRange = dCeil - dFloor;
@@ -388,29 +403,104 @@ void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _S
         const FLType lowerL = static_cast<FLType>(dFloor);
         const FLType upperL = static_cast<FLType>(dCeil);
 
-        for (j = 0; j < height; ++j)
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
-            i = j * stride;
-            for (upper = i + width; i < upper; ++i)
-            {
-                dstR[i] = static_cast<dstType>(Clip(srcR[i] * gain + offset, lowerL, upperL));
-                dstG[i] = static_cast<dstType>(Clip(srcG[i] * gain + offset, lowerL, upperL));
-                dstB[i] = static_cast<dstType>(Clip(srcB[i] * gain + offset, lowerL, upperL));
-            }
-        }
+            dstR[i] = static_cast<dstType>(Clip(static_cast<FLType>(srcR[i]) * gain + offset, lowerL, upperL));
+            dstG[i] = static_cast<dstType>(Clip(static_cast<FLType>(srcG[i]) * gain + offset, lowerL, upperL));
+            dstB[i] = static_cast<dstType>(Clip(static_cast<FLType>(srcB[i]) * gain + offset, lowerL, upperL));
+        });
     }
     else
     {
-        for (j = 0; j < height; ++j)
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
-            i = j * stride;
-            for (upper = i + width; i < upper; ++i)
-            {
-                dstR[i] = static_cast<dstType>(srcR[i] * gain + offset);
-                dstG[i] = static_cast<dstType>(srcG[i] * gain + offset);
-                dstB[i] = static_cast<dstType>(srcB[i] * gain + offset);
-            }
-        }
+            dstR[i] = static_cast<dstType>(static_cast<FLType>(srcR[i]) * gain + offset);
+            dstG[i] = static_cast<dstType>(static_cast<FLType>(srcG[i]) * gain + offset);
+            dstB[i] = static_cast<dstType>(static_cast<FLType>(srcB[i]) * gain + offset);
+        });
+    }
+}
+
+template < typename _Dt1, typename _St1 >
+void YFromRGB(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, ColorMatrix dstColorMatrix = ColorMatrix::Average)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool srcFloat = isFloat(srcType);
+    const bool dstFloat = isFloat(dstType);
+
+    if (dst.isChroma())
+    {
+        dst.ReSetChroma(false);
+    }
+
+    dst.ReSize(srcR.Width(), srcR.Height());
+
+    const PCType height = dst.Height();
+    const PCType width = dst.Width();
+    const PCType stride = dst.Stride();
+
+    const auto sFloor = srcR.Floor();
+    const auto sRange = srcR.ValueRange();
+    const auto dFloor = dst.Floor();
+    const auto dRange = dst.ValueRange();
+
+    FLType gain = static_cast<FLType>(dRange) / sRange;
+    FLType offset = dFloor - sFloor * gain;
+    if (!dstFloat) offset += FLType(0.5);
+
+    if (dstColorMatrix == ColorMatrix::Average)
+    {
+        gain = static_cast<FLType>(dRange) / (sRange * 3);
+        offset = dFloor - sFloor * 3 * gain;
+
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dst[i] = static_cast<dstType>(static_cast<FLType>(srcR[i] + srcG[i] + srcB[i]) * gain + offset);
+        });
+    }
+    else if (dstColorMatrix == ColorMatrix::Minimum)
+    {
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dst[i] = static_cast<dstType>(static_cast<FLType>(::Min(srcR[i], ::Min(srcG[i], srcB[i]))) * gain + offset);
+        });
+    }
+    else if (dstColorMatrix == ColorMatrix::Maximum)
+    {
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dst[i] = static_cast<dstType>(static_cast<FLType>(::Max(srcR[i], ::Max(srcG[i], srcB[i]))) * gain + offset);
+        });
+    }
+    else
+    {
+        FLType Kr, Kg, Kb;
+        ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
+
+        Kr *= gain;
+        Kg *= gain;
+        Kb *= gain;
+
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dst[i] = static_cast<dstType>(Kr * static_cast<FLType>(srcR[i]) + Kg * static_cast<FLType>(srcG[i])
+                + Kb * static_cast<FLType>(srcB[i]) + offset);
+        });
+    }
+}
+
+template < typename _Dt1, typename _St1 > inline
+void YFrom(_Dt1 &dst, const _St1 &src, ColorMatrix dstColorMatrix = ColorMatrix::Average)
+{
+    if (src.isRGB())
+    {
+        YFromRGB(dst, src.R(), src.G(), src.B(), dstColorMatrix);
+    }
+    else if (src.isYUV())
+    {
+        dst.From(src.Y());
     }
 }
 
@@ -454,7 +544,60 @@ void SimplestColorBalance(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, 
 
 
 // Template functions of algorithm
-template < typename _St1, typename _Fn1 > inline
+template < typename _Fn1 >
+void _Loop_V(const PCType height, _Fn1 &&_Func)
+{
+    for (PCType j = 0; j < height; ++j)
+    {
+        _Func(j);
+    }
+}
+
+template < typename _Fn1 >
+void _Loop_H(const PCType height, const PCType width, const PCType stride, _Fn1 &&_Func)
+{
+    const PCType offset = 0;
+    const PCType range = width;
+
+    for (PCType j = 0; j < height; ++j)
+    {
+        const PCType lower = j * stride + offset;
+        const PCType upper = lower + range;
+
+        _Func(j, lower, upper);
+    }
+}
+
+template < typename _Fn1 >
+void _Loop_Hinv(const PCType height, const PCType width, const PCType stride, _Fn1 &&_Func)
+{
+    const PCType offset = 0;
+    const PCType range = width;
+
+    for (PCType j = height - 1; j >= 0; --j)
+    {
+        const PCType lower = j * stride + offset;
+        const PCType upper = lower + range;
+
+        _Func(j, lower, upper);
+    }
+}
+
+template < typename _Fn1 >
+void _Loop_VH(const PCType height, const PCType width, const PCType stride, _Fn1 &&_Func)
+{
+    for (PCType j = 0; j < height; ++j)
+    {
+        PCType i = j * stride;
+
+        for (const PCType upper = i + width; i < upper; ++i)
+        {
+            _Func(i);
+        }
+    }
+}
+
+template < typename _St1, typename _Fn1 >
 void _For_each(_St1 &data, _Fn1 &_Func)
 {
     for (PCType j = 0; j < data.Height(); ++j)
@@ -468,7 +611,7 @@ void _For_each(_St1 &data, _Fn1 &_Func)
     }
 }
 
-template < typename _St1, typename _Fn1 > inline
+template < typename _St1, typename _Fn1 >
 void _Transform(_St1 &data, _Fn1 &_Func)
 {
     for (PCType j = 0; j < data.Height(); ++j)
@@ -482,7 +625,7 @@ void _Transform(_St1 &data, _Fn1 &_Func)
     }
 }
 
-template < typename _Dt1, typename _St1, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
@@ -504,7 +647,7 @@ void _Transform(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
     }
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
@@ -528,7 +671,7 @@ void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
     }
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
@@ -554,7 +697,7 @@ void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3,
     }
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform";
@@ -582,7 +725,7 @@ void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3,
     }
 }
 
-template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 > inline
+template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 >
 void _Convolute(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Convolute";
@@ -652,7 +795,86 @@ void _Convolute(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 
 
 // Template functions of algorithm with PPL
-template < typename _St1, typename _Fn1 > inline
+template < typename _Fn1 >
+void _Loop_V_PPL(const PCType height, _Fn1 &&_Func)
+{
+    const PCType pNum = (height + PPL_HP - 1) / PPL_HP;
+
+    concurrency::parallel_for(PCType(0), pNum, [&](PCType p)
+    {
+        const PCType lower = p * PPL_HP;
+        const PCType upper = Min(height, lower + PPL_HP);
+
+        for (PCType j = lower; j < upper; ++j)
+        {
+            _Func(j);
+        }
+    });
+}
+
+template < typename _Fn1 >
+void _Loop_H_PPL(const PCType height, const PCType width, const PCType stride, _Fn1 &&_Func)
+{
+    const PCType pNum = (width + PPL_WP - 1) / PPL_WP;
+
+    concurrency::parallel_for(PCType(0), pNum, [&](PCType p)
+    {
+        const PCType offset = p * PPL_WP;
+        const PCType range = Min(width - offset, PPL_WP);
+
+        for (PCType j = 0; j < height; ++j)
+        {
+            const PCType lower = j * stride + offset;
+            const PCType upper = lower + range;
+
+            _Func(j, lower, upper);
+        }
+    });
+}
+
+template < typename _Fn1 >
+void _Loop_Hinv_PPL(const PCType height, const PCType width, const PCType stride, _Fn1 &&_Func)
+{
+    const PCType pNum = (width + PPL_WP - 1) / PPL_WP;
+
+    concurrency::parallel_for(PCType(0), pNum, [&](PCType p)
+    {
+        const PCType offset = p * PPL_WP;
+        const PCType range = Min(width - offset, PPL_WP);
+
+        for (PCType j = height - 1; j >= 0; --j)
+        {
+            const PCType lower = j * stride + offset;
+            const PCType upper = lower + range;
+
+            _Func(j, lower, upper);
+        }
+    });
+}
+
+template < typename _Fn1 >
+void _Loop_VH_PPL(const PCType height, const PCType width, const PCType stride, _Fn1 &&_Func)
+{
+    const PCType pNum = (height + PPL_HP - 1) / PPL_HP;
+
+    concurrency::parallel_for(PCType(0), pNum, [&](PCType p)
+    {
+        const PCType lower = p * PPL_HP;
+        const PCType upper = Min(height, lower + PPL_HP);
+
+        for (PCType j = lower; j < upper; ++j)
+        {
+            PCType i = j * stride;
+
+            for (const PCType upper = i + width; i < upper; ++i)
+            {
+                _Func(i);
+            }
+        }
+    });
+}
+
+template < typename _St1, typename _Fn1 >
 void _For_each_PPL(_St1 &data, _Fn1 &_Func)
 {
     concurrency::parallel_for(PCType(0), dst.Height(), [&](PCType j)
@@ -666,7 +888,7 @@ void _For_each_PPL(_St1 &data, _Fn1 &_Func)
     });
 }
 
-template < typename _St1, typename _Fn1 > inline
+template < typename _St1, typename _Fn1 >
 void _Transform_PPL(_St1 &data, _Fn1 &_Func)
 {
     concurrency::parallel_for(PCType(0), dst.Height(), [&](PCType j)
@@ -680,7 +902,7 @@ void _Transform_PPL(_St1 &data, _Fn1 &_Func)
     });
 }
 
-template < typename _Dt1, typename _St1, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
@@ -702,7 +924,7 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
     });
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
@@ -725,7 +947,7 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
     });
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
@@ -751,7 +973,7 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &s
     });
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_PPL";
@@ -779,7 +1001,7 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &s
     });
 }
 
-template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 > inline
+template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 >
 void _Convolute_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Convolute_PPL";
@@ -849,7 +1071,7 @@ void _Convolute_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 
 
 // Template functions of algorithm with AMP
-template < typename _St1, typename _Fn1 > inline
+template < typename _St1, typename _Fn1 >
 void _For_each_AMP(_St1 &data, _Fn1 &_Func)
 {
     concurrency::array_view<decltype(data.value(0)), 1> datav(data.PixelCount(), datap);
@@ -860,7 +1082,7 @@ void _For_each_AMP(_St1 &data, _Fn1 &_Func)
     });
 }
 
-template < typename _St1, typename _Fn1 > inline
+template < typename _St1, typename _Fn1 >
 void _Transform_AMP(_St1 &data, _Fn1 &_Func)
 {
     concurrency::array_view<decltype(data.value(0)), 1> datav(data.PixelCount(), data);
@@ -871,7 +1093,7 @@ void _Transform_AMP(_St1 &data, _Fn1 &_Func)
     });
 }
 
-template < typename _Dt1, typename _St1, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
@@ -891,7 +1113,7 @@ void _Transform_AMP(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
     });
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
@@ -913,7 +1135,7 @@ void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &_Func)
     });
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
@@ -937,7 +1159,7 @@ void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &s
     });
 }
 
-template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &_Func)
 {
     const char *FunctionName = "_Transform_AMP";
@@ -960,74 +1182,6 @@ void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &s
     concurrency::parallel_for_each(dstv.extent, [=](concurrency::index<1> idx) restrict(amp)
     {
         dstv[idx] = _Func(src1v[idx], src2v[idx], src3v[idx], src4v[idx]);
-    });
-}
-
-template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 > inline
-void _Convolute_AMP(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
-{
-    const char *FunctionName = "_Convolute_AMP";
-    if (dst.Width() != src.Width() || dst.Height() != src.Height())
-    {
-        std::cerr << FunctionName << ": Width() and Height() of dst and src must be the same.\n";
-        exit(EXIT_FAILURE);
-    }
-
-    concurrency::parallel_for(PCType(0), dst.Height(), [&_Func, &dst, &src](PCType j)
-    {
-        auto dstp = dst.Data() + dst.Stride() * j;
-
-        typename _St1::const_pointer srcpV[VRad * 2 + 1];
-        typename _St1::value_type srcb2D[VRad * 2 + 1][HRad * 2 + 1];
-
-        srcpV[VRad] = src.Data() + src.Stride() * j;
-        for (PCType y = 1; y <= VRad; ++y)
-        {
-            srcpV[VRad - y] = j < y ? srcpV[VRad - y + 1] : srcpV[VRad - y + 1] - src.Stride();
-            srcpV[VRad + y] = j >= src.Height() - y ? srcpV[VRad + y - 1] : srcpV[VRad + y - 1] + src.Stride();
-        }
-
-        for (PCType y = 0; y < VRad * 2 + 1; ++y)
-        {
-            PCType x = 0;
-            for (; x < HRad + 2 && x < HRad * 2 + 1; ++x)
-            {
-                srcb2D[y][x] = srcpV[y][0];
-            }
-            for (; x < HRad * 2 + 1; ++x)
-            {
-                srcb2D[y][x] = srcpV[y][x - HRad - 1];
-            }
-        }
-
-        PCType i = HRad;
-        for (; i < dst.Width(); ++i)
-        {
-            for (PCType y = 0; y < VRad * 2 + 1; ++y)
-            {
-                PCType x = 0;
-                for (; x < HRad * 2; ++x)
-                {
-                    srcb2D[y][x] = srcb2D[y][x + 1];
-                }
-                srcb2D[y][x] = srcpV[y][i];
-            }
-
-            dstp[i - HRad] = _Func(srcb2D);
-        }
-        for (; i < dst.Width() + HRad; ++i)
-        {
-            for (PCType y = 0; y < VRad * 2 + 1; ++y)
-            {
-                PCType x = 0;
-                for (; x < HRad * 2; ++x)
-                {
-                    srcb2D[y][x] = srcb2D[y][x + 1];
-                }
-            }
-
-            dstp[i - HRad] = _Func(srcb2D);
-        }
     });
 }
 

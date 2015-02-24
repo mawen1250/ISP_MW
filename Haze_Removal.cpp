@@ -1,3 +1,6 @@
+#define ENABLE_PPL
+
+
 #include "Haze_Removal.h"
 #include "Gaussian.h"
 
@@ -5,12 +8,14 @@
 // Functions for class Haze_Removal
 Frame &Haze_Removal::process(Frame &dst, const Frame &src)
 {
-    height = src.Height();
-    width = src.Width();
-    stride = src.Stride();
+    height = dst.Height();
+    width = dst.Width();
+    stride = dst.Stride();
 
-    if (src.isYUV())
+    if (src.isYUV() || dst.isYUV())
     {
+        const char *FunctionName = "Haze_Removal::process";
+        std::cerr << FunctionName << ": YUV input/output is not supported.\n";
         exit(EXIT_FAILURE);
     }
     else
@@ -30,60 +35,47 @@ Frame &Haze_Removal::process(Frame &dst, const Frame &src)
 
 void Haze_Removal::GetAirLight()
 {
-    PCType i, j, upper;
-
-    Histogram<FLType> Histogram(tMapInv, para.HistBins);
-    FLType tMapLowerThr = Histogram.Max(para.tMap_thr);
+    const Histogram<FLType> Histogram(tMapInv, para.HistBins);
+    const FLType tMapLowerThr = Histogram.Max(para.tMap_thr);
 
     int count = 0;
     FLType AL_Rsum = 0;
     FLType AL_Gsum = 0;
     FLType AL_Bsum = 0;
 
-    for (j = 0; j < height; ++j)
+    LOOP_VH(height, width, stride, [&](PCType i)
     {
-        i = j * stride;
-        for (upper = i + width; i < upper; ++i)
+        if (tMapInv[i] >= tMapLowerThr)
         {
-            if (tMapInv[i] >= tMapLowerThr)
-            {
-                ++count;
-                AL_Rsum += dataR[i];
-                AL_Gsum += dataG[i];
-                AL_Bsum += dataB[i];
-            }
+            ++count;
+            AL_Rsum += dataR[i];
+            AL_Gsum += dataG[i];
+            AL_Bsum += dataB[i];
         }
-    }
+    });
 
     AL_R = Min(para.ALmax, AL_Rsum / count);
     AL_G = Min(para.ALmax, AL_Gsum / count);
     AL_B = Min(para.ALmax, AL_Bsum / count);
 
-    std::cout << "Global Atmospheric Light (R, G, B) = (" << AL_R << ", " << AL_G << ", " << AL_B << ")\n";
+    //std::cout << "Global Atmospheric Light (R, G, B) = (" << AL_R << ", " << AL_G << ", " << AL_B << ")\n";
 }
 
 void Haze_Removal::RemoveHaze()
 {
-    PCType i, j, upper;
+    const FLType mulR = para.strength / AL_R;
+    const FLType mulG = para.strength / AL_G;
+    const FLType mulB = para.strength / AL_B;
 
-    FLType divR, divG, divB;
-    FLType mulR = para.strength / AL_R;
-    FLType mulG = para.strength / AL_G;
-    FLType mulB = para.strength / AL_B;
-
-    for (j = 0; j < height; ++j)
+    LOOP_VH_PPL(height, width, stride, [&](PCType i)
     {
-        i = j * stride;
-        for (upper = i + width; i < upper; ++i)
-        {
-            divR = Max(para.tMapMin, 1 - tMapInv[i] * mulR);
-            divG = Max(para.tMapMin, 1 - tMapInv[i] * mulG);
-            divB = Max(para.tMapMin, 1 - tMapInv[i] * mulB);
-            dataR[i] = (dataR[i] - AL_R) / divR + AL_R;
-            dataG[i] = (dataG[i] - AL_G) / divG + AL_G;
-            dataB[i] = (dataB[i] - AL_B) / divB + AL_B;
-        }
-    }
+        const FLType divR = Max(para.tMapMin, 1 - tMapInv[i] * mulR);
+        const FLType divG = Max(para.tMapMin, 1 - tMapInv[i] * mulG);
+        const FLType divB = Max(para.tMapMin, 1 - tMapInv[i] * mulB);
+        dataR[i] = (dataR[i] - AL_R) / divR + AL_R;
+        dataG[i] = (dataG[i] - AL_G) / divG + AL_G;
+        dataB[i] = (dataB[i] - AL_B) / divB + AL_B;
+    });
 }
 
 void Haze_Removal::StoreResult(Frame &dst)
@@ -99,8 +91,8 @@ void Haze_Removal::StoreResult(Frame &dst)
     }
     else if (para.ppmode == 1) // Canonical range scaling
     {
-        FLType min = -0.10; // Experimental lower limit
-        FLType max = (AL_R + AL_G + AL_B) / FLType(3); // Take average Global Atmospheric Light as upper limit
+        const FLType min = -0.10; // Experimental lower limit
+        const FLType max = (AL_R + AL_G + AL_B) / FLType(3); // Take average Global Atmospheric Light as upper limit
         RangeConvert(dstR, dstG, dstB, dataR, dataG, dataB,
             dstR.Floor(), dstR.Neutral(), dstR.Ceil(), min, min, max, true);
     }
@@ -120,12 +112,12 @@ void Haze_Removal::StoreResult(Frame &dst)
 // Functions for class Haze_Removal_Retinex
 void Haze_Removal_Retinex::GetTMapInv(const Frame &src)
 {
-    PCType i, j, upper;
-
     Plane_FL refY(src.P(0), false);
-    refY.YFrom(src, ColorMatrix::Average);
+    refY.YFrom(src, para.Ymode == 1 ? ColorMatrix::Minimum
+        : para.Ymode == 2 ? ColorMatrix::Maximum : ColorMatrix::Average);
 
-    size_t s, scount = para.sigmaVector.size();
+    const size_t scount = para.sigmaVector.size();
+    size_t s;
 
     // Use refY as tMapInv if no Gaussian need to be applied
     for (s = 0; s < scount; ++s)
@@ -146,21 +138,17 @@ void Haze_Removal_Retinex::GetTMapInv(const Frame &src)
 
         tMapInv = Plane_FL(refY, false);
 
-        for (j = 0; j < height; ++j)
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
-            i = j * stride;
-            for (upper = i + width; i < upper; ++i)
+            if (gauss[i] > 0)
             {
-                if (gauss[i] > 0)
-                {
-                    tMapInv[i] = gauss[i];
-                }
-                else
-                {
-                    tMapInv[i] = 0;
-                }
+                tMapInv[i] = gauss[i];
             }
-        }
+            else
+            {
+                tMapInv[i] = 0;
+            }
+        });
     }
     else if (scount == 2 && para.sigmaVector[0] > 0 && para.sigmaVector[1] > 0) // double-scale Gaussian filter
     {
@@ -174,21 +162,17 @@ void Haze_Removal_Retinex::GetTMapInv(const Frame &src)
 
         tMapInv = Plane_FL(refY, false);
 
-        for (j = 0; j < height; ++j)
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
-            i = j * stride;
-            for (upper = i + width; i < upper; ++i)
+            if (gauss0[i] > 0 && gauss1[i] > 0)
             {
-                if (gauss0[i] > 0 && gauss1[i] > 0)
-                {
-                    tMapInv[i] = sqrt(gauss0[i] * gauss1[i]);
-                }
-                else
-                {
-                    tMapInv[i] = 0;
-                }
+                tMapInv[i] = sqrt(gauss0[i] * gauss1[i]);
             }
-        }
+            else
+            {
+                tMapInv[i] = 0;
+            }
+        });
     }
     else // multi-scale Gaussian filter
     {
@@ -202,45 +186,33 @@ void Haze_Removal_Retinex::GetTMapInv(const Frame &src)
                 RecursiveGaussian GFilter(para.sigmaVector[s]);
                 GFilter.Filter(gauss, refY);
 
-                for (j = 0; j < height; ++j)
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
                 {
-                    i = j * stride;
-                    for (upper = i + width; i < upper; ++i)
+                    if (gauss[i] > 0)
                     {
-                        if (gauss[i] > 0)
-                        {
-                            tMapInv[i] *= gauss[i];
-                        }
-                        else
-                        {
-                            tMapInv[i] = 0;
-                        }
+                        tMapInv[i] *= gauss[i];
                     }
-                }
+                    else
+                    {
+                        tMapInv[i] = 0;
+                    }
+                });
             }
             else
             {
-                for (j = 0; j < height; ++j)
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
                 {
-                    i = j * stride;
-                    for (upper = i + width; i < upper; ++i)
-                    {
-                        tMapInv[i] *= refY[i];
-                    }
-                }
+                    tMapInv[i] *= refY[i];
+                });
             }
         }
 
         // Calculate geometric mean of multiple scales
         FLType scountRec = 1 / static_cast<FLType>(scount);
 
-        for (j = 0; j < height; ++j)
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
-            i = j * stride;
-            for (upper = i + width; i < upper; ++i)
-            {
-                tMapInv[i] = pow(tMapInv[i], scountRec);
-            }
-        }
+            tMapInv[i] = pow(tMapInv[i], scountRec);
+        });
     }
 }

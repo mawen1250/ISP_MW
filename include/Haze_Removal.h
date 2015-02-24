@@ -18,6 +18,7 @@ const struct Haze_Removal_Para
     double upper_thr = 0.01;
     Histogram<FLType>::BinType HistBins = 1024;
 
+    int Ymode = 1;
     std::vector<double> sigmaVector;
 
     Haze_Removal_Para() : sigmaVector({ 25.0, 250.0 }) {}
@@ -185,6 +186,11 @@ protected:
 
         for (int i = 0; i < argc; i++)
         {
+            if (args[i] == "-Y" || args[i] == "--Ymode")
+            {
+                ArgsObj.GetPara(i, para.Ymode);
+                continue;
+            }
             if (args[i] == "-S" || args[i] == "--sigma")
             {
                 ArgsObj.GetPara(i, sigma);
