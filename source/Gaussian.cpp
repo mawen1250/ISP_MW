@@ -5,7 +5,6 @@
 #include "Transform.h"
 
 
-// Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
 Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
 {
     if (sigma <= 0)
@@ -16,7 +15,7 @@ Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
 
     Plane_FL data(src);
     RecursiveGaussian GFilter(sigma);
-
+    
     GFilter.Filter(data);
     dst.From(data);
     
@@ -27,7 +26,7 @@ Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
 // Member functions of class RecursiveGaussian
 void RecursiveGaussian::GetPara(double sigma)
 {
-    const double q = sigma < 2.5 ? 3.97156 - 4.14554*sqrt(1 - 0.26891*sigma) : 0.98711*sigma - 0.96330;
+    const double q = sigma < 2.5 ? 3.97156 - 4.14554 * sqrt(1 - 0.26891*sigma) : 0.98711 * sigma - 0.96330;
 
     const double b0 = 1.57825 + 2.44413*q + 1.4281*q*q + 0.422205*q*q*q;
     const double b1 = 2.44413*q + 2.85619*q*q + 1.26661*q*q*q;
@@ -146,15 +145,16 @@ void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
     LOOP_V_PPL(height, [&](PCType j)
     {
         const PCType lower = j * stride;
-        const PCType upper = lower + width;
+        const PCType upper = lower + width - 1;
 
         PCType i = lower;
-
         FLType P0, P1, P2, P3;
-        dst[i] = P3 = P2 = P1 = src[i];
+        P3 = P2 = P1 = src[i];
+        dst[i] = src[i];
 
-        for (++i; i < upper; ++i)
+        for (; i < upper;)
         {
+            ++i;
             P0 = B * src[i] + B1 * P1 + B2 * P2 + B3 * P3;
             P3 = P2;
             P2 = P1;
@@ -162,11 +162,11 @@ void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
             dst[i] = P0;
         }
         
-        --i;
         P3 = P2 = P1 = dst[i];
 
-        for (--i; i >= lower; --i)
+        for (; i > lower;)
         {
+            --i;
             P0 = B * dst[i] + B1 * P1 + B2 * P2 + B3 * P3;
             P3 = P2;
             P2 = P1;
@@ -185,15 +185,15 @@ void RecursiveGaussian::FilterH(Plane_FL &data)
     LOOP_V_PPL(height, [&](PCType j)
     {
         const PCType lower = j * stride;
-        const PCType upper = lower + width;
+        const PCType upper = lower + width - 1;
 
         PCType i = lower;
-
         FLType P0, P1, P2, P3;
         P3 = P2 = P1 = data[i];
 
-        for (++i; i < upper; ++i)
+        for (; i < upper;)
         {
+            ++i;
             P0 = B * data[i] + B1 * P1 + B2 * P2 + B3 * P3;
             P3 = P2;
             P2 = P1;
@@ -201,11 +201,11 @@ void RecursiveGaussian::FilterH(Plane_FL &data)
             data[i] = P0;
         }
 
-        --i;
         P3 = P2 = P1 = data[i];
 
-        for (--i; i >= lower; --i)
+        for (; i > lower;)
         {
+            --i;
             P0 = B * data[i] + B1 * P1 + B2 * P2 + B3 * P3;
             P3 = P2;
             P2 = P1;

@@ -80,6 +80,7 @@ public:
 };
 
 
+// Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
 class RecursiveGaussian
 {
 public:

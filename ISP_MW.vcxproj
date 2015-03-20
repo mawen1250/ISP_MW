@@ -69,7 +69,14 @@
     <Import Project="OpenCV.Release.x64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -121,6 +128,7 @@
       <FloatingPointModel>Precise</FloatingPointModel>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerOutput>NoListing</AssemblerOutput>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -128,24 +136,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="AWB.cpp" />
-    <ClCompile Include="Bilateral.cpp" />
-    <ClCompile Include="BM3D.cpp" />
-    <ClCompile Include="Convolution.cpp" />
-    <ClCompile Include="Format_Conversion.cpp" />
-    <ClCompile Include="Gaussian.cpp" />
-    <ClCompile Include="Haze_Removal.cpp" />
-    <ClCompile Include="Highlight_Removal.cpp" />
-    <ClCompile Include="Histogram_Equalization.cpp" />
-    <ClCompile Include="ImageIO.cpp" />
-    <ClCompile Include="Image_Type.cpp" />
-    <ClCompile Include="ISP_MW.cpp" />
-    <ClCompile Include="NLMeans.cpp" />
-    <ClCompile Include="Retinex.cpp" />
-    <ClCompile Include="Tone_Mapping.cpp" />
-    <ClCompile Include="Transform.cpp" />
-  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Args.h" />
     <ClInclude Include="include\Bilateral.h" />
@@ -174,6 +164,24 @@
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Type.h" />
     <ClInclude Include="include\Helper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\AWB.cpp" />
+    <ClCompile Include="source\Bilateral.cpp" />
+    <ClCompile Include="source\BM3D.cpp" />
+    <ClCompile Include="source\Convolution.cpp" />
+    <ClCompile Include="source\Format_Conversion.cpp" />
+    <ClCompile Include="source\Gaussian.cpp" />
+    <ClCompile Include="source\Haze_Removal.cpp" />
+    <ClCompile Include="source\Highlight_Removal.cpp" />
+    <ClCompile Include="source\Histogram_Equalization.cpp" />
+    <ClCompile Include="source\ImageIO.cpp" />
+    <ClCompile Include="source\Image_Type.cpp" />
+    <ClCompile Include="source\ISP_MW.cpp" />
+    <ClCompile Include="source\NLMeans.cpp" />
+    <ClCompile Include="source\Retinex.cpp" />
+    <ClCompile Include="source\Tone_Mapping.cpp" />
+    <ClCompile Include="source\Transform.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

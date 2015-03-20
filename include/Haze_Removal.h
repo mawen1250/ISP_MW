@@ -64,7 +64,7 @@ protected:
     virtual void GetTMapInv(const Frame &src) = 0;
 
     // Get the Global Atmospheric Light from Inverted Transmission Map and src
-    void GetAirLight();
+    void GetAtmosLight();
 
     // Generate the haze-free image
     void RemoveHaze();

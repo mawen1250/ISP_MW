@@ -25,7 +25,7 @@ Frame &Haze_Removal::process(Frame &dst, const Frame &src)
         dataB = Plane_FL(src.B());
 
         GetTMapInv(src);
-        GetAirLight();
+        GetAtmosLight();
         RemoveHaze();
         StoreResult(dst);
     }
@@ -33,7 +33,7 @@ Frame &Haze_Removal::process(Frame &dst, const Frame &src)
     return dst;
 }
 
-void Haze_Removal::GetAirLight()
+void Haze_Removal::GetAtmosLight()
 {
     const Histogram<FLType> Histogram(tMapInv, para.HistBins);
     const FLType tMapLowerThr = Histogram.Max(para.tMap_thr);
