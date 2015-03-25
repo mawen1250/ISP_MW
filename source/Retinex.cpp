@@ -104,7 +104,7 @@ Plane_FL &Retinex_SSR::process(Plane_FL &dst, const Plane_FL &src)
 {
     Kernel(dst, src);
 
-    dst.SimplestColorBalance(dst, para.lower_thr, para.upper_thr, para.HistBins);
+    SimplestColorBalance(dst, dst, para.lower_thr, para.upper_thr, para.HistBins);
 
     return dst;
 }
@@ -115,7 +115,7 @@ Plane &Retinex_SSR::process(Plane &dst, const Plane &src)
     
     Kernel(data, data);
     
-    dst.SimplestColorBalance(data, para.lower_thr, para.upper_thr, para.HistBins);
+    SimplestColorBalance(dst, data, para.lower_thr, para.upper_thr, para.HistBins);
 
     return dst;
 }
@@ -126,7 +126,7 @@ Plane_FL &Retinex_MSR::process(Plane_FL &dst, const Plane_FL &src)
 {
     Kernel(dst, src);
     
-    dst.SimplestColorBalance(dst, para.lower_thr, para.upper_thr, para.HistBins);
+    SimplestColorBalance(dst, dst, para.lower_thr, para.upper_thr, para.HistBins);
 
     return dst;
 }
@@ -136,7 +136,7 @@ Plane &Retinex_MSR::process(Plane &dst, const Plane &src)
     Plane_FL idata(src);
     Plane_FL odata = Kernel(idata);
 
-    dst.SimplestColorBalance(odata, para.lower_thr, para.upper_thr, para.HistBins);
+    SimplestColorBalance(dst, odata, para.lower_thr, para.upper_thr, para.HistBins);
 
     return dst;
 }
@@ -237,7 +237,7 @@ Frame &Retinex_MSRCP::process(Frame &dst, const Frame &src)
         FLType sRangeFL = static_cast<FLType>(srcR.ValueRange());
 
         Plane_FL idata(srcR, false);
-        idata.YFrom(src, ColorMatrix::Average);
+        ConvertToY(idata, src, ColorMatrix::Average);
         
         Plane_FL odata = operator()(idata);
         
@@ -288,11 +288,11 @@ Frame &Retinex_MSRCR::process(Frame &dst, const Frame &src)
 
         Plane_FL idata(srcR, false);
 
-        idata.From(srcR);
+        RangeConvert(idata, srcR);
         Plane_FL odataR = Kernel(idata);
-        idata.From(srcG);
+        RangeConvert(idata, srcG);
         Plane_FL odataG = Kernel(idata);
-        idata.From(srcB);
+        RangeConvert(idata, srcB);
         Plane_FL odataB = Kernel(idata);
 
         DType Rval, Gval, Bval;
@@ -314,7 +314,7 @@ Frame &Retinex_MSRCR::process(Frame &dst, const Frame &src)
             }
         }
 
-        dst.SimplestColorBalance(odataR, odataG, odataB, para.lower_thr, para.upper_thr, para.HistBins);
+        SimplestColorBalance(dst, odataR, odataG, odataB, para.lower_thr, para.upper_thr, para.HistBins);
     }
     else
     {

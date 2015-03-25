@@ -198,12 +198,6 @@ public:
     _Myt &ReQuantize(value_type _BitDepth, value_type _Floor, value_type _Neutral, value_type _Ceil, bool scale = true, bool clip = false);
     _Myt &SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
-    template < typename _St1 > void From(const _St1 &src, bool clip = false);
-    _Myt &ConvertFrom(const Plane &src, TransferChar dstTransferChar);
-    _Myt &ConvertFrom(const Plane &src) { return ConvertFrom(src, TransferChar_); }
-    void YFrom(const Frame &src);
-    void YFrom(const Frame &src, ColorMatrix dstColorMatrix);
-
     FLType GetFL(value_type input) const { return static_cast<FLType>(input - Neutral()) / ValueRange(); }
     FLType GetFL_PCChroma(value_type input) const { return Clip(static_cast<FLType>(input - Neutral()) / ValueRange(), -0.5, 0.5); }
     value_type GetD(FLType input) const { return static_cast<value_type>(input * ValueRange() + Neutral_ + FLType(0.5)); }
@@ -213,7 +207,6 @@ public:
     _Myt &Binarize(value_type lower_thrD, value_type upper_thrD) { return Binarize(*this, lower_thrD, upper_thrD); }
     _Myt &Binarize_ratio(const _Myt &src, double lower_thr = 0., double upper_thr = 1.);
     _Myt &Binarize_ratio(double lower_thr = 0., double upper_thr = 1.) { return Binarize_ratio(*this, lower_thr, upper_thr); }
-    template < typename _St1 > void SimplestColorBalance(const _St1 &src, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024);
 
     template < typename T > value_type Quantize(T input) const;
 
@@ -275,8 +268,7 @@ public:
     Plane_FL(_Myt &&src); // Move constructor
     explicit Plane_FL(const Plane &src, value_type range = 1.); // Convertor/Constructor from Plane
     Plane_FL(const Plane &src, bool Init, value_type Value = 0, value_type range = 1.);
-    Plane_FL(const _Myt &src, TransferChar dstTransferChar);
-    Plane_FL(const Plane &src, TransferChar dstTransferChar);
+    template < typename _St1 > Plane_FL(const _St1 &src, TransferChar dstTransferChar);
 
     ~Plane_FL(); // Destructor
 
@@ -329,19 +321,10 @@ public:
     _Myt &ReQuantize(value_type _Floor, value_type _Neutral, value_type _Ceil, bool scale = true, bool clip = false);
     _Myt &SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
-    template < typename _St1 > void From(const _St1 &src, bool clip = false);
-    _Myt &ConvertFrom(const Plane_FL &src, TransferChar dstTransferChar);
-    _Myt &ConvertFrom(const Plane_FL &src) { return ConvertFrom(src, TransferChar_); }
-    _Myt &ConvertFrom(const Plane &src, TransferChar dstTransferChar);
-    _Myt &ConvertFrom(const Plane &src) { return ConvertFrom(src, TransferChar_); }
-    void YFrom(const Frame &src);
-    void YFrom(const Frame &src, ColorMatrix dstColorMatrix);
-
     _Myt &Binarize(const _Myt &src, value_type lower_thrD, value_type upper_thrD);
     _Myt &Binarize(value_type lower_thrD, value_type upper_thrD) { return Binarize(*this, lower_thrD, upper_thrD); }
     _Myt &Binarize_ratio(const _Myt &src, double lower_thr = 0., double upper_thr = 1.);
     _Myt &Binarize_ratio(double lower_thr = 0., double upper_thr = 1.) { return Binarize_ratio(*this, lower_thr, upper_thr); }
-    template < typename _St1 > void SimplestColorBalance(const _St1 &src, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024);
 
     template < typename T > value_type Quantize(T input) const;
 
@@ -460,10 +443,7 @@ public:
     PCType PixelCount() const { return P_[0]->PixelCount(); }
     value_type BitDepth() const { return P_[0]->BitDepth(); }
 
-    _Myt &ConvertFrom(const Frame &src, TransferChar dstTransferChar);
-
-    template < typename _St1 > void SimplestColorBalance(const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
-        double lower_thr = 0., double upper_thr = 0., int HistBins = 1024);
+    _Myt &SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 };
 
 
@@ -478,8 +458,6 @@ inline void Plane::ValidRange(reference min, reference max, double lower_thr, do
     ::ValidRange(*this, min, max, lower_thr, upper_thr, HistBins, protect);
 }
 inline void Plane::ReSetChroma(bool Chroma) { ::ReSetChroma(Floor_, Neutral_, Ceil_, Chroma); }
-inline void Plane::YFrom(const Frame &src){ ::YFrom(*this, src, src.GetColorMatrix()); }
-inline void Plane::YFrom(const Frame &src, ColorMatrix dstColorMatrix) { ::YFrom(*this, src, dstColorMatrix); }
 
 
 // Inline functions for class Plane_FL
@@ -490,25 +468,9 @@ inline void Plane_FL::ValidRange(reference min, reference max, double lower_thr,
     ::ValidRange(*this, min, max, lower_thr, upper_thr, HistBins, protect);
 }
 inline void Plane_FL::ReSetChroma(bool Chroma) { ::ReSetChroma(Floor_, Neutral_, Ceil_, Chroma); }
-inline void Plane_FL::YFrom(const Frame &src){ ::YFrom(*this, src, src.GetColorMatrix()); }
-inline void Plane_FL::YFrom(const Frame &src, ColorMatrix dstColorMatrix) { ::YFrom(*this, src, dstColorMatrix); }
 
 
 // Template functions for class Plane
-template < typename _St1 > inline
-void Plane::From(const _St1 &src, bool clip)
-{
-    RangeConvert(*this, src, clip);
-}
-
-
-template < typename _St1 > inline
-void Plane::SimplestColorBalance(const _St1 &src, double lower_thr, double upper_thr, int HistBins)
-{
-    ::SimplestColorBalance(*this, src, lower_thr, upper_thr, HistBins);
-}
-
-
 template < typename T > inline
 Plane::value_type Plane::Quantize(T input) const
 {
@@ -568,16 +530,10 @@ void Plane::convolute(const _St1 &src, _Fn1 _Func)
 
 // Template functions for class Plane_FL
 template < typename _St1 > inline
-void Plane_FL::From(const _St1 &src, bool clip)
+Plane_FL::Plane_FL(const _St1 &src, TransferChar dstTransferChar)
+    : _Myt(src, false)
 {
-    RangeConvert(*this, src, clip);
-}
-
-
-template < typename _St1 > inline
-void Plane_FL::SimplestColorBalance(const _St1 &src, double lower_thr, double upper_thr, int HistBins)
-{
-    ::SimplestColorBalance(*this, src, lower_thr, upper_thr, HistBins);
+    TransferConvert(*this, src, dstTransferChar);
 }
 
 
@@ -634,15 +590,6 @@ template < PCType VRad, PCType HRad, typename _St1, typename _Fn1 > inline
 void Plane_FL::convolute(const _St1 &src, _Fn1 _Func)
 {
     CONVOLUTE<VRad, HRad>(*this, src, _Func);
-}
-
-
-// Template functions for class Frame
-template < typename _St1 > inline
-void Frame::SimplestColorBalance(const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
-    double lower_thr, double upper_thr, int HistBins)
-{
-    ::SimplestColorBalance(R(), G(), B(), srcR, srcG, srcB, lower_thr, upper_thr, HistBins);
 }
 
 

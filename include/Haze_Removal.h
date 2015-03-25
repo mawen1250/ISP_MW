@@ -9,19 +9,22 @@
 
 const struct Haze_Removal_Para
 {
+    TransferChar TransferChar_ = TransferChar::bt709;
     double tMap_thr = 0.001;
     FLType ALmax = 1;
     FLType tMapMin = 0.1;
-    FLType strength = 0.65;
+    FLType tMapMax = 1.2;
+    FLType strength = 0.8;
     int ppmode = 3;
-    double lower_thr = 0.02;
-    double upper_thr = 0.01;
+    double lower_thr = 0.05;
+    double upper_thr = 0.03;
     Histogram<FLType>::BinType HistBins = 1024;
+    int debug = 0;
 
     int Ymode = 1;
     std::vector<double> sigmaVector;
 
-    Haze_Removal_Para() : sigmaVector({ 25.0, 250.0 }) {}
+    Haze_Removal_Para() : sigmaVector({ 15.0, 120.0 }) {}
 } Haze_Removal_Default;
 
 
@@ -61,7 +64,7 @@ public:
 
 protected:
     // Generate the Inverted Transmission Map from intensity image
-    virtual void GetTMapInv(const Frame &src) = 0;
+    virtual void GetTMapInv() = 0;
 
     // Get the Global Atmospheric Light from Inverted Transmission Map and src
     void GetAtmosLight();
@@ -88,7 +91,7 @@ public:
 
 protected:
     // Generate the Inverted Transmission Map from intensity image
-    virtual void GetTMapInv(const Frame &src);
+    virtual void GetTMapInv();
 };
 
 
@@ -110,6 +113,11 @@ protected:
 
         for (int i = 0; i < argc; i++)
         {
+            if (args[i] == "-TC" || args[i] == "--TransferChar")
+            {
+                ArgsObj.GetPara(i, para.TransferChar_);
+                continue;
+            }
             if (args[i] == "--tMap_thr")
             {
                 ArgsObj.GetPara(i, para.tMap_thr);
@@ -123,6 +131,11 @@ protected:
             if (args[i] == "--tMapMin")
             {
                 ArgsObj.GetPara(i, para.tMapMin);
+                continue;
+            }
+            if (args[i] == "--tMapMax")
+            {
+                ArgsObj.GetPara(i, para.tMapMax);
                 continue;
             }
             if (args[i] == "-S" || args[i] == "--strength")
@@ -148,6 +161,11 @@ protected:
             if (args[i] == "-HB" || args[i] == "--HistBins")
             {
                 ArgsObj.GetPara(i, para.HistBins);
+                continue;
+            }
+            if (args[i] == "--debug")
+            {
+                ArgsObj.GetPara(i, para.debug);
                 continue;
             }
             if (args[i][0] == '-')

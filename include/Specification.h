@@ -17,14 +17,16 @@ const int SD_Height_U = 576;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-enum class ResLevel {
+enum class ResLevel
+{
     SD = 0,
     HD,
     UHD,
     Unknown,
 };
 
-enum class ColorPrim {
+enum class ColorPrim
+{
     bt709 = 1,
     Unspecified = 2,
     bt470m = 4,
@@ -35,7 +37,8 @@ enum class ColorPrim {
     bt2020 = 9
 };
 
-enum class TransferChar {
+enum class TransferChar
+{
     bt709 = 1,
     Unspecified = 2,
     bt470m = 4,
@@ -52,7 +55,8 @@ enum class TransferChar {
     bt2020_12 = 15
 };
 
-enum class ColorMatrix {
+enum class ColorMatrix
+{
     GBR = 0,
     bt709 = 1,
     Unspecified = 2,
@@ -374,30 +378,264 @@ inline ColorMatrix ColorMatrix_Default(int Width, int Height)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-// Conversion functions
-template < typename T >
-T TransferChar_gamma2linear(T data, T k0, T phi, T alpha, T power)
+// Conversion classes
+template < typename T = FLType >
+class TransferChar_Conv_Sub
 {
-    return data < k0*phi ? data / phi : pow((data + alpha) / (1 + alpha), 1 / power);
-}
+public:
+    typedef TransferChar_Conv_Sub<T> _Myt;
 
-template < typename T >
-T TransferChar_linear2gamma(T data, T k0, T phi, T alpha, T power)
-{
-    return data < k0 ? phi*data : (1 + alpha)*pow(data, power) - alpha;
-}
+private:
+    // General Parameters
+    T k0 = 1;
+    T k0Mphi;
 
-template < typename T >
-T TransferChar_gamma2linear(T data, T k0, T div)
-{
-    return data == 0 ? 0 : pow(10, (data - 1)*div);
-}
+    // Parameters for gamma function
+    T phi = 1;
+    T recPhi;
+    T alpha = 0;
+    T beta;
+    T recBeta;
+    T power = 1;
+    T recPower;
 
-template < typename T >
-T TransferChar_linear2gamma(T data, T k0, T div)
+    // Parameters for log function
+    T div = 1;
+    T recDiv;
+
+public:
+    TransferChar_Conv_Sub(TransferChar _TransferChar)
+    {
+        TransferChar_Parameter(_TransferChar, k0, phi, alpha, power, div);
+
+        k0Mphi = k0 * phi;
+        recPhi = 1 / phi;
+        beta = alpha + 1;
+        recBeta = 1 / beta;
+        recPower = 1 / power;
+        recDiv = 1 / div;
+    }
+
+    bool operator==(const _Myt &right) const
+    {
+        auto &left = *this;
+
+        if (left.k0 == right.k0 && left.phi == right.phi && left.alpha == right.alpha
+            && left.power == right.power && left.div == right.div)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    T gamma2linear(T x) const
+    {
+        return x < k0Mphi ? x * recPhi : pow((x + alpha) * recBeta, recPower);
+    }
+
+    T linear2gamma(T x) const
+    {
+        return x < k0 ? x * phi : pow(x, power) * beta - alpha;
+    }
+
+    T log2linear(T x) const
+    {
+        return x == 0 ? 0 : pow(10, (x - 1) * div);
+    }
+
+    T linear2log(T x) const
+    {
+        return x < k0 ? 0 : 1 + log10(x) * recDiv;
+    }
+};
+
+
+template < typename T = FLType >
+class TransferChar_Conv
 {
-    return data < k0 ? 0 : 1 + log10(data) / div;
-}
+public:
+    typedef TransferChar_Conv<T> _Myt;
+
+    enum class TransferType
+    {
+        linear = 0,
+        gamma,
+        log
+    };
+
+    enum class ConvType
+    {
+        none = 0,
+        linear2gamma,
+        linear2log,
+        gamma2linear,
+        gamma2gamma,
+        gamma2log,
+        log2linear,
+        log2gamma,
+        log2log
+    };
+
+private:
+    TransferChar_Conv_Sub<T> ToLinear;
+    TransferChar_Conv_Sub<T> LinearTo;
+    TransferType srcType_;
+    TransferType dstType_;
+    ConvType type_;
+
+protected:
+    TransferType TransferTypeDecision(TransferChar _TransferChar) const
+    {
+        if (_TransferChar == TransferChar::linear)
+        {
+            return TransferType::linear;
+        }
+        else if (_TransferChar == TransferChar::log100 || _TransferChar == TransferChar::log316)
+        {
+            return TransferType::log;
+        }
+        else
+        {
+            return TransferType::gamma;
+        }
+    }
+
+    void ConvTypeDecision()
+    {
+        if (ToLinear == LinearTo)
+        {
+            type_ = ConvType::none;
+        }
+        else if (srcType_ == TransferType::linear)
+        {
+            if (dstType_ == TransferType::gamma)
+            {
+                type_ = ConvType::linear2gamma;
+            }
+            else
+            {
+                type_ = ConvType::linear2log;
+            }
+        }
+        else if (srcType_ == TransferType::gamma)
+        {
+            if (dstType_ == TransferType::linear)
+            {
+                type_ = ConvType::gamma2linear;
+            }
+            else if (dstType_ == TransferType::gamma)
+            {
+                type_ = ConvType::gamma2gamma;
+            }
+            else
+            {
+                type_ = ConvType::gamma2log;
+            }
+        }
+        else
+        {
+            if (dstType_ == TransferType::linear)
+            {
+                type_ = ConvType::log2linear;
+            }
+            else if (dstType_ == TransferType::gamma)
+            {
+                type_ = ConvType::log2gamma;
+            }
+            else
+            {
+                type_ = ConvType::log2log;
+            }
+        }
+    }
+
+public:
+    TransferChar_Conv(TransferChar dst, TransferChar src)
+        : ToLinear(src), LinearTo(dst), srcType_(TransferTypeDecision(src)), dstType_(TransferTypeDecision(dst))
+    {
+        ConvTypeDecision();
+    }
+
+    T operator()(T x) const
+    {
+        switch (type_)
+        {
+        case ConvType::none:
+            return none(x);
+        case ConvType::linear2gamma:
+            return linear2gamma(x);
+        case ConvType::linear2log:
+            return linear2log(x);
+        case ConvType::gamma2linear:
+            return gamma2linear(x);
+        case ConvType::gamma2gamma:
+            return gamma2gamma(x);
+        case ConvType::gamma2log:
+            return gamma2log(x);
+        case ConvType::log2linear:
+            return log2linear(x);
+        case ConvType::log2gamma:
+            return log2gamma(x);
+        case ConvType::log2log:
+            return log2log(x);
+        default:
+            return none(x);
+        }
+    }
+
+    T none(T x) const
+    {
+        return x;
+    }
+
+    T linear2gamma(T x) const
+    {
+        return LinearTo.linear2gamma(x);
+    }
+
+    T linear2log(T x) const
+    {
+        return LinearTo.linear2log(x);
+    }
+
+    T gamma2linear(T x) const
+    {
+        return ToLinear.gamma2linear(x);
+    }
+
+    T gamma2gamma(T x) const
+    {
+        return LinearTo.linear2gamma(ToLinear.gamma2linear(x));
+    }
+
+    T gamma2log(T x) const
+    {
+        return LinearTo.linear2log(ToLinear.gamma2linear(x));
+    }
+
+    T log2linear(T x) const
+    {
+        return ToLinear.log2linear(x);
+    }
+
+    T log2gamma(T x) const
+    {
+        return LinearTo.linear2gamma(ToLinear.log2linear(x));
+    }
+
+    T log2log(T x) const
+    {
+        return LinearTo.linear2log(ToLinear.log2linear(x));
+    }
+
+    ConvType Type() const
+    {
+        return type_;
+    }
+};
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,6 @@
 
 
 #include "Gaussian.h"
-#include "Transform.h"
 
 
 Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
@@ -17,7 +16,7 @@ Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
     RecursiveGaussian GFilter(sigma);
     
     GFilter.Filter(data);
-    dst.From(data);
+    RangeConvert(dst, data, true);
     
     return dst;
 }
@@ -142,7 +141,7 @@ void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
     const PCType width = dst.Width();
     const PCType stride = dst.Stride();
     
-    LOOP_V_PPL(height, [&](PCType j)
+    LOOP_V_PPL(height, [&](const PCType j)
     {
         const PCType lower = j * stride;
         const PCType upper = lower + width - 1;
@@ -182,7 +181,7 @@ void RecursiveGaussian::FilterH(Plane_FL &data)
     const PCType width = data.Width();
     const PCType stride = data.Stride();
 
-    LOOP_V_PPL(height, [&](PCType j)
+    LOOP_V_PPL(height, [&](const PCType j)
     {
         const PCType lower = j * stride;
         const PCType upper = lower + width - 1;

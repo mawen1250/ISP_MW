@@ -266,7 +266,7 @@ Frame &NLMeans::process(Frame &dst, const Frame &src, const Frame &ref)
     const Plane &src2 = src.P(2);
 
     Plane_FL refY(ref.P(0), false);
-    refY.YFrom(ref, ColorMatrix::Average);
+    ConvertToY(refY, ref, ColorMatrix::Average);
 
     typedef Block<double, double> BlockT;
 

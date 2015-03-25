@@ -18,6 +18,53 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\Args.h" />
+    <ClInclude Include="..\include\AWB.h" />
+    <ClInclude Include="..\include\Bilateral.h" />
+    <ClInclude Include="..\include\Block.h" />
+    <ClInclude Include="..\include\Block.hpp" />
+    <ClInclude Include="..\include\BM3D.h" />
+    <ClInclude Include="..\include\Convolution.h" />
+    <ClInclude Include="..\include\Format_Conversion.h" />
+    <ClInclude Include="..\include\Gaussian.h" />
+    <ClInclude Include="..\include\Haze_Removal.h" />
+    <ClInclude Include="..\include\Helper.h" />
+    <ClInclude Include="..\include\Highlight_Removal.h" />
+    <ClInclude Include="..\include\Histogram.h" />
+    <ClInclude Include="..\include\Histogram_Equalization.h" />
+    <ClInclude Include="..\include\ImageIO.h" />
+    <ClInclude Include="..\include\Image_Type.h" />
+    <ClInclude Include="..\include\Image_Type.hpp" />
+    <ClInclude Include="..\include\IO.h" />
+    <ClInclude Include="..\include\ISP_MW.h" />
+    <ClInclude Include="..\include\LUT.h" />
+    <ClInclude Include="..\include\LUT.hpp" />
+    <ClInclude Include="..\include\NLMeans.h" />
+    <ClInclude Include="..\include\Retinex.h" />
+    <ClInclude Include="..\include\Specification.h" />
+    <ClInclude Include="..\include\Tone_Mapping.h" />
+    <ClInclude Include="..\include\Transform.h" />
+    <ClInclude Include="..\include\Type.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\AWB.cpp" />
+    <ClCompile Include="..\source\Bilateral.cpp" />
+    <ClCompile Include="..\source\BM3D.cpp" />
+    <ClCompile Include="..\source\Convolution.cpp" />
+    <ClCompile Include="..\source\Format_Conversion.cpp" />
+    <ClCompile Include="..\source\Gaussian.cpp" />
+    <ClCompile Include="..\source\Haze_Removal.cpp" />
+    <ClCompile Include="..\source\Highlight_Removal.cpp" />
+    <ClCompile Include="..\source\Histogram_Equalization.cpp" />
+    <ClCompile Include="..\source\ImageIO.cpp" />
+    <ClCompile Include="..\source\Image_Type.cpp" />
+    <ClCompile Include="..\source\ISP_MW.cpp" />
+    <ClCompile Include="..\source\NLMeans.cpp" />
+    <ClCompile Include="..\source\Retinex.cpp" />
+    <ClCompile Include="..\source\Tone_Mapping.cpp" />
+    <ClCompile Include="..\source\Transform.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8252F2AE-B042-44CC-82A9-6FB4CC727613}</ProjectGuid>
     <RootNamespace>ISP_MW</RootNamespace>
@@ -54,19 +101,19 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="OpenCV.Debug.Win32.props" />
+    <Import Project="..\OpenCV.Debug.Win32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="OpenCV.Debug.x64.props" />
+    <Import Project="..\OpenCV.Debug.x64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="OpenCV.Release.Win32.props" />
+    <Import Project="..\OpenCV.Release.Win32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="OpenCV.Release.x64.props" />
+    <Import Project="..\OpenCV.Release.x64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -82,7 +129,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -93,7 +140,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -109,7 +156,7 @@
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <FloatingPointModel>Precise</FloatingPointModel>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -127,7 +174,7 @@
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <FloatingPointModel>Precise</FloatingPointModel>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerOutput>NoListing</AssemblerOutput>
     </ClCompile>
     <Link>
@@ -136,53 +183,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="include\Args.h" />
-    <ClInclude Include="include\Bilateral.h" />
-    <ClInclude Include="include\Block.h" />
-    <ClInclude Include="include\Block.hpp" />
-    <ClInclude Include="include\BM3D.h" />
-    <ClInclude Include="include\Convolution.h" />
-    <ClInclude Include="include\Format_Conversion.h" />
-    <ClInclude Include="include\Gaussian.h" />
-    <ClInclude Include="include\AWB.h" />
-    <ClInclude Include="include\Haze_Removal.h" />
-    <ClInclude Include="include\Histogram_Equalization.h" />
-    <ClInclude Include="include\Highlight_Removal.h" />
-    <ClInclude Include="include\Histogram.h" />
-    <ClInclude Include="include\ImageIO.h" />
-    <ClInclude Include="include\Image_Type.h" />
-    <ClInclude Include="include\Image_Type.hpp" />
-    <ClInclude Include="include\IO.h" />
-    <ClInclude Include="include\ISP_MW.h" />
-    <ClInclude Include="include\LUT.h" />
-    <ClInclude Include="include\LUT.hpp" />
-    <ClInclude Include="include\NLMeans.h" />
-    <ClInclude Include="include\Retinex.h" />
-    <ClInclude Include="include\Specification.h" />
-    <ClInclude Include="include\Tone_Mapping.h" />
-    <ClInclude Include="include\Transform.h" />
-    <ClInclude Include="include\Type.h" />
-    <ClInclude Include="include\Helper.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="source\AWB.cpp" />
-    <ClCompile Include="source\Bilateral.cpp" />
-    <ClCompile Include="source\BM3D.cpp" />
-    <ClCompile Include="source\Convolution.cpp" />
-    <ClCompile Include="source\Format_Conversion.cpp" />
-    <ClCompile Include="source\Gaussian.cpp" />
-    <ClCompile Include="source\Haze_Removal.cpp" />
-    <ClCompile Include="source\Highlight_Removal.cpp" />
-    <ClCompile Include="source\Histogram_Equalization.cpp" />
-    <ClCompile Include="source\ImageIO.cpp" />
-    <ClCompile Include="source\Image_Type.cpp" />
-    <ClCompile Include="source\ISP_MW.cpp" />
-    <ClCompile Include="source\NLMeans.cpp" />
-    <ClCompile Include="source\Retinex.cpp" />
-    <ClCompile Include="source\Tone_Mapping.cpp" />
-    <ClCompile Include="source\Transform.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

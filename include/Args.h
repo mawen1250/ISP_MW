@@ -38,7 +38,7 @@ public:
     {
         if (++i < argc)
         {
-            para = std::stoi(args[i]);
+            para = static_cast<T>(std::stoi(args[i]));
         }
         else
         {

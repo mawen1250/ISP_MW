@@ -15,135 +15,135 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\Bilateral.h">
+    <ClInclude Include="..\include\Args.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Convolution.h">
+    <ClInclude Include="..\include\AWB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Image_Type.h">
+    <ClInclude Include="..\include\Bilateral.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\ImageIO.h">
+    <ClInclude Include="..\include\Block.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\ISP_MW.h">
+    <ClInclude Include="..\include\Block.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Specification.h">
+    <ClInclude Include="..\include\BM3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Transform.h">
+    <ClInclude Include="..\include\Convolution.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Type.h">
+    <ClInclude Include="..\include\Format_Conversion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Gaussian.h">
+    <ClInclude Include="..\include\Gaussian.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\IO.h">
+    <ClInclude Include="..\include\Haze_Removal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Highlight_Removal.h">
+    <ClInclude Include="..\include\Helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Tone_Mapping.h">
+    <ClInclude Include="..\include\Highlight_Removal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Histogram.h">
+    <ClInclude Include="..\include\Histogram.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Format_Conversion.h">
+    <ClInclude Include="..\include\Histogram_Equalization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\LUT.h">
+    <ClInclude Include="..\include\Image_Type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Retinex.h">
+    <ClInclude Include="..\include\Image_Type.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Args.h">
+    <ClInclude Include="..\include\ImageIO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Histogram_Equalization.h">
+    <ClInclude Include="..\include\IO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Helper.h">
+    <ClInclude Include="..\include\ISP_MW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\AWB.h">
+    <ClInclude Include="..\include\LUT.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Image_Type.hpp">
+    <ClInclude Include="..\include\LUT.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\LUT.hpp">
+    <ClInclude Include="..\include\NLMeans.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Block.h">
+    <ClInclude Include="..\include\Retinex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Block.hpp">
+    <ClInclude Include="..\include\Specification.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\BM3D.h">
+    <ClInclude Include="..\include\Tone_Mapping.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\NLMeans.h">
+    <ClInclude Include="..\include\Transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Haze_Removal.h">
+    <ClInclude Include="..\include\Type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\AWB.cpp">
+    <ClCompile Include="..\source\AWB.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Bilateral.cpp">
+    <ClCompile Include="..\source\Bilateral.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\BM3D.cpp">
+    <ClCompile Include="..\source\BM3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Convolution.cpp">
+    <ClCompile Include="..\source\Convolution.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Format_Conversion.cpp">
+    <ClCompile Include="..\source\Format_Conversion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Gaussian.cpp">
+    <ClCompile Include="..\source\Gaussian.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Haze_Removal.cpp">
+    <ClCompile Include="..\source\Haze_Removal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Highlight_Removal.cpp">
+    <ClCompile Include="..\source\Highlight_Removal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Histogram_Equalization.cpp">
+    <ClCompile Include="..\source\Histogram_Equalization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Image_Type.cpp">
+    <ClCompile Include="..\source\Image_Type.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\ImageIO.cpp">
+    <ClCompile Include="..\source\ImageIO.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\ISP_MW.cpp">
+    <ClCompile Include="..\source\ISP_MW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\NLMeans.cpp">
+    <ClCompile Include="..\source\NLMeans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Retinex.cpp">
+    <ClCompile Include="..\source\Retinex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Tone_Mapping.cpp">
+    <ClCompile Include="..\source\Tone_Mapping.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Transform.cpp">
+    <ClCompile Include="..\source\Transform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

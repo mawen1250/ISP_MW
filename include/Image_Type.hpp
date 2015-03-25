@@ -422,7 +422,26 @@ void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _S
 }
 
 template < typename _Dt1, typename _St1 >
-void YFromRGB(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, ColorMatrix dstColorMatrix = ColorMatrix::Average)
+void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, bool clip = false)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool sameType = typeid(srcType) == typeid(dstType);
+
+    if (sameType && reinterpret_cast<const void *>(dstR.Data()) == reinterpret_cast<const void *>(srcR.Data())
+        && reinterpret_cast<const void *>(dstG.Data()) == reinterpret_cast<const void *>(srcG.Data())
+        && reinterpret_cast<const void *>(dstB.Data()) == reinterpret_cast<const void *>(srcB.Data()))
+    {
+        return;
+    }
+
+    RangeConvert(dstR, dstG, dstB, srcR, srcG, srcB, dstR.Floor(), dstR.Neutral(), dstR.Ceil(), srcR.Floor(), srcR.Neutral(), srcR.Ceil(), clip);
+}
+
+
+template < typename _Dt1, typename _St1 >
+void ConvertToY(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, ColorMatrix dstColorMatrix = ColorMatrix::Average)
 {
     typedef typename _St1::value_type srcType;
     typedef typename _Dt1::value_type dstType;
@@ -492,17 +511,406 @@ void YFromRGB(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, C
 }
 
 template < typename _Dt1, typename _St1 > inline
-void YFrom(_Dt1 &dst, const _St1 &src, ColorMatrix dstColorMatrix = ColorMatrix::Average)
+void ConvertToY(_Dt1 &dst, const _St1 &src, ColorMatrix dstColorMatrix = ColorMatrix::Average)
 {
     if (src.isRGB())
     {
-        YFromRGB(dst, src.R(), src.G(), src.B(), dstColorMatrix);
+        ConvertToY(dst, src.R(), src.G(), src.B(), dstColorMatrix);
     }
     else if (src.isYUV())
     {
-        dst.From(src.Y());
+        RangeConvert(dst, src.Y());
     }
 }
+
+
+template < typename _Dt1 >
+void TransferConvert(_Dt1 &dst, const Plane &src, TransferChar dstTransferChar, TransferChar srcTransferChar)
+{
+    typedef Plane _St1;
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool dstFloat = isFloat(dstType);
+
+    // Transfer Characteristics process
+    dst.SetTransferChar(dstTransferChar);
+    TransferChar_Conv<FLType> ConvFilter(dstTransferChar, srcTransferChar);
+
+    // Skip Transfer conversion if not needed
+    if (ConvFilter.Type() == TransferChar_Conv<FLType>::ConvType::none)
+    {
+        RangeConvert(dst, src, false);
+        return;
+    }
+
+    // Lambda for conversion to/from float point
+    FLType gain, offset;
+
+    srcType sFloor = src.Floor();
+    gain = FLType(1) / src.ValueRange();
+
+    auto ToFloat = [=](srcType i)
+    {
+        return static_cast<FLType>(i - sFloor) * gain;
+    };
+
+    gain = dst.ValueRange();
+    offset = dst.Floor();
+    if (!dstFloat) offset += FLType(0.5);
+
+    auto FloatTo = [=](FLType i)
+    {
+        return static_cast<dstType>(i * gain + offset);
+    };
+
+    // Generate conversion LUT
+    LUT<dstType> _LUT(src);
+
+    if (dstFloat && dst.Floor() == 0 && dst.ValueRange() == 1)
+    {
+        _LUT.Set(src, [&](srcType i)
+        {
+            return static_cast<dstType>(ConvFilter(ToFloat(i)));
+        });
+    }
+    else
+    {
+        _LUT.Set(src, [&](srcType i)
+        {
+            return FloatTo(ConvFilter(ToFloat(i)));
+        });
+    }
+
+    // Conversion
+    dst.ReSize(src.Width(), src.Height());
+    _LUT.Lookup(dst, src);
+}
+
+template < typename _Dt1 >
+void TransferConvert(_Dt1 &dst, const Plane_FL &src, TransferChar dstTransferChar, TransferChar srcTransferChar)
+{
+    typedef Plane_FL _St1;
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool dstFloat = isFloat(dstType);
+
+    // Transfer Characteristics process
+    dst.SetTransferChar(dstTransferChar);
+    TransferChar_Conv<FLType> ConvFilter(dstTransferChar, srcTransferChar);
+
+    // Skip Transfer conversion if not needed
+    if (ConvFilter.Type() == TransferChar_Conv<FLType>::ConvType::none)
+    {
+        RangeConvert(dst, src, false);
+        return;
+    }
+
+    // Lambda for conversion to/from float point
+    FLType gain, offset;
+
+    gain = FLType(1) / src.ValueRange();
+    offset = -src.Floor() * gain;
+
+    auto ToFloat = [=](srcType i)
+    {
+        return static_cast<FLType>(i * gain + offset);
+    };
+
+    gain = dst.ValueRange();
+    offset = dst.Floor();
+    if (!dstFloat) offset += FLType(0.5);
+
+    auto FloatTo = [=](FLType i)
+    {
+        return static_cast<dstType>(i * gain + offset);
+    };
+
+    // Conversion
+    dst.ReSize(src.Width(), src.Height());
+
+    if (src.Floor() == 0 && src.ValueRange() == 1)
+    {
+        if (dstFloat && dst.Floor() == 0 && dst.ValueRange() == 1)
+        {
+            TRANSFORM_PPL(dst, src, [&](srcType i)
+            {
+                return static_cast<dstType>(ConvFilter(static_cast<FLType>(i)));
+            });
+        }
+        else
+        {
+            TRANSFORM_PPL(dst, src, [&](srcType i)
+            {
+                return FloatTo(ConvFilter(static_cast<FLType>(i)));
+            });
+        }
+    }
+    else
+    {
+        if (dstFloat && dst.Floor() == 0 && dst.ValueRange() == 1)
+        {
+            TRANSFORM_PPL(dst, src, [&](srcType i)
+            {
+                return static_cast<dstType>(ConvFilter(ToFloat(i)));
+            });
+        }
+        else
+        {
+            TRANSFORM_PPL(dst, src, [&](srcType i)
+            {
+                return FloatTo(ConvFilter(ToFloat(i)));
+            });
+        }
+    }
+}
+
+template < typename _Dt1, typename _St1 > inline
+void TransferConvert(_Dt1 &dst, const _St1 &src, TransferChar dstTransferChar)
+{
+    TransferConvert(dst, src, dstTransferChar, src.GetTransferChar());
+}
+
+template < typename _Dt1, typename _St1 > inline
+void TransferConvert(_Dt1 &dst, const _St1 &src)
+{
+    TransferConvert(dst, src, dst.GetTransferChar(), src.GetTransferChar());
+}
+
+template < typename _Dt1 >
+void TransferConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const Plane &srcR, const Plane &srcG, const Plane &srcB, TransferChar dstTransferChar, TransferChar srcTransferChar)
+{
+    typedef Plane _St1;
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool dstFloat = isFloat(dstType);
+
+    // Transfer Characteristics process
+    dstR.SetTransferChar(dstTransferChar);
+    dstG.SetTransferChar(dstTransferChar);
+    dstB.SetTransferChar(dstTransferChar);
+    TransferChar_Conv<FLType> ConvFilter(dstTransferChar, srcTransferChar);
+
+    // Skip Transfer conversion if not needed
+    if (ConvFilter.Type() == TransferChar_Conv<FLType>::ConvType::none)
+    {
+        RangeConvert(dstR, dstG, dstB, srcR, srcG, srcB, false);
+        return;
+    }
+
+    // Lambda for conversion to/from float point
+    FLType gain, offset;
+
+    srcType sFloor = srcR.Floor();
+    gain = FLType(1) / srcR.ValueRange();
+
+    auto ToFloat = [=](srcType i)
+    {
+        return static_cast<FLType>(i - sFloor) * gain;
+    };
+
+    gain = dstR.ValueRange();
+    offset = dstR.Floor();
+    if (!dstFloat) offset += FLType(0.5);
+
+    auto FloatTo = [=](FLType i)
+    {
+        return static_cast<dstType>(i * gain + offset);
+    };
+
+    // Generate conversion LUT
+    LUT<dstType> _LUT(srcR);
+
+    if (dstFloat && dstR.Floor() == 0 && dstR.ValueRange() == 1)
+    {
+        _LUT.Set(srcR, [&](srcType i)
+        {
+            return static_cast<dstType>(ConvFilter(ToFloat(i)));
+        });
+    }
+    else
+    {
+        _LUT.Set(srcR, [&](srcType i)
+        {
+            return FloatTo(ConvFilter(ToFloat(i)));
+        });
+    }
+
+    // Conversion
+    dstR.ReSize(srcR.Width(), srcR.Height());
+    dstG.ReSize(srcG.Width(), srcG.Height());
+    dstB.ReSize(srcB.Width(), srcB.Height());
+    _LUT.Lookup(dstR, srcR);
+    _LUT.Lookup(dstG, srcG);
+    _LUT.Lookup(dstB, srcB);
+}
+
+template < typename _Dt1 >
+void TransferConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const Plane_FL &srcR, const Plane_FL &srcG, const Plane_FL &srcB, TransferChar dstTransferChar, TransferChar srcTransferChar)
+{
+    typedef Plane_FL _St1;
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool dstFloat = isFloat(dstType);
+
+    // Transfer Characteristics process
+    dstR.SetTransferChar(dstTransferChar);
+    dstG.SetTransferChar(dstTransferChar);
+    dstB.SetTransferChar(dstTransferChar);
+    TransferChar_Conv<FLType> ConvFilter(dstTransferChar, srcTransferChar);
+
+    // Skip Transfer conversion if not needed
+    if (ConvFilter.Type() == TransferChar_Conv<FLType>::ConvType::none)
+    {
+        RangeConvert(dstR, dstG, dstB, srcR, srcG, srcB, false);
+        return;
+    }
+
+    // Lambda for conversion to/from float point
+    FLType gain, offset;
+
+    gain = FLType(1) / srcR.ValueRange();
+    offset = -srcR.Floor() * gain;
+
+    auto ToFloat = [=](srcType i)
+    {
+        return static_cast<FLType>(i * gain + offset);
+    };
+
+    gain = dstR.ValueRange();
+    offset = dstR.Floor();
+    if (!dstFloat) offset += FLType(0.5);
+
+    auto FloatTo = [=](FLType i)
+    {
+        return static_cast<dstType>(i * gain + offset);
+    };
+
+    // Conversion
+    dstR.ReSize(srcR.Width(), srcR.Height());
+    dstG.ReSize(srcG.Width(), srcG.Height());
+    dstB.ReSize(srcB.Width(), srcB.Height());
+
+    const PCType height = dstR.Height();
+    const PCType width = dstR.Width();
+    const PCType stride = dstR.Stride();
+
+    if (srcR.Floor() == 0 && srcR.ValueRange() == 1)
+    {
+        if (dstFloat && dstR.Floor() == 0 && dstR.ValueRange() == 1)
+        {
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
+            {
+                dstR[i] = static_cast<dstType>(ConvFilter(static_cast<FLType>(srcR[i])));
+                dstG[i] = static_cast<dstType>(ConvFilter(static_cast<FLType>(srcG[i])));
+                dstB[i] = static_cast<dstType>(ConvFilter(static_cast<FLType>(srcB[i])));
+            });
+        }
+        else
+        {
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
+            {
+                dstR[i] = FloatTo(ConvFilter(static_cast<FLType>(srcR[i])));
+                dstG[i] = FloatTo(ConvFilter(static_cast<FLType>(srcG[i])));
+                dstB[i] = FloatTo(ConvFilter(static_cast<FLType>(srcB[i])));
+            });
+        }
+    }
+    else
+    {
+        if (dstFloat && dstR.Floor() == 0 && dstR.ValueRange() == 1)
+        {
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
+            {
+                dstR[i] = static_cast<dstType>(ConvFilter(ToFloat(srcR[i])));
+                dstG[i] = static_cast<dstType>(ConvFilter(ToFloat(srcG[i])));
+                dstB[i] = static_cast<dstType>(ConvFilter(ToFloat(srcB[i])));
+            });
+        }
+        else
+        {
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
+            {
+                dstR[i] = FloatTo(ConvFilter(ToFloat(srcR[i])));
+                dstG[i] = FloatTo(ConvFilter(ToFloat(srcG[i])));
+                dstB[i] = FloatTo(ConvFilter(ToFloat(srcB[i])));
+            });
+        }
+    }
+}
+
+template < typename _Dt1, typename _St1 > inline
+void TransferConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, TransferChar dstTransferChar)
+{
+    TransferConvert(dstR, dstG, dstB, srcR, srcG, srcB, dstTransferChar, srcR.GetTransferChar());
+}
+
+template < typename _Dt1, typename _St1 > inline
+void TransferConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB)
+{
+    TransferConvert(dstR, dstG, dstB, srcR, srcG, srcB, dstR.GetTransferChar(), srcR.GetTransferChar());
+}
+
+inline void TransferConvert(Frame &dst, const Frame &src, TransferChar dstTransferChar, TransferChar srcTransferChar)
+{
+    const char *FunctionName = "TransferConvert";
+    if (dst.GetPixelType() != src.GetPixelType())
+    {
+        std::cerr << FunctionName << ": \"PixelType\" of dst and src should be the same!\n";
+        exit(EXIT_FAILURE);
+    }
+
+    dst.SetTransferChar(dstTransferChar);
+
+    if (dst.isRGB())
+    {
+        if (dst.GetPixelType() == PixelType::RGB)
+        {
+            TransferConvert(dst.R(), dst.G(), dst.B(), src.R(), src.G(), src.B(), dstTransferChar, srcTransferChar);
+        }
+        else
+        {
+            if (dst.GetPixelType() == PixelType::R)
+            {
+                TransferConvert(dst.R(), src.R(), dstTransferChar, srcTransferChar);
+            }
+
+            if (dst.GetPixelType() == PixelType::G)
+            {
+                TransferConvert(dst.G(), src.G(), dstTransferChar, srcTransferChar);
+            }
+
+            if (dst.GetPixelType() == PixelType::B)
+            {
+                TransferConvert(dst.B(), src.B(), dstTransferChar, srcTransferChar);
+            }
+        }
+    }
+    else if (dst.isYUV())
+    {
+        if (dst.GetPixelType() != PixelType::U && dst.GetPixelType() != PixelType::V)
+        {
+            TransferConvert(dst.Y(), src.Y(), dstTransferChar, srcTransferChar);
+        }
+
+        if (dst.GetPixelType() != PixelType::Y)
+        {
+            if (dst.GetPixelType() != PixelType::V)
+            {
+                dst.U() = src.U();
+            }
+
+            if (dst.GetPixelType() != PixelType::U)
+            {
+                dst.V() = src.V();
+            }
+        }
+    }
+}
+
 
 template < typename _Dt1, typename _St1 >
 void SimplestColorBalance(_Dt1 &dst, const _St1 &src, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024)
@@ -540,6 +948,13 @@ void SimplestColorBalance(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, 
     RangeConvert(dstR, dstG, dstB, srcR, srcG, srcB,
         dstR.Floor(), dstR.Neutral(), dstR.Ceil(), min, min, max,
         lower_thr > 0 || upper_thr > 0);
+}
+
+template < typename _St1 > inline
+void SimplestColorBalance(Frame &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
+double lower_thr = 0., double upper_thr = 0., int HistBins = 1024)
+{
+    SimplestColorBalance(dst.R(), dst.G(), dst.B(), srcR, srcG, srcB, lower_thr, upper_thr, HistBins);
 }
 
 

@@ -66,7 +66,7 @@ int main()
         });
     }*/
 #elif defined(Test_Write) // Test_Other
-    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150126_131557.jpg");
+    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
     Frame PFrame;
 #if defined(Convolution_)
     PFrame = Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
@@ -105,7 +105,7 @@ int main()
 #else
     PFrame = IFrame;
 #endif
-    ImageWriter(PFrame, "D:\\Test Images\\Haze\\20150126_131557.0.png");
+    ImageWriter(PFrame, "D:\\Test Images\\Haze\\20150202_132636.0.png");
     system("pause");
 #else // Test_Write
     const int Loop = 50;
