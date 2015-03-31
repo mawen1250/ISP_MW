@@ -18,9 +18,9 @@ const struct Retinex_Para
 
     double chroma_protect = 1.2;
 
-    double restore = 125.0;
+    FLType restore = FLType(125.0);
 
-    double dynamic = 10.0;
+    FLType dynamic = FLType(10.0);
 
     Retinex_Para() : sigmaVector({ 25.0, 80.0, 250.0 }) {}
 } Retinex_Default;

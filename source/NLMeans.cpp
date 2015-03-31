@@ -1,4 +1,5 @@
 #include "NLMeans.h"
+#include "Conversion.hpp"
 
 
 // Get the filtered block through weighted averaging of matched blocks in Plane src

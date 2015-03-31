@@ -202,7 +202,7 @@ void AWB2::kernel()
     EdgeDetect(dstG, srcG, EdgeKernel::Sobel);
     EdgeDetect(dstB, srcB, EdgeKernel::Sobel);
 
-    sum(dst, 0.50, 0.99);
+    sum(dst, FLType(0.50), FLType(0.99));
     
     Plane srcY = GetIntensity(src);
     Plane edgeY = EdgeDetect(srcY, EdgeKernel::Sobel);

@@ -11,10 +11,10 @@ const struct Haze_Removal_Para
 {
     TransferChar TransferChar_ = TransferChar::bt709;
     double tMap_thr = 0.001;
-    FLType ALmax = 1;
-    FLType tMapMin = 0.1;
-    FLType tMapMax = 1.2;
-    FLType strength = 0.8;
+    FLType ALmax = FLType(1);
+    FLType tMapMin = FLType(0.1);
+    FLType tMapMax = FLType(1.2);
+    FLType strength = FLType(0.8);
     int ppmode = 3;
     double lower_thr = 0.05;
     double upper_thr = 0.03;

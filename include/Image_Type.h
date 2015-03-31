@@ -164,7 +164,7 @@ public:
     pointer data() { return Data_; }
     const_pointer data() const { return Data_; }
     value_type value(PCType i) { return Data_[i]; }
-    const value_type value(PCType i) const { return Data_[i]; }
+    value_type value(PCType i) const { return Data_[i]; }
 
     PCType Height() const { return Height_; }
     PCType Width() const { return Width_; }
@@ -188,7 +188,6 @@ public:
     FLType Mean() const;
     FLType Variance(FLType Mean) const;
     FLType Variance() const { return Variance(Mean()); }
-    void ValidRange(reference min, reference max, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false) const;
 
     _Myt &Width(PCType _Width) { return ReSize(_Width, Height()); }
     _Myt &Height(PCType _Height) { return ReSize(Width(), _Height); }
@@ -199,7 +198,7 @@ public:
     _Myt &SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
 
     FLType GetFL(value_type input) const { return static_cast<FLType>(input - Neutral()) / ValueRange(); }
-    FLType GetFL_PCChroma(value_type input) const { return Clip(static_cast<FLType>(input - Neutral()) / ValueRange(), -0.5, 0.5); }
+    FLType GetFL_PCChroma(value_type input) const { return Clip(static_cast<FLType>(input - Neutral()) / ValueRange(), FLType(-0.5), FLType(0.5)); }
     value_type GetD(FLType input) const { return static_cast<value_type>(input * ValueRange() + Neutral_ + FLType(0.5)); }
     value_type GetD_PCChroma(FLType input) const { return static_cast<value_type>(input * ValueRange() + Neutral_ + FLType(0.499999)); }
 
@@ -268,7 +267,6 @@ public:
     Plane_FL(_Myt &&src); // Move constructor
     explicit Plane_FL(const Plane &src, value_type range = 1.); // Convertor/Constructor from Plane
     Plane_FL(const Plane &src, bool Init, value_type Value = 0, value_type range = 1.);
-    template < typename _St1 > Plane_FL(const _St1 &src, TransferChar dstTransferChar);
 
     ~Plane_FL(); // Destructor
 
@@ -289,7 +287,7 @@ public:
     pointer data() { return Data_; }
     const_pointer data() const { return Data_; }
     value_type value(PCType i) { return Data_[i]; }
-    const value_type value(PCType i) const { return Data_[i]; }
+    value_type value(PCType i) const { return Data_[i]; }
 
     PCType Height() const { return Height_; }
     PCType Width() const { return Width_; }
@@ -312,7 +310,6 @@ public:
     value_type Mean() const;
     value_type Variance(value_type Mean) const;
     value_type Variance() const { return Variance(Mean()); }
-    void ValidRange(reference min, reference max, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false) const;
 
     _Myt &Width(PCType _Width) { return ReSize(_Width, Height()); }
     _Myt &Height(PCType _Height) { return ReSize(Width(), _Height); }
@@ -453,20 +450,12 @@ public:
 // Inline functions for class Plane
 inline bool Plane::isChroma() const { return ::isChroma(Floor(), Neutral()); }
 inline bool Plane::isPCChroma() const { return ::isPCChroma(Floor(), Neutral(), Ceil()); }
-inline void Plane::ValidRange(reference min, reference max, double lower_thr, double upper_thr, int HistBins, bool protect) const
-{
-    ::ValidRange(*this, min, max, lower_thr, upper_thr, HistBins, protect);
-}
 inline void Plane::ReSetChroma(bool Chroma) { ::ReSetChroma(Floor_, Neutral_, Ceil_, Chroma); }
 
 
 // Inline functions for class Plane_FL
 inline bool Plane_FL::isChroma() const { return ::isChroma(Floor(), Neutral()); }
 inline bool Plane_FL::isPCChroma() const { return ::isPCChroma(Floor(), Neutral(), Ceil()); }
-inline void Plane_FL::ValidRange(reference min, reference max, double lower_thr, double upper_thr, int HistBins, bool protect) const
-{
-    ::ValidRange(*this, min, max, lower_thr, upper_thr, HistBins, protect);
-}
 inline void Plane_FL::ReSetChroma(bool Chroma) { ::ReSetChroma(Floor_, Neutral_, Ceil_, Chroma); }
 
 
@@ -529,18 +518,10 @@ void Plane::convolute(const _St1 &src, _Fn1 _Func)
 
 
 // Template functions for class Plane_FL
-template < typename _St1 > inline
-Plane_FL::Plane_FL(const _St1 &src, TransferChar dstTransferChar)
-    : _Myt(src, false)
-{
-    TransferConvert(*this, src, dstTransferChar);
-}
-
-
 template < typename T > inline
 Plane_FL::value_type Plane_FL::Quantize(T input) const
 {
-    return input <= Floor_ ? Floor_ : input >= Ceil_ ? Ceil_ : input;
+    return input <= Floor_ ? Floor_ : input >= Ceil_ ? Ceil_ : static_cast<value_type>(input);
 }
 
 

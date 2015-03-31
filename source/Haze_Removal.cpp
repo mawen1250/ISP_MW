@@ -2,6 +2,7 @@
 
 
 #include "Haze_Removal.h"
+#include "Conversion.hpp"
 #include "Gaussian.h"
 
 
@@ -125,7 +126,7 @@ void Haze_Removal::StoreResult(Frame &dst)
     }
     else if (para.ppmode == 1) // Canonical range scaling
     {
-        const FLType min = -0.10; // Experimental lower limit
+        const FLType min = FLType(- 0.10); // Experimental lower limit
         const FLType max = (AL_R + AL_G + AL_B) / FLType(3); // Take average Global Atmospheric Light as upper limit
         RangeConvert(dstR, dstG, dstB, dataR, dataG, dataB,
             dstR.Floor(), dstR.Neutral(), dstR.Ceil(), min, min, max, true);

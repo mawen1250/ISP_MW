@@ -1,6 +1,5 @@
 ﻿#include <cmath>
 #include "Highlight_Removal.h"
-#include "Helper.h"
 #include "Bilateral.h"
 
 
@@ -48,9 +47,10 @@ Frame &Specular_Highlight_Removal(Frame &dst, const Frame &src, const double thr
         B = srcB[i];
 
         RGBsum = (FLType)(R + G + B);
+
         if (RGBsum == 0)
         {
-            sigma_R = sigma_G = sigma_B = 1. / 3.;
+            sigma_R = sigma_G = sigma_B = FLType(1. / 3.);
         }
         else
         {

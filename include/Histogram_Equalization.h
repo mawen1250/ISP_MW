@@ -5,6 +5,7 @@
 #include "IO.h"
 #include "Image_Type.h"
 #include "Histogram.h"
+#include "LUT.h"
 
 
 const struct HE_Para
@@ -14,8 +15,20 @@ const struct HE_Para
 } HE_Default;
 
 
-Plane & Histogram_Equalization(Plane &dst, const Plane &src, FLType strength = HE_Default.strength);
-Frame & Histogram_Equalization(Frame &dst, const Frame &src, FLType strength = HE_Default.strength, bool separate = HE_Default.separate);
+LUT<DType> Equalization_LUT(const Histogram<DType> &hist, const Plane &dst, const Plane &src, FLType strength = 1.0);
+inline LUT<DType> Equalization_LUT(const Histogram<DType> &hist, const Plane &src, FLType strength = 1.0)
+{
+    return Equalization_LUT(hist, src, src, strength);
+}
+
+LUT<FLType> Equalization_LUT_Gain(const Histogram<DType> &hist, const Plane &dst, const Plane &src, FLType strength = 1.0);
+inline LUT<FLType> Equalization_LUT_Gain(const Histogram<DType> &hist, const Plane &src, FLType strength = 1.0)
+{
+    return Equalization_LUT_Gain(hist, src, src, strength);
+}
+
+Plane &Histogram_Equalization(Plane &dst, const Plane &src, FLType strength = HE_Default.strength);
+Frame &Histogram_Equalization(Frame &dst, const Frame &src, FLType strength = HE_Default.strength, bool separate = HE_Default.separate);
 
 inline Plane Histogram_Equalization(const Plane &src, FLType strength = HE_Default.strength)
 {

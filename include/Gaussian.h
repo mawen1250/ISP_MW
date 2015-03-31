@@ -81,6 +81,7 @@ public:
 
 
 // Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
+// For 32bit float type, the maximum sigma with valid result is about 120.
 class RecursiveGaussian
 {
 public:
@@ -93,7 +94,7 @@ protected:
     FLType B3;
 
 public:
-    _Myt(double sigma)
+    _Myt(long double sigma)
     {
         GetPara(sigma);
     }
@@ -105,7 +106,7 @@ public:
         return dst;
     }
 
-    void GetPara(double sigma);
+    void GetPara(long double sigma);
 
     void FilterV(Plane_FL &dst, const Plane_FL &src);
     void FilterV(Plane_FL &data);

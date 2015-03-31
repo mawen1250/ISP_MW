@@ -1,7 +1,6 @@
 #include <cmath>
 #include "Tone_Mapping.h"
-#include "Helper.h"
-#include "Specification.h"
+#include "Conversion.hpp"
 
 
 Frame &Adaptive_Global_Tone_Mapping(Frame &dst, const Frame &src)
@@ -82,20 +81,20 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane &src)
     {
         if (H0 >= thr0hhh) // Dark scene 3
         {
-            Alpha = 1.0;
-            Beta = -4.5;
+            Alpha = FLType(1.0);
+            Beta = FLType(-4.5);
             std::cout << "Mode 1-3\n";
         }
         else if (H0 >= thr0hh) // Dark scene 2
         {
-            Alpha = 0.8;
-            Beta = -4.0;
+            Alpha = FLType(0.8);
+            Beta = FLType(-4.0);
             std::cout << "Mode 1-2\n";
         }
         else // Dark scene 1
         {
-            Alpha = 0.6;
-            Beta = -3.5;
+            Alpha = FLType(0.6);
+            Beta = FLType(-3.5);
             std::cout << "Mode 1-1\n";
         }
     }
@@ -103,20 +102,20 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane &src)
     {
         if (H67 >= thr67hhh) // Bright scene 3
         {
-            Alpha = 1.0;
-            Beta = 4.5;
+            Alpha = FLType(1.0);
+            Beta = FLType(4.5);
             std::cout << "Mode 4-3\n";
         }
         else if (H67 >= thr67hh) // Bright scene 2
         {
-            Alpha = 0.9;
-            Beta = 4.0;
+            Alpha = FLType(0.9);
+            Beta = FLType(4.0);
             std::cout << "Mode 4-2\n";
         }
         else // Bright scene 1
         {
-            Alpha = 0.8;
-            Beta = 3.5;
+            Alpha = FLType(0.8);
+            Beta = FLType(3.5);
             std::cout << "Mode 4-1\n";
         }
     }
@@ -124,20 +123,20 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane &src)
     {
         if (H01 < thr01l && H7 < thr7l) // Little dark area - contrast enhancement
         {
-            Alpha = 0.4;
-            Beta = 3;
+            Alpha = FLType(0.4);
+            Beta = FLType(3);
             std::cout << "Mode 2-1\n";
         }
         else if (H01 >= thr01h && H67 < thr67l) // Mainly dark area and no bright light
         {
-            Alpha = 0.55;
-            Beta = -3;
+            Alpha = FLType(0.55);
+            Beta = FLType(-3);
             std::cout << "Mode 2-3\n";
         }
         else
         {
-            Alpha = 0.4;
-            Beta = -3;
+            Alpha = FLType(0.4);
+            Beta = FLType(-3);
             std::cout << "Mode 2-2\n";
         }
     }
@@ -145,39 +144,39 @@ LUT<FLType> Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(const Plane &src)
     {
         if (H67 >= thr67hh) // Bright scene 2
         {
-            Alpha = 0.35;
-            Beta = -5;
+            Alpha = FLType(0.35);
+            Beta = FLType(-5);
             std::cout << "Mode 3-5\n";
         }
         else if (H67 >= thr67h) // Bright scene 1
         {
-            Alpha = 0.35;
-            Beta = -4.5;
+            Alpha = FLType(0.35);
+            Beta = FLType(-4.5);
             std::cout << "Mode 3-4\n";
         }
         else if (H01 >= thr01hh) // Dark scene 2
         {
-            Alpha = 0.4;
-            Beta = -5;
+            Alpha = FLType(0.4);
+            Beta = FLType(-5);
             std::cout << "Mode 3-1\n";
         }
         else if (H01 >= thr01h) // Dark scene 1
         {
-            Alpha = 0.4;
-            Beta = -4.5;
+            Alpha = FLType(0.4);
+            Beta = FLType(-4.5);
             std::cout << "Mode 3-2\n";
         }
         else // Normal
         {
-            Alpha = 0.375;
-            Beta = -4.5;
+            Alpha = FLType(0.375);
+            Beta = FLType(-4.5);
             std::cout << "Mode 3-3\n";
         }
     }
     else
     {
-        Alpha = 0.5;
-        Beta = 0;
+        Alpha = FLType(0.5);
+        Beta = FLType(0);
         std::cout << "Mode 0\n";
     }
 

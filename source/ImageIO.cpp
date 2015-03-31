@@ -58,7 +58,7 @@ Frame ImageReader(const std::string &filename, const FCType FrameNum, const DTyp
 
             for (k = 0; k < iLevels; k++)
             {
-                ConvertLUT[k] = R.GetD(static_cast<FLType>(k) / 255.);
+                ConvertLUT[k] = R.GetD(static_cast<FLType>(k) / FLType(255));
             }
 
             for (i = 0, j = 0; i < pcount; i++)

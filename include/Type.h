@@ -19,13 +19,17 @@ typedef   signed long long sint64;
 typedef sint32 FCType;
 typedef sint32 PCType;
 typedef uint32 DType;
+#ifdef _CUDA_1_1_
+typedef float FLType;
+#else
 typedef double FLType;
+#endif
 
 
-const DType DType_MAX = ULONG_MAX;
-const DType DType_MIN = 0;
-const FLType FLType_MAX = sizeof(FLType) < 8 ? FLT_MAX : DBL_MAX;
-const FLType FLType_MIN = sizeof(FLType) < 8 ? FLT_MIN : DBL_MIN;
+const DType DType_MAX = DType(sizeof(FLType) <= 1 ? _UI8_MAX : sizeof(FLType) <= 2 ? _UI16_MAX : sizeof(FLType) <= 4 ? _UI32_MAX : _UI64_MAX);
+const DType DType_MIN = DType(0);
+const FLType FLType_MAX = FLType(sizeof(FLType) <= 4 ? FLT_MAX : sizeof(FLType) <= 8 ? DBL_MAX : LDBL_MAX);
+const FLType FLType_MIN = FLType(sizeof(FLType) <= 4 ? FLT_MIN : sizeof(FLType) <= 8 ? DBL_MIN : LDBL_MAX);
 
 
 enum class STAT {

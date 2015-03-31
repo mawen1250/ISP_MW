@@ -3,18 +3,18 @@
 
 
 // Template functions of template class LUT
-template < typename T > inline
-LUT<T>::LUT(const _Myt& src)
-: Levels_(src.Levels_)
+template < typename T >
+LUT<T>::LUT(const _Myt &src)
+    : Levels_(src.Levels_)
 {
     Table_ = new T[Levels_];
 
-    memcpy(Table_, src.Table_, sizeof(T)*Levels_);
+    memcpy(Table_, src.Table_, sizeof(T) * Levels_);
 }
 
-template < typename T > inline
-LUT<T>::LUT(_Myt&& src)
-: Levels_(src.Levels_)
+template < typename T >
+LUT<T>::LUT(_Myt &&src)
+    : Levels_(src.Levels_)
 {
     Table_ = src.Table_;
 
@@ -22,28 +22,28 @@ LUT<T>::LUT(_Myt&& src)
     src.Table_ = nullptr;
 }
 
-template < typename T > inline
+template < typename T >
 LUT<T>::LUT(LevelType Levels)
-: Levels_(Levels)
+    : Levels_(Levels)
 {
     Table_ = new T[Levels_];
 }
 
-template < typename T > inline
-LUT<T>::LUT(const Plane& src)
-: Levels_(src.ValueRange() + 1)
+template < typename T >
+LUT<T>::LUT(const Plane &src)
+    : Levels_(src.ValueRange() + 1)
 {
     Table_ = new T[Levels_];
 }
 
-template < typename T > inline
+template < typename T >
 LUT<T>::~LUT()
 {
     delete[] Table_;
 }
 
-template < typename T > inline
-LUT<T>& LUT<T>::operator=(const _Myt& src)
+template < typename T >
+LUT<T> &LUT<T>::operator=(const _Myt &src)
 {
     if (this == &src)
     {
@@ -55,13 +55,13 @@ LUT<T>& LUT<T>::operator=(const _Myt& src)
     delete[] Table_;
     Table_ = new T[Levels_];
 
-    memcpy(Table_, src.Table_, sizeof(T)*Levels_);
+    memcpy(Table_, src.Table_, sizeof(T) * Levels_);
 
     return *this;
 }
 
-template < typename T > inline
-LUT<T>& LUT<T>::operator=(_Myt&& src)
+template < typename T >
+LUT<T> &LUT<T>::operator=(_Myt &&src)
 {
     if (this == &src)
     {
@@ -80,19 +80,27 @@ LUT<T>& LUT<T>::operator=(_Myt&& src)
 }
 
 
-template < typename T > inline
-LUT<T>& LUT<T>::Set(const Plane& src, LevelType i, T o)
+template < typename T >
+void LUT<T>::Set(const Plane &src, LevelType i, T o)
 {
-    if (i >= src.Floor() && i <= src.Ceil()) Table_[i - src.Floor()] = o;
-    return *this;
+    if (i >= src.Floor() && i <= src.Ceil())
+    {
+        Table_[i - src.Floor()] = o;
+    }
+    else
+    {
+        const char *FunctionName = "LUT<T>::Set";
+        std::cerr << FunctionName << ": \"i\" out of range!\n";
+        exit(EXIT_FAILURE);
+    }
 }
 
-template < typename T > inline
-LUT<T>& LUT<T>::SetRange(const Plane& src, T o, LevelType start, LevelType end)
+template < typename T >
+void LUT<T>::SetRange(const Plane &src, T o, LevelType start, LevelType end)
 {
-    sint64 length = static_cast<sint64>(end)-static_cast<sint64>(start)+1;
+    sint64 length = static_cast<sint64>(end) - static_cast<sint64>(start) + 1;
     start = Max(LevelType(0), start - src.Floor());
-    end = start + static_cast<LevelType>(length)-1;
+    end = start + static_cast<LevelType>(length) - 1;
 
     if (length >= 1 && end < Levels_)
     {
@@ -101,38 +109,72 @@ LUT<T>& LUT<T>::SetRange(const Plane& src, T o, LevelType start, LevelType end)
             Table_[i] = o;
         }
     }
-
-    return *this;
 }
 
 template < typename T >
-template < typename _St1, typename _Fn1 > inline
-LUT<T>& LUT<T>::Set(const _St1 src, _Fn1 _Func)
+template < typename _St1, typename _Fn1 >
+void LUT<T>::Set(const _St1 &src, _Fn1 &&_Func)
 {
-    for (_St1::value_type i = src.Floor(); i <= src.Ceil(); ++i)
+    for (auto i = src.Floor(); i <= src.Ceil(); ++i)
     {
         Table_[i - src.Floor()] = _Func(i);
     }
-
-    return *this;
 }
 
 
 template < typename T >
-template < typename _Dt1, typename _St1, typename _Rt1 > inline
-const LUT<T>& LUT<T>::Lookup_Gain(_Dt1& dst, const _St1& src, const _Rt1& ref) const
+template < typename _Dt1 >
+void LUT<T>::Lookup(_Dt1 &dst, const Plane &src) const
 {
-    dst.transform(src, ref, [&](_St1::value_type s, _Rt1::value_type r)
-    {
-        return dst.Quantize((s - src.Neutral()) * Table_[r - ref.Floor()] + dst.Neutral());
-    });
+    typedef Plane _St1;
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
 
-    return *this;
+    TRANSFORM_PPL(dst, src, [&](srcType x)
+    {
+        return static_cast<dstType>(Table_[x - src.Floor()]);
+    });
 }
 
 template < typename T >
-template < typename _Rt1 > inline
-const LUT<T>& LUT<T>::Lookup_Gain(Frame& dst, const Frame& src, const _Rt1& ref) const
+template < typename _Dt1 >
+void LUT<T>::Lookup(_Dt1 &dst, const Plane_FL &src) const
+{
+    typedef Plane_FL _St1;
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool dstFloat = isFloat(dstType);
+
+    const LevelType LevelRange = Levels_ - 1;
+    const FLType scale = static_cast<FLType>(LevelRange) / src.ValueRange();
+    const FLType offset = dstFloat ? FLType(0) : FLType(0.5);
+
+    TRANSFORM_PPL(dst, src, [&](srcType x)
+    {
+        FLType value = static_cast<FLType>(x - src.Floor()) * scale;
+        LevelType _lower = static_cast<LevelType>(value);
+        if (_lower >= LevelRange) _lower = LevelRange - 1;
+        LevelType _upper = _lower + 1;
+        return static_cast<dstType>(Table_[_lower] * (_upper - value) + Table_[_upper] * (value - _lower) + offset);
+    });
+}
+
+
+template < typename T >
+template < typename _Dt1, typename _St1, typename _Rt1 >
+void LUT<T>::Lookup_Gain(_Dt1 &dst, const _St1 &src, const _Rt1 &ref) const
+{
+    TRANSFORM_PPL(dst, src, ref, [&](typename _St1::value_type s, typename _Rt1::value_type r)
+    {
+        return Clip(static_cast<typename _Dt1::value_type>((s - src.Neutral()) * Table_[r - ref.Floor()] + dst.Neutral()),
+            dst.Floor(), dst.Ceil());
+    });
+}
+
+template < typename T >
+template < typename _Rt1 >
+void LUT<T>::Lookup_Gain(Frame &dst, const Frame &src, const _Rt1 &ref) const
 {
     PCType i, j, upper;
     PCType height = ref.Height();
@@ -144,17 +186,17 @@ const LUT<T>& LUT<T>::Lookup_Gain(Frame& dst, const Frame& src, const _Rt1& ref)
 
     if (src.isYUV())
     {
-        auto& srcY = src.Y();
-        auto& srcU = src.U();
-        auto& srcV = src.V();
-        auto& dstY = dst.Y();
-        auto& dstU = dst.U();
-        auto& dstV = dst.V();
+        auto &srcY = src.Y();
+        auto &srcU = src.U();
+        auto &srcV = src.V();
+        auto &dstY = dst.Y();
+        auto &dstU = dst.U();
+        auto &dstV = dst.V();
 
         DType sFloor = srcY.Floor();
         sint32 sNeutral = srcU.Neutral();
         FLType sRangeFL = static_cast<FLType>(srcY.ValueRange());
-        FLType sRangeC2FL = static_cast<FLType>(srcU.ValueRange()) / 2.;
+        FLType sRangeC2FL = static_cast<FLType>(srcU.ValueRange()) / FLType(2);
 
         DType Yval;
         sint32 Uval, Vval;
@@ -182,12 +224,12 @@ const LUT<T>& LUT<T>::Lookup_Gain(Frame& dst, const Frame& src, const _Rt1& ref)
     }
     else if (src.isRGB())
     {
-        auto& srcR = src.R();
-        auto& srcG = src.G();
-        auto& srcB = src.B();
-        auto& dstR = dst.R();
-        auto& dstG = dst.G();
-        auto& dstB = dst.B();
+        auto &srcR = src.R();
+        auto &srcG = src.G();
+        auto &srcB = src.B();
+        auto &dstR = dst.R();
+        auto &dstG = dst.G();
+        auto &dstB = dst.B();
 
         DType sFloor = srcR.Floor();
         FLType sRangeFL = static_cast<FLType>(srcR.ValueRange());
@@ -211,101 +253,6 @@ const LUT<T>& LUT<T>::Lookup_Gain(Frame& dst, const Frame& src, const _Rt1& ref)
             }
         }
     }
-
-    return *this;
-}
-
-
-// Functions of template class LUT instantiation
-/*template < typename T >
-template < typename _Dt1, typename _St1 > inline
-const LUT<T>& LUT<T>::Lookup(_Dt1& dst, const _St1 src) const
-{
-    dst.transform(src, [&](_St1::value_type x)
-    {
-        return Table_[x - src.Floor()];
-    });
-
-    return *this;
-}*/
-
-inline const LUT<DType>& LUT<DType>::Lookup(Plane& dst, const Plane& src) const
-{
-    PCType i, j, upper;
-    PCType height = src.Height();
-    PCType width = src.Width();
-    PCType stride = src.Width();
-    DType iFloor = src.Floor();
-
-    for (j = 0; j < height; j++)
-    {
-        i = stride * j;
-        for (upper = i + width; i < upper; i++)
-        {
-            dst[i] = Table_[src[i] - iFloor];
-        }
-    }
-
-    return *this;
-}
-
-inline const LUT<FLType>& LUT<FLType>::Lookup(Plane_FL& dst, const Plane& src) const
-{
-    PCType i, j;
-    PCType height = src.Height();
-    PCType width = src.Width();
-    PCType src_stride = src.Width();
-    PCType dst_stride = dst.Width();
-    DType iFloor = src.Floor();
-
-    const DType *srcp = src.Data();
-    FLType *dstp = dst.Data();
-
-    for (j = 0; j < height; j++)
-    {
-        for (i = 0; i < width; i++)
-        {
-            dstp[i] = Table_[srcp[i] - iFloor];
-        }
-
-        srcp += src_stride;
-        dstp += dst_stride;
-    }
-
-    return *this;
-}
-
-template < typename T >
-inline const LUT<T>& LUT<T>::Lookup(Plane_FL& dst, const Plane_FL& src) const
-{
-    PCType i, j, upper;
-    PCType height = src.Height();
-    PCType width = src.Width();
-    PCType stride = src.Width();
-    FLType iFloor = src.Floor();
-    FLType iValueRange = src.ValueRange();
-
-    LevelType _lower, _upper;
-    LevelType LevelRange = Levels_ - 1;
-    FLType value;
-    FLType scale;
-
-    scale = static_cast<FLType>(LevelRange) / iValueRange;
-
-    for (j = 0; j < height; j++)
-    {
-        i = stride * j;
-        for (upper = i + width; i < upper; i++)
-        {
-            value = (src[i] - iFloor) * scale;
-            _lower = static_cast<LevelType>(value);
-            if (_lower >= LevelRange) _lower = LevelRange - 1;
-            _upper = _lower + 1;
-            dst[i] = Table_[_lower] * (_upper - value) + Table_[_upper] * (value - _lower);
-        }
-    }
-
-    return *this;
 }
 
 

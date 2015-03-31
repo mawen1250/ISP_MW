@@ -21,6 +21,10 @@ bld/
 *.tlog
 [Rr]elease/*.asm
 
+# CUDA build results
+*.deps
+*.cache
+
 # Roslyn cache directories
 *.ide/
 

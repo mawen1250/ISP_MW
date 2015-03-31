@@ -1,7 +1,4 @@
-#include <iostream>
 #include "Image_Type.h"
-#include "LUT.h"
-#include "Histogram.h"
 
 
 // Functions of class Plane
@@ -498,12 +495,14 @@ Plane_FL::Plane_FL(const Plane &src, bool Init, value_type Value, value_type ran
     Data_ = new value_type[PixelCount()];
 
     if (range > 0)
+    {
         DefaultPara(src.isChroma(), range);
+    }
     else
     {
-        Floor_ = src.Floor();
-        Neutral_ = src.Neutral();
-        Ceil_ = src.Ceil();
+        Floor_ = static_cast<value_type>(src.Floor());
+        Neutral_ = static_cast<value_type>(src.Neutral());
+        Ceil_ = static_cast<value_type>(src.Ceil());
     }
 
     InitValue(Value, Init);

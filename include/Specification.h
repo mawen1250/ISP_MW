@@ -83,84 +83,84 @@ void ColorPrim_Parameter(ColorPrim _ColorPrim, T &green_x, T &green_y, T &blue_x
     switch (_ColorPrim)
     {
     case ColorPrim::bt709:
-        green_x = 0.300;
-        green_y = 0.600;
-        blue_x = 0.150;
-        blue_y = 0.060;
-        red_x = 0.640;
-        red_y = 0.330;
-        white_x = 0.3127;
-        white_y = 0.3290;
+        green_x = T(0.300);
+        green_y = T(0.600);
+        blue_x = T(0.150);
+        blue_y = T(0.060);
+        red_x = T(0.640);
+        red_y = T(0.330);
+        white_x = T(0.3127);
+        white_y = T(0.3290);
         break;
     case ColorPrim::bt470m:
-        green_x = 0.21;
-        green_y = 0.71;
-        blue_x = 0.14;
-        blue_y = 0.08;
-        red_x = 0.67;
-        red_y = 0.33;
-        white_x = 0.310;
-        white_y = 0.316;
+        green_x = T(0.21);
+        green_y = T(0.71);
+        blue_x = T(0.14);
+        blue_y = T(0.08);
+        red_x = T(0.67);
+        red_y = T(0.33);
+        white_x = T(0.310);
+        white_y = T(0.316);
         break;
     case ColorPrim::bt470bg:
-        green_x = 0.29;
-        green_y = 0.60;
-        blue_x = 0.15;
-        blue_y = 0.06;
-        red_x = 0.64;
-        red_y = 0.33;
-        white_x = 0.3127;
-        white_y = 0.3290;
+        green_x = T(0.29);
+        green_y = T(0.60);
+        blue_x = T(0.15);
+        blue_y = T(0.06);
+        red_x = T(0.64);
+        red_y = T(0.33);
+        white_x = T(0.3127);
+        white_y = T(0.3290);
         break;
     case ColorPrim::smpte170m:
-        green_x = 0.310;
-        green_y = 0.595;
-        blue_x = 0.155;
-        blue_y = 0.070;
-        red_x = 0.630;
-        red_y = 0.340;
-        white_x = 0.3127;
-        white_y = 0.3290;
+        green_x = T(0.310);
+        green_y = T(0.595);
+        blue_x = T(0.155);
+        blue_y = T(0.070);
+        red_x = T(0.630);
+        red_y = T(0.340);
+        white_x = T(0.3127);
+        white_y = T(0.3290);
         break;
     case ColorPrim::smpte240m:
-        green_x = 0.310;
-        green_y = 0.595;
-        blue_x = 0.155;
-        blue_y = 0.070;
-        red_x = 0.630;
-        red_y = 0.340;
-        white_x = 0.3127;
-        white_y = 0.3290;
+        green_x = T(0.310);
+        green_y = T(0.595);
+        blue_x = T(0.155);
+        blue_y = T(0.070);
+        red_x = T(0.630);
+        red_y = T(0.340);
+        white_x = T(0.3127);
+        white_y = T(0.3290);
         break;
     case ColorPrim::film:
-        green_x = 0.243;
-        green_y = 0.692;
-        blue_x = 0.145;
-        blue_y = 0.049;
-        red_x = 0.681;
-        red_y = 0.319;
-        white_x = 0.310;
-        white_y = 0.316;
+        green_x = T(0.243);
+        green_y = T(0.692);
+        blue_x = T(0.145);
+        blue_y = T(0.049);
+        red_x = T(0.681);
+        red_y = T(0.319);
+        white_x = T(0.310);
+        white_y = T(0.316);
         break;
     case ColorPrim::bt2020:
-        green_x = 0.170;
-        green_y = 0.797;
-        blue_x = 0.131;
-        blue_y = 0.046;
-        red_x = 0.708;
-        red_y = 0.292;
-        white_x = 0.3127;
-        white_y = 0.3290;
+        green_x = T(0.170);
+        green_y = T(0.797);
+        blue_x = T(0.131);
+        blue_y = T(0.046);
+        red_x = T(0.708);
+        red_y = T(0.292);
+        white_x = T(0.3127);
+        white_y = T(0.3290);
         break;
     default:
-        green_x = 0.300;
-        green_y = 0.600;
-        blue_x = 0.150;
-        blue_y = 0.060;
-        red_x = 0.640;
-        red_y = 0.330;
-        white_x = 0.3127;
-        white_y = 0.3290;
+        green_x = T(0.300);
+        green_y = T(0.600);
+        blue_x = T(0.150);
+        blue_y = T(0.060);
+        red_x = T(0.640);
+        red_y = T(0.330);
+        white_x = T(0.3127);
+        white_y = T(0.3290);
         break;
     }
 }
@@ -168,87 +168,94 @@ void ColorPrim_Parameter(ColorPrim _ColorPrim, T &green_x, T &green_y, T &blue_x
 template < typename T >
 void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha, T &power, T &div)
 {
+    k0 = T(1);
+    phi = T(1);
+    alpha = T(0);
+    power = T(1);
+    div = T(1);
+
     switch (_TransferChar)
     {
     case TransferChar::bt709:
-        k0 = 0.018;
-        phi = 4.500;
-        alpha = 0.099;
-        power = 0.45;
+        k0 = T(0.018);
+        phi = T(4.500);
+        alpha = T(0.099);
+        power = T(0.45);
         break;
     case TransferChar::bt470m:
-        k0 = 0;
-        phi = 0;
-        alpha = 0;
-        power = 1 / 2.2;
+        k0 = T(0);
+        phi = T(0);
+        alpha = T(0);
+        power = T(1. / 2.2);
         break;
     case TransferChar::bt470bg:
-        k0 = 0;
-        phi = 0;
-        alpha = 0;
-        power = 1 / 2.8;
+        k0 = T(0);
+        phi = T(0);
+        alpha = T(0);
+        power = T(1. / 2.8);
         break;
     case TransferChar::smpte170m:
-        k0 = 0.018;
-        phi = 4.500;
-        alpha = 0.099;
-        power = 0.45;
+        k0 = T(0.018);
+        phi = T(4.500);
+        alpha = T(0.099);
+        power = T(0.45);
         break;
     case TransferChar::smpte240m:
-        k0 = 0.0228;
-        phi = 4.0;
-        alpha = 0.1115;
-        power = 0.45;
+        k0 = T(0.0228);
+        phi = T(4.0);
+        alpha = T(0.1115);
+        power = T(0.45);
         break;
     case TransferChar::linear:
-        k0 = 1;
-        phi = 1;
-        alpha = 0;
-        power = 1;
+        k0 = T(1);
+        phi = T(1);
+        alpha = T(0);
+        power = T(1);
         break;
     case TransferChar::log100:
-        k0 = 0.01;
-        div = 2;
+        k0 = T(0.01);
+        div = T(2);
         break;
     case TransferChar::log316:
-        k0 = sqrt(10.) / 1000.;
-        div = 2.5;
+        k0 = T(sqrt(10.) / 1000.);
+        div = T(2.5);
         break;
     case TransferChar::iec61966_2_4:
-        k0 = 0.018;
-        phi = 4.500;
-        alpha = 0.099;
-        power = 0.45;
+        k0 = T(0.018);
+        phi = T(4.500);
+        alpha = T(0.099);
+        power = T(0.45);
         break;
     case TransferChar::bt1361e:
-        k0 = 0.018;
-        phi = 4.500;
-        alpha = 0.099;
-        power = 0.45;
+        k0 = T(0.018);
+        phi = T(4.500);
+        alpha = T(0.099);
+        power = T(0.45);
         break;
     case TransferChar::iec61966_2_1:
-        k0 = 0.0031308;
-        phi = 12.92;
-        alpha = 0.055;
-        power = 1 / 2.4;
+        k0 = T(0.0031308);
+        phi = T(12.92);
+        alpha = T(0.055);
+        power = T(1. / 2.4);
         break;
     case TransferChar::bt2020_10:
-        k0 = 0.018;
-        phi = 4.500;
-        alpha = 0.099;
-        power = 0.45;
+        k0 = T(0.018);
+        phi = T(4.500);
+        alpha = T(0.099);
+        power = T(0.45);
         break;
     case TransferChar::bt2020_12:
-        k0 = 0.0181;
-        phi = 4.500;
-        alpha = 0.0993;
-        power = 0.45;
+        k0 = T(0.0181);
+        phi = T(4.500);
+        alpha = T(0.0993);
+        power = T(0.45);
         break;
     default:
-        k0 = 0.0031308;
-        phi = 12.92;
-        alpha = 0.055;
-        power = 1 / 2.4;
+        k0 = T(1);
+        phi = T(1);
+        alpha = T(0);
+        power = T(1);
+        div = T(1);
         break;
     }
 }
@@ -259,59 +266,59 @@ void ColorMatrix_Parameter(ColorMatrix _ColorMatrix, T &Kr, T &Kg, T &Kb)
     switch (_ColorMatrix)
     {
     case ColorMatrix::GBR:
-        Kr = 0;
-        Kg = 1;
-        Kb = 0;
+        Kr = T(0);
+        Kg = T(1);
+        Kb = T(0);
         break;
     case ColorMatrix::bt709:
-        Kr = 0.2126;
-        Kg = 0.7152;
-        Kb = 0.0722;
+        Kr = T(0.2126);
+        Kg = T(0.7152);
+        Kb = T(0.0722);
         break;
     case ColorMatrix::fcc:
-        Kr = 0.30;
-        Kg = 0.59;
-        Kb = 0.11;
+        Kr = T(0.30);
+        Kg = T(0.59);
+        Kb = T(0.11);
         break;
     case ColorMatrix::bt470bg:
-        Kr = 0.299;
-        Kg = 0.587;
-        Kb = 0.114;
+        Kr = T(0.299);
+        Kg = T(0.587);
+        Kb = T(0.114);
         break;
     case ColorMatrix::smpte170m:
-        Kr = 0.299;
-        Kg = 0.587;
-        Kb = 0.114;
+        Kr = T(0.299);
+        Kg = T(0.587);
+        Kb = T(0.114);
         break;
     case ColorMatrix::smpte240m:
-        Kr = 0.212;
-        Kg = 0.701;
-        Kb = 0.087;
+        Kr = T(0.212);
+        Kg = T(0.701);
+        Kb = T(0.087);
         break;
     case ColorMatrix::YCgCo:
-        Kr = 0.25;
-        Kg = 0.50;
-        Kb = 0.25;
+        Kr = T(0.25);
+        Kg = T(0.50);
+        Kb = T(0.25);
         break;
     case ColorMatrix::bt2020nc:
-        Kr = 0.2627;
-        Kg = 0.6780;
-        Kb = 0.0593;
+        Kr = T(0.2627);
+        Kg = T(0.6780);
+        Kb = T(0.0593);
         break;
     case ColorMatrix::bt2020c:
-        Kr = 0.2627;
-        Kg = 0.6780;
-        Kb = 0.0593;
+        Kr = T(0.2627);
+        Kg = T(0.6780);
+        Kb = T(0.0593);
         break;
     case ColorMatrix::Average:
-        Kr = 1. / 3.;
-        Kg = 1. / 3.;
-        Kb = 1. / 3.;
+        Kr = T(1. / 3.);
+        Kg = T(1. / 3.);
+        Kb = T(1. / 3.);
         break;
     default:
-        Kr = 0.2126;
-        Kg = 0.7152;
-        Kb = 0.0722;
+        Kr = T(0.2126);
+        Kg = T(0.7152);
+        Kb = T(0.0722);
         break;
     }
 }
@@ -406,14 +413,21 @@ private:
 public:
     TransferChar_Conv_Sub(TransferChar _TransferChar)
     {
-        TransferChar_Parameter(_TransferChar, k0, phi, alpha, power, div);
+        long double _k0 = 1, _phi = 1, _alpha = 0, _power = 1, _div = 1;
+        TransferChar_Parameter(_TransferChar, _k0, _phi, _alpha, _power, _div);
+        long double _beta = _alpha + 1;
 
-        k0Mphi = k0 * phi;
-        recPhi = 1 / phi;
-        beta = alpha + 1;
-        recBeta = 1 / beta;
-        recPower = 1 / power;
-        recDiv = 1 / div;
+        k0 = static_cast<T>(_k0);
+        phi = static_cast<T>(_phi);
+        alpha = static_cast<T>(_alpha);
+        power = static_cast<T>(_power);
+        div = static_cast<T>(_div);
+        k0Mphi = static_cast<T>(_k0 * _phi);
+        recPhi = static_cast<T>(1 / _phi);
+        beta = static_cast<T>(_beta);
+        recBeta = static_cast<T>(1 / _beta);
+        recPower = static_cast<T>(1 / _power);
+        recDiv = static_cast<T>(1 / _div);
     }
 
     bool operator==(const _Myt &right) const
@@ -443,12 +457,12 @@ public:
 
     T log2linear(T x) const
     {
-        return x == 0 ? 0 : pow(10, (x - 1) * div);
+        return x == 0 ? 0 : pow(T(10), (x - 1) * div);
     }
 
     T linear2log(T x) const
     {
-        return x < k0 ? 0 : 1 + log10(x) * recDiv;
+        return x < k0 ? 0 : T(1) + log10(x) * recDiv;
     }
 };
 

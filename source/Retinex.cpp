@@ -1,5 +1,5 @@
 #include "Retinex.h"
-#include "Specification.h"
+#include "Conversion.hpp"
 #include "Gaussian.h"
 
 
@@ -193,7 +193,7 @@ Frame &Retinex_MSRCP::process(Frame &dst, const Frame &src)
         Plane &dstV = dst.V();
 
         sint32 sNeutral = srcU.Neutral();
-        FLType sRangeC2FL = static_cast<FLType>(srcU.ValueRange()) / 2.;
+        FLType sRangeC2FL = static_cast<FLType>(srcU.ValueRange()) / FLType(2);
         FLType dRangeFL = static_cast<FLType>(dstY.ValueRange());
 
         Plane_FL idata(srcY);
@@ -306,7 +306,7 @@ Frame &Retinex_MSRCR::process(Frame &dst, const Frame &src)
                 Rval = srcR[i] - sFloor;
                 Gval = srcG[i] - sFloor;
                 Bval = srcB[i] - sFloor;
-                temp = Rval + Gval + Bval;
+                temp = static_cast<FLType>(Rval + Gval + Bval);
                 temp = temp <= 0 ? 0 : para.restore / temp;
                 odataR[i] *= log(Rval * temp + 1);
                 odataG[i] *= log(Gval * temp + 1);

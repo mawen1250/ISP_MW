@@ -67,7 +67,8 @@ public:
     AWB(const Frame &_src) 
         : src(_src), srcR(src.R()), srcG(src.G()), srcB(src.B()), dst(_src, false), dstR(dst.R()), dstG(dst.G()), dstB(dst.B()),
         height(src.Height()), width(src.Width()), stride(src.Stride()),
-        sFloor(srcR.Floor()), sCeil(srcR.Ceil()), dFloor(dstR.Floor()), dCeil(dstR.Ceil()), dFloorFL(dFloor), dCeilFL(dCeil)
+        sFloor(srcR.Floor()), sCeil(srcR.Ceil()), dFloor(dstR.Floor()), dCeil(dstR.Ceil()),
+        dFloorFL(static_cast<FLType>(dFloor)), dCeilFL(static_cast<FLType>(dCeil))
     {
         if (!src.isRGB())
         {
