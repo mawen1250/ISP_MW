@@ -4,6 +4,7 @@
 
 #include "Image_Type.h"
 #include "LUT.h"
+#include "Histogram.h"
 
 
 template < typename _St1 >
@@ -20,10 +21,253 @@ void ValidRange(const _St1 &src, typename _St1::reference min, typename _St1::re
     }
     else if (lower_thr > 0 || upper_thr > 0)
     {
-        Histogram<dataType> Histogram(src, min, max, HistBins);
-        if (lower_thr > 0) min = Histogram.Min(lower_thr);
-        if (upper_thr > 0) max = Histogram.Max(upper_thr);
+        Histogram<dataType> hist(src, min, max, HistBins);
+        if (lower_thr > 0) min = hist.Min(lower_thr);
+        if (upper_thr > 0) max = hist.Max(upper_thr);
     }
+}
+
+
+template < typename _Dt1, typename _St1 >
+void RangeConvert(_Dt1 &dst, const _St1 &src,
+    typename _Dt1::value_type dFloor, typename _Dt1::value_type dNeutral, typename _Dt1::value_type dCeil,
+    typename _St1::value_type sFloor, typename _St1::value_type sNeutral, typename _St1::value_type sCeil,
+    bool clip = false)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool srcFloat = isFloat(srcType);
+    const bool dstFloat = isFloat(dstType);
+    const bool sameType = typeid(srcType) == typeid(dstType);
+
+    bool srcChroma = isChroma(sFloor, sNeutral);
+    bool dstChroma = isChroma(dFloor, dNeutral);
+    bool srcPCChroma = isPCChroma(sFloor, sNeutral, sCeil);
+    bool dstPCChroma = isPCChroma(dFloor, dNeutral, dCeil);
+
+    if (dstChroma && !srcChroma)
+    {
+        if (srcFloat)
+        {
+            sNeutral = (sFloor + sCeil) / 2;
+        }
+        else
+        {
+            sNeutral = (sFloor + sCeil + 1) / 2;
+        }
+        srcChroma = true;
+    }
+    else if (!dstChroma && srcChroma)
+    {
+        sNeutral = sFloor;
+        srcChroma = false;
+    }
+
+    dst.ReSize(src.Width(), src.Height());
+
+    const PCType height = dst.Height();
+    const PCType width = dst.Width();
+    const PCType stride = dst.Stride();
+
+    const auto sRange = sCeil - sFloor;
+    const auto dRange = dCeil - dFloor;
+
+    if (sFloor == dFloor && sNeutral == dNeutral && sCeil == dCeil) // src and dst are of the same quantization range
+    {
+        if (reinterpret_cast<const void *>(dst.Data()) != reinterpret_cast<const void *>(src.Data()))
+        {
+            return;
+        }
+        if (sameType && !clip) // Copy memory if they are of the same type and clipping is not performed
+        {
+            memcpy(dst.Data(), src.Data(), sizeof(dstType) * dst.PixelCount());
+        }
+        else if (srcFloat && !dstFloat) // Conversion from float to integer
+        {
+            srcType offset = srcType(dstPCChroma ? 0.499999 : 0.5);
+
+            if (clip)
+            {
+                const srcType lowerL = static_cast<srcType>(dFloor);
+                const srcType upperL = static_cast<srcType>(dCeil);
+
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
+                {
+                    dst[i] = static_cast<dstType>(Clip(src[i] + offset, lowerL, upperL));
+                });
+            }
+            else
+            {
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
+                {
+                    dst[i] = static_cast<dstType>(src[i] + offset);
+                });
+            }
+        }
+        else // Otherwise cast type with/without clipping
+        {
+            if (clip)
+            {
+                const srcType lowerL = static_cast<srcType>(dFloor);
+                const srcType upperL = static_cast<srcType>(dCeil);
+
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
+                {
+                    dst[i] = static_cast<dstType>(Clip(src[i], lowerL, upperL));
+                });
+            }
+            else
+            {
+                LOOP_VH_PPL(height, width, stride, [&](PCType i)
+                {
+                    dst[i] = static_cast<dstType>(src[i]);
+                });
+            }
+        }
+    }
+    else // src and dst are of different quantization range
+    {
+        // Always apply clipping if source is PC range chroma
+        if (srcPCChroma) clip = true;
+
+        FLType gain = static_cast<FLType>(dRange) / sRange;
+        FLType offset = dNeutral - sNeutral * gain;
+        if (!dstFloat) offset += FLType(dstPCChroma ? 0.499999 : 0.5);
+
+        if (clip)
+        {
+            const FLType lowerL = static_cast<FLType>(dFloor);
+            const FLType upperL = static_cast<FLType>(dCeil);
+
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
+            {
+                dst[i] = static_cast<dstType>(Clip(static_cast<FLType>(src[i]) * gain + offset, lowerL, upperL));
+            });
+        }
+        else
+        {
+            LOOP_VH_PPL(height, width, stride, [&](PCType i)
+            {
+                dst[i] = static_cast<dstType>(static_cast<FLType>(src[i]) * gain + offset);
+            });
+        }
+    }
+}
+
+template < typename _Dt1, typename _St1 >
+void RangeConvert(_Dt1 &dst, const _St1 &src, bool clip = false)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool sameType = typeid(srcType) == typeid(dstType);
+
+    if (sameType && reinterpret_cast<const void *>(dst.Data()) == reinterpret_cast<const void *>(src.Data()))
+    {
+        return;
+    }
+
+    if (dst.isChroma() != src.isChroma())
+    {
+        dst.ReSetChroma(src.isChroma());
+    }
+
+    RangeConvert(dst, src, dst.Floor(), dst.Neutral(), dst.Ceil(), src.Floor(), src.Neutral(), src.Ceil(), clip);
+}
+
+template < typename _Dt1, typename _St1 >
+void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
+    typename _Dt1::value_type dFloor, typename _Dt1::value_type dNeutral, typename _Dt1::value_type dCeil,
+    typename _St1::value_type sFloor, typename _St1::value_type sNeutral, typename _St1::value_type sCeil,
+    bool clip = false)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool srcFloat = isFloat(srcType);
+    const bool dstFloat = isFloat(dstType);
+
+    bool srcChroma = isChroma(sFloor, sNeutral);
+    bool dstChroma = isChroma(dFloor, dNeutral);
+    bool srcPCChroma = isPCChroma(sFloor, sNeutral, sCeil);
+    bool dstPCChroma = isPCChroma(dFloor, dNeutral, dCeil);
+
+    if (dstChroma && !srcChroma)
+    {
+        if (srcFloat)
+        {
+            sNeutral = (sFloor + sCeil) / 2;
+        }
+        else
+        {
+            sNeutral = (sFloor + sCeil + 1) / 2;
+        }
+        srcChroma = true;
+    }
+    else if (!dstChroma && srcChroma)
+    {
+        sNeutral = sFloor;
+        srcChroma = false;
+    }
+
+    dstR.ReSize(srcR.Width(), srcR.Height());
+    dstG.ReSize(srcG.Width(), srcG.Height());
+    dstB.ReSize(srcB.Width(), srcB.Height());
+
+    const PCType height = dstR.Height();
+    const PCType width = dstR.Width();
+    const PCType stride = dstR.Stride();
+
+    const auto sRange = sCeil - sFloor;
+    const auto dRange = dCeil - dFloor;
+
+    FLType gain = static_cast<FLType>(dRange) / sRange;
+    FLType offset = dNeutral - sNeutral * gain;
+    if (!dstFloat) offset += FLType(0.5);
+
+    // Always apply clipping if source is PC range chroma
+    if (srcPCChroma) clip = true;
+
+    if (clip)
+    {
+        const FLType lowerL = static_cast<FLType>(dFloor);
+        const FLType upperL = static_cast<FLType>(dCeil);
+
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dstR[i] = static_cast<dstType>(Clip(static_cast<FLType>(srcR[i]) * gain + offset, lowerL, upperL));
+            dstG[i] = static_cast<dstType>(Clip(static_cast<FLType>(srcG[i]) * gain + offset, lowerL, upperL));
+            dstB[i] = static_cast<dstType>(Clip(static_cast<FLType>(srcB[i]) * gain + offset, lowerL, upperL));
+        });
+    }
+    else
+    {
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dstR[i] = static_cast<dstType>(static_cast<FLType>(srcR[i]) * gain + offset);
+            dstG[i] = static_cast<dstType>(static_cast<FLType>(srcG[i]) * gain + offset);
+            dstB[i] = static_cast<dstType>(static_cast<FLType>(srcB[i]) * gain + offset);
+        });
+    }
+}
+
+template < typename _Dt1, typename _St1 >
+void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, bool clip = false)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool sameType = typeid(srcType) == typeid(dstType);
+
+    if (sameType && reinterpret_cast<const void *>(dstR.Data()) == reinterpret_cast<const void *>(srcR.Data())
+        && reinterpret_cast<const void *>(dstG.Data()) == reinterpret_cast<const void *>(srcG.Data())
+        && reinterpret_cast<const void *>(dstB.Data()) == reinterpret_cast<const void *>(srcB.Data()))
+    {
+        return;
+    }
+
+    RangeConvert(dstR, dstG, dstB, srcR, srcG, srcB, dstR.Floor(), dstR.Neutral(), dstR.Ceil(), srcR.Floor(), srcR.Neutral(), srcR.Ceil(), clip);
 }
 
 

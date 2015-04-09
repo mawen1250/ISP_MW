@@ -2,7 +2,7 @@
 #define HAZE_REMOVAL_H_
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 #include "Histogram.h"
 
@@ -29,9 +29,11 @@ const struct Haze_Removal_Para
 
 
 class Haze_Removal
+    : public FilterIF
 {
 public:
     typedef Haze_Removal _Myt;
+    typedef FilterIF _Mybase;
 
 protected:
     Haze_Removal_Para para;
@@ -54,15 +56,9 @@ public:
         : para(_para)
     {}
 
-    Frame &process(Frame &dst, const Frame &src);
-
-    Frame operator()(const Frame &src)
-    {
-        Frame dst(src, false);
-        return process(dst, src);
-    }
-
 protected:
+    virtual Frame &process_Frame(Frame &dst, const Frame &src);
+
     // Generate the Inverted Transmission Map from intensity image
     virtual void GetTMapInv() = 0;
 

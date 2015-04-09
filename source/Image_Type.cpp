@@ -1,4 +1,8 @@
+#define ENABLE_PPL
+
+
 #include "Image_Type.h"
+#include "Conversion.hpp"
 
 
 // Functions of class Plane
@@ -25,7 +29,7 @@ void Plane::InitValue(value_type Value, bool Init)
     {
         Value = Quantize(Value);
 
-        if (Value)
+        if (Value != 0)
         {
             for_each([&](value_type &x)
             {
@@ -34,7 +38,7 @@ void Plane::InitValue(value_type Value, bool Init)
         }
         else
         {
-            memset(Data(), Value, sizeof(value_type) * PixelCount());
+            memset(Data(), Value, sizeof(value_type) * size());
         }
     }
 }
@@ -71,7 +75,7 @@ Plane::Plane(value_type Value, PCType _Width, PCType _Height, value_type _BitDep
         exit(EXIT_FAILURE);
     }
 
-    Data_ = new value_type[PixelCount()];
+    AlignedMalloc(Data_, size());
 
     InitValue(Value, Init);
 }
@@ -79,7 +83,7 @@ Plane::Plane(value_type Value, PCType _Width, PCType _Height, value_type _BitDep
 Plane::Plane(const _Myt &src)
     : _Myt(src, false)
 {
-    memcpy(Data(), src.Data(), sizeof(value_type) * PixelCount());
+    memcpy(Data(), src.Data(), sizeof(value_type) * size());
 }
 
 Plane::Plane(const _Myt &src, bool Init, value_type Value)
@@ -119,7 +123,7 @@ Plane::Plane(const Plane_FL &src, bool Init, value_type Value, value_type _BitDe
 
 Plane::~Plane()
 {
-    delete[] Data_;
+    AlignedFree(Data_);
 }
 
 
@@ -132,10 +136,10 @@ Plane &Plane::operator=(const _Myt &src)
 
     CopyParaFrom(src);
 
-    delete[] Data_;
-    Data_ = new value_type[PixelCount()];
+    AlignedFree(Data_);
+    AlignedMalloc(Data_, size());
 
-    memcpy(Data(), src.Data(), sizeof(value_type) * PixelCount());
+    memcpy(Data(), src.Data(), sizeof(value_type) * size());
 
     return *this;
 }
@@ -149,7 +153,7 @@ Plane &Plane::operator=(_Myt &&src)
 
     CopyParaFrom(src);
 
-    delete[] Data_;
+    AlignedFree(Data_);
     Data_ = src.Data();
 
     src.Width_ = 0;
@@ -255,9 +259,9 @@ Plane &Plane::ReSize(PCType _Width, PCType _Height)
     {
         if (PixelCount() != _Width * _Height)
         {
-            delete[] Data_;
+            AlignedFree(Data_);
             PixelCount_ = _Width * _Height;
-            Data_ = new value_type[PixelCount()];
+            AlignedMalloc(Data_, size());
         }
 
         Width_ = _Width;
@@ -447,7 +451,7 @@ Plane_FL::Plane_FL(value_type Value, PCType _Width, PCType _Height, bool RGB, bo
 {
     DefaultPara(!RGB&&Chroma);
 
-    Data_ = new value_type[PixelCount()];
+    AlignedMalloc(Data_, size());
 
     InitValue(Value, Init);
 }
@@ -456,7 +460,7 @@ Plane_FL::Plane_FL(value_type Value, PCType _Width, PCType _Height, value_type _
     : Width_(_Width), Height_(_Height), PixelCount_(_Width * _Height),
     Floor_(_Floor), Neutral_(_Neutral), Ceil_(_Ceil), TransferChar_(_TransferChar)
 {
-    Data_ = new value_type[PixelCount()];
+    AlignedMalloc(Data_, size());
 
     InitValue(Value, Init);
 }
@@ -464,7 +468,7 @@ Plane_FL::Plane_FL(value_type Value, PCType _Width, PCType _Height, value_type _
 Plane_FL::Plane_FL(const _Myt &src)
     : _Myt(src, false)
 {
-    memcpy(Data(), src.Data(), sizeof(value_type) * PixelCount());
+    memcpy(Data(), src.Data(), sizeof(value_type) * size());
 }
 
 Plane_FL::Plane_FL(const _Myt &src, bool Init, value_type Value)
@@ -492,7 +496,7 @@ Plane_FL::Plane_FL(const Plane &src, value_type range)
 Plane_FL::Plane_FL(const Plane &src, bool Init, value_type Value, value_type range)
     : Width_(src.Width()), Height_(src.Height()), PixelCount_(src.PixelCount()), TransferChar_(src.GetTransferChar())
 {
-    Data_ = new value_type[PixelCount()];
+    AlignedMalloc(Data_, size());
 
     if (range > 0)
     {
@@ -511,7 +515,7 @@ Plane_FL::Plane_FL(const Plane &src, bool Init, value_type Value, value_type ran
 
 Plane_FL::~Plane_FL()
 {
-    delete[] Data_;
+    AlignedFree(Data_);
 }
 
 
@@ -524,10 +528,10 @@ Plane_FL &Plane_FL::operator=(const _Myt &src)
 
     CopyParaFrom(src);
 
-    delete[] Data_;
-    Data_ = new value_type[PixelCount()];
+    AlignedFree(Data_);
+    AlignedMalloc(Data_, size());
 
-    memcpy(Data(), src.Data(), sizeof(value_type) * PixelCount());
+    memcpy(Data(), src.Data(), sizeof(value_type) * size());
 
     return *this;
 }
@@ -541,7 +545,7 @@ Plane_FL &Plane_FL::operator=(_Myt &&src)
 
     CopyParaFrom(src);
 
-    delete[] Data_;
+    AlignedFree(Data_);
     Data_ = src.Data();
 
     src.Width_ = 0;
@@ -647,9 +651,9 @@ Plane_FL &Plane_FL::ReSize(PCType _Width, PCType _Height)
     {
         if (PixelCount() != _Width * _Height)
         {
-            delete[] Data_;
+            AlignedFree(Data_);
             PixelCount_ = _Width * _Height;
-            Data_ = new value_type[PixelCount()];
+            AlignedMalloc(Data_, size());
         }
 
         Width_ = _Width;

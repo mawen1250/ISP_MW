@@ -2,7 +2,7 @@
 #define TONE_MAPPING_H_
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 #include "LUT.h"
 #include "Histogram.h"
@@ -29,11 +29,6 @@ public:
     typedef FilterIO _Mybase;
 
 protected:
-    virtual void arguments_process()
-    {
-        FilterIO::arguments_process();
-    }
-
     virtual Frame process(const Frame &src)
     {
         return Adaptive_Global_Tone_Mapping(src);

@@ -8,14 +8,14 @@
 
 #include "Type.h"
 #include "Helper.h"
-#include "IO.h"
 #include "Image_Type.h"
 #include "Specification.h"
 #include "LUT.h"
 #include "Histogram.h"
 #include "Block.h"
-
 #include "ImageIO.h"
+#include "Filter.h"
+
 #include "Transform.h"
 #include "Convolution.h"
 #include "Gaussian.h"
@@ -28,6 +28,14 @@
 #include "NLMeans.h"
 #include "BM3D.h"
 #include "Haze_Removal.h"
+
+#ifdef _CUDA_
+#include "Gaussian.cuh"
+
+typedef CUDA_Gaussian2D_IO _Gaussian2D_IO;
+#else
+typedef Gaussian2D_IO _Gaussian2D_IO;
+#endif
 
 
 int Filtering(const int argc, char ** argv);

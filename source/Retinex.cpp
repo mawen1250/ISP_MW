@@ -100,7 +100,7 @@ Plane_FL &Retinex::Kernel(Plane_FL &dst, const Plane_FL &src)
 
 
 // Functions of class Retinex_SSR
-Plane_FL &Retinex_SSR::process(Plane_FL &dst, const Plane_FL &src)
+Plane_FL &Retinex_SSR::process_Plane_FL(Plane_FL &dst, const Plane_FL &src)
 {
     Kernel(dst, src);
 
@@ -109,7 +109,7 @@ Plane_FL &Retinex_SSR::process(Plane_FL &dst, const Plane_FL &src)
     return dst;
 }
 
-Plane &Retinex_SSR::process(Plane &dst, const Plane &src)
+Plane &Retinex_SSR::process_Plane(Plane &dst, const Plane &src)
 {
     Plane_FL data(src);
     
@@ -122,7 +122,7 @@ Plane &Retinex_SSR::process(Plane &dst, const Plane &src)
 
 
 // Functions of class Retinex_MSR
-Plane_FL &Retinex_MSR::process(Plane_FL &dst, const Plane_FL &src)
+Plane_FL &Retinex_MSR::process_Plane_FL(Plane_FL &dst, const Plane_FL &src)
 {
     Kernel(dst, src);
     
@@ -131,7 +131,7 @@ Plane_FL &Retinex_MSR::process(Plane_FL &dst, const Plane_FL &src)
     return dst;
 }
 
-Plane &Retinex_MSR::process(Plane &dst, const Plane &src)
+Plane &Retinex_MSR::process_Plane(Plane &dst, const Plane &src)
 {
     Plane_FL idata(src);
     Plane_FL odata = Kernel(idata);
@@ -143,7 +143,7 @@ Plane &Retinex_MSR::process(Plane &dst, const Plane &src)
 
 
 // Functions of class Retinex_MSRCR_GIMP
-Plane_FL &Retinex_MSRCR_GIMP::process(Plane_FL &dst, const Plane_FL &src)
+Plane_FL &Retinex_MSRCR_GIMP::process_Plane_FL(Plane_FL &dst, const Plane_FL &src)
 {
     Kernel(dst, src);
 
@@ -157,7 +157,7 @@ Plane_FL &Retinex_MSRCR_GIMP::process(Plane_FL &dst, const Plane_FL &src)
     return dst;
 }
 
-Plane &Retinex_MSRCR_GIMP::process(Plane &dst, const Plane &src)
+Plane &Retinex_MSRCR_GIMP::process_Plane(Plane &dst, const Plane &src)
 {
     Plane_FL idata(src);
     Plane_FL odata = Kernel(idata);
@@ -174,7 +174,7 @@ Plane &Retinex_MSRCR_GIMP::process(Plane &dst, const Plane &src)
 
 
 // Functions of class Retinex_MSRCP
-Frame &Retinex_MSRCP::process(Frame &dst, const Frame &src)
+Frame &Retinex_MSRCP::process_Frame(Frame &dst, const Frame &src)
 {
     PCType i, j, upper;
     PCType height = src.Height();
@@ -266,7 +266,7 @@ Frame &Retinex_MSRCP::process(Frame &dst, const Frame &src)
 
 
 // Functions of class Retinex_MSRCR
-Frame &Retinex_MSRCR::process(Frame &dst, const Frame &src)
+Frame &Retinex_MSRCR::process_Frame(Frame &dst, const Frame &src)
 {
     PCType i, j, upper;
     PCType height = src.Height();

@@ -2,7 +2,7 @@
 #define HISTOGRAM_EQUALIZATION_H_
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 #include "Histogram.h"
 #include "LUT.h"
@@ -54,7 +54,7 @@ protected:
 
     virtual void arguments_process()
     {
-        FilterIO::arguments_process();
+        _Mybase::arguments_process();
 
         Args ArgsObj(argc, args);
 

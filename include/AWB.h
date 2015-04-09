@@ -2,7 +2,7 @@
 #define AWB_H_
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 #include "Helper.h"
 #include "LUT.h"
@@ -120,7 +120,7 @@ public:
 protected:
     virtual void arguments_process()
     {
-        FilterIO::arguments_process();
+        _Mybase::arguments_process();
     }
 
     virtual Frame process(const Frame &src) = 0;
@@ -141,7 +141,7 @@ public:
 protected:
     virtual void arguments_process()
     {
-        AWB_IO::arguments_process();
+        _Mybase::arguments_process();
     }
 
     virtual Frame process(const Frame &src)
@@ -166,7 +166,7 @@ public:
 protected:
     virtual void arguments_process()
     {
-        AWB_IO::arguments_process();
+        _Mybase::arguments_process();
     }
 
     virtual Frame process(const Frame &src)

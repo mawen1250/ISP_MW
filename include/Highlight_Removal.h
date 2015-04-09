@@ -2,7 +2,7 @@
 #define HIGHLIGHT_REMOVAL_H
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 
 

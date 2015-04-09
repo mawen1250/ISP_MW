@@ -2,7 +2,7 @@
 #define CONVOLUTION_H_
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 
 
@@ -115,7 +115,7 @@ protected:
 
     virtual void arguments_process()
     {
-        FilterIO::arguments_process();
+        _Mybase::arguments_process();
 
         Args ArgsObj(argc, args);
         std::string KernelStr;

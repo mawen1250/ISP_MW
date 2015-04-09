@@ -3,7 +3,7 @@
 
 
 #include <cmath>
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 #include "LUT.h"
 
@@ -15,25 +15,32 @@ const double sigmaSMul = 2.;
 const double sigmaRMul = sizeof(FLType) < 8 ? 8. : 32.; // 8. when FLType is float, 32. when FLType is double
 
 
-const struct Gaussian2D_Para
+struct Gaussian2D_Para
 {
     double sigma = 3.0;
-} Gaussian2D_Default;
+};
+
+extern const Gaussian2D_Para Gaussian2D_Default;
 
 
-Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma = Gaussian2D_Default.sigma);
-inline Plane Gaussian2D(const Plane &src, const double sigma = Gaussian2D_Default.sigma)
+class Gaussian2D
+    : public FilterIF
 {
-    Plane dst(src, false);
-    return Gaussian2D(dst, src, sigma);
-}
-inline Frame Gaussian2D(const Frame &src, const double sigma = Gaussian2D_Default.sigma)
-{
-    Frame dst(src, false);
-    for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
-        Gaussian2D(dst.P(i), src.P(i), sigma);
-    return dst;
-}
+public:
+    typedef Gaussian2D _Myt;
+    typedef FilterIF _Mybase;
+
+protected:
+    Gaussian2D_Para para;
+
+public:
+    _Myt(const Gaussian2D_Para &_para = Gaussian2D_Default)
+        : para(_para)
+    {}
+
+protected:
+    virtual Plane &process_Plane(Plane &dst, const Plane &src);
+};
 
 
 class Gaussian2D_IO
@@ -48,7 +55,7 @@ protected:
 
     virtual void arguments_process()
     {
-        FilterIO::arguments_process();
+        _Mybase::arguments_process();
 
         Args ArgsObj(argc, args);
 
@@ -71,7 +78,8 @@ protected:
 
     virtual Frame process(const Frame &src)
     {
-        return Gaussian2D(src, para.sigma);
+        Gaussian2D filter(para);
+        return filter(src);
     }
 
 public:
@@ -86,8 +94,12 @@ class RecursiveGaussian
 {
 public:
     typedef RecursiveGaussian _Myt;
+    typedef FilterData<FLType> _Dt;
 
-protected:
+private:
+    _Dt d;
+
+public:
     FLType B;
     FLType B1;
     FLType B2;
@@ -99,6 +111,8 @@ public:
         GetPara(sigma);
     }
 
+    const _Dt &D() const { return d; }
+
     Plane_FL operator()(const Plane_FL &src)
     {
         Plane_FL dst(src, false);
@@ -108,14 +122,20 @@ public:
 
     void GetPara(long double sigma);
 
-    void FilterV(Plane_FL &dst, const Plane_FL &src);
-    void FilterV(Plane_FL &data);
+    virtual void FilterV(Plane_FL &dst, const Plane_FL &src);
+    void FilterV(Plane_FL &data) { FilterV(data, data); }
 
-    void FilterH(Plane_FL &dst, const Plane_FL &src);
-    void FilterH(Plane_FL &data);
+    virtual void FilterH(Plane_FL &dst, const Plane_FL &src);
+    void FilterH(Plane_FL &data) { FilterH(data, data); }
 
-    void Filter(Plane_FL &dst, const Plane_FL &src) { FilterH(dst, src); FilterV(dst); }
-    void Filter(Plane_FL &data) { FilterH(data); FilterV(data); }
+    virtual void Filter(Plane_FL &dst, const Plane_FL &src);
+    void Filter(Plane_FL &data) { Filter(data, data); }
+
+    virtual void Filter(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
+
+protected:
+    virtual void FilterV_Kernel(FLType *dst, const FLType *src) const;
+    virtual void FilterH_Kernel(FLType *dst, const FLType *src) const;
 };
 
 

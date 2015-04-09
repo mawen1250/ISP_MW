@@ -69,9 +69,6 @@
     <ClInclude Include="..\include\ImageIO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\IO.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\ISP_MW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -103,6 +100,12 @@
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="..\include\Conversion.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\CUDA\Helper.cuh">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Filter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -155,6 +158,9 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\source\CUDA\Gaussian.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\source\CUDA\Helper.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
   </ItemGroup>

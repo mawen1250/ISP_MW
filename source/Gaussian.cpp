@@ -2,18 +2,23 @@
 
 
 #include "Gaussian.h"
+#include "Conversion.hpp"
 
 
-Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
+const Gaussian2D_Para Gaussian2D_Default;
+
+
+// Public functions of class Gaussian2D
+Plane &Gaussian2D::process_Plane(Plane &dst, const Plane &src)
 {
-    if (sigma <= 0)
+    if (para.sigma <= 0)
     {
         dst = src;
         return dst;
     }
 
     Plane_FL data(src);
-    RecursiveGaussian GFilter(sigma);
+    RecursiveGaussian GFilter(para.sigma);
     
     GFilter.Filter(data);
     RangeConvert(dst, data, true);
@@ -22,7 +27,7 @@ Plane &Gaussian2D(Plane &dst, const Plane &src, const double sigma)
 }
 
 
-// Member functions of class RecursiveGaussian
+// Public functions of class RecursiveGaussian
 void RecursiveGaussian::GetPara(long double sigma)
 {
     const long double q = sigma < 2.5 ? 3.97156 - 4.14554 * sqrt(1 - 0.26891 * sigma) : 0.98711 * sigma - 0.96330;
@@ -41,21 +46,57 @@ void RecursiveGaussian::GetPara(long double sigma)
 
 void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
 {
-    const PCType height = dst.Height();
-    const PCType width = dst.Width();
-    const PCType stride = dst.Stride();
+    d.Init(dst, src);
 
-    if (dst.Data() != src.Data())
+    FilterV_Kernel(d.dst_data, d.src_data);
+
+    d.End();
+}
+
+void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
+{
+    d.Init(dst, src);
+
+    FilterH_Kernel(d.dst_data, d.src_data);
+
+    d.End();
+}
+
+void RecursiveGaussian::Filter(Plane_FL &dst, const Plane_FL &src)
+{
+    d.Init(dst, src);
+
+    FilterH_Kernel(d.dst_data, d.src_data);
+    FilterV_Kernel(d.dst_data, d.dst_data);
+
+    d.End();
+}
+
+void RecursiveGaussian::Filter(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride)
+{
+    d.Init(dst, src, height, width, stride);
+
+    FilterH_Kernel(d.dst_data, d.src_data);
+    FilterV_Kernel(d.dst_data, d.dst_data);
+
+    d.End();
+}
+
+
+// Protected functions of class RecursiveGaussian
+void RecursiveGaussian::FilterV_Kernel(FLType *dst, const FLType *src) const
+{
+    if (dst != src)
     {
-        memcpy(dst.Data(), src.Data(), sizeof(FLType) * width);
+        memcpy(dst, src, sizeof(FLType) * d.width);
     }
 
-    LOOP_H_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
+    LOOP_H_PPL(d.height, d.width, d.stride, [&](const PCType j, const PCType lower, const PCType upper)
     {
         PCType i0 = lower;
-        PCType i1 = j < 1 ? i0 : i0 - stride;
-        PCType i2 = j < 2 ? i1 : i1 - stride;
-        PCType i3 = j < 3 ? i2 : i2 - stride;
+        PCType i1 = j < 1 ? i0 : i0 - d.stride;
+        PCType i2 = j < 2 ? i1 : i1 - d.stride;
+        PCType i3 = j < 3 ? i2 : i2 - d.stride;
 
         FLType P0, P1, P2, P3;
 
@@ -69,12 +110,12 @@ void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
         }
     });
 
-    LOOP_Hinv_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
+    LOOP_Hinv_PPL(d.height, d.width, d.stride, [&](const PCType j, const PCType lower, const PCType upper)
     {
         PCType i0 = lower;
-        PCType i1 = j >= height - 1 ? i0 : i0 + stride;
-        PCType i2 = j >= height - 2 ? i1 : i1 + stride;
-        PCType i3 = j >= height - 3 ? i2 : i2 + stride;
+        PCType i1 = j >= d.height - 1 ? i0 : i0 + d.stride;
+        PCType i2 = j >= d.height - 2 ? i1 : i1 + d.stride;
+        PCType i3 = j >= d.height - 3 ? i2 : i2 + d.stride;
 
         FLType P0, P1, P2, P3;
 
@@ -89,62 +130,12 @@ void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
     });
 }
 
-void RecursiveGaussian::FilterV(Plane_FL &data)
+void RecursiveGaussian::FilterH_Kernel(FLType *dst, const FLType *src) const
 {
-    const PCType height = data.Height();
-    const PCType width = data.Width();
-    const PCType stride = data.Stride();
-
-    LOOP_H_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
+    LOOP_V_PPL(d.height, [&](const PCType j)
     {
-        PCType i0 = lower;
-        PCType i1 = j < 1 ? i0 : i0 - stride;
-        PCType i2 = j < 2 ? i1 : i1 - stride;
-        PCType i3 = j < 3 ? i2 : i2 - stride;
-
-        FLType P0, P1, P2, P3;
-
-        for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
-        {
-            P3 = data[i3];
-            P2 = data[i2];
-            P1 = data[i1];
-            P0 = data[i0];
-            data[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
-        }
-    });
-
-    LOOP_Hinv_PPL(height, width, stride, [&](const PCType j, const PCType lower, const PCType upper)
-    {
-        PCType i0 = lower;
-        PCType i1 = j >= height - 1 ? i0 : i0 + stride;
-        PCType i2 = j >= height - 2 ? i1 : i1 + stride;
-        PCType i3 = j >= height - 3 ? i2 : i2 + stride;
-
-        FLType P0, P1, P2, P3;
-
-        for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
-        {
-            P3 = data[i3];
-            P2 = data[i2];
-            P1 = data[i1];
-            P0 = data[i0];
-            data[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
-        }
-    });
-}
-
-
-void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
-{
-    const PCType height = dst.Height();
-    const PCType width = dst.Width();
-    const PCType stride = dst.Stride();
-    
-    LOOP_V_PPL(height, [&](const PCType j)
-    {
-        const PCType lower = j * stride;
-        const PCType upper = lower + width - 1;
+        const PCType lower = j * d.stride;
+        const PCType upper = lower + d.width - 1;
 
         PCType i = lower;
         FLType P0, P1, P2, P3;
@@ -160,7 +151,7 @@ void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
             P1 = P0;
             dst[i] = P0;
         }
-        
+
         P3 = P2 = P1 = dst[i];
 
         for (; i > lower;)
@@ -171,45 +162,6 @@ void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
             P2 = P1;
             P1 = P0;
             dst[i] = P0;
-        }
-    });
-}
-
-void RecursiveGaussian::FilterH(Plane_FL &data)
-{
-    const PCType height = data.Height();
-    const PCType width = data.Width();
-    const PCType stride = data.Stride();
-
-    LOOP_V_PPL(height, [&](const PCType j)
-    {
-        const PCType lower = j * stride;
-        const PCType upper = lower + width - 1;
-
-        PCType i = lower;
-        FLType P0, P1, P2, P3;
-        P3 = P2 = P1 = data[i];
-
-        for (; i < upper;)
-        {
-            ++i;
-            P0 = B * data[i] + B1 * P1 + B2 * P2 + B3 * P3;
-            P3 = P2;
-            P2 = P1;
-            P1 = P0;
-            data[i] = P0;
-        }
-
-        P3 = P2 = P1 = data[i];
-
-        for (; i > lower;)
-        {
-            --i;
-            P0 = B * data[i] + B1 * P1 + B2 * P2 + B3 * P3;
-            P3 = P2;
-            P2 = P1;
-            P1 = P0;
-            data[i] = P0;
         }
     });
 }

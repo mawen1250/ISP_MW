@@ -5,6 +5,35 @@
 #include "Type.h"
 
 
+// Memory allocation
+#ifdef _CUDA_
+const size_t MEMORY_ALIGNMENT = 4096;
+#else
+const size_t MEMORY_ALIGNMENT = 64;
+#endif
+
+
+template < typename _Ty = void >
+void AlignedMalloc(_Ty *&Memory, size_t Count, size_t Alignment = MEMORY_ALIGNMENT)
+{
+    Memory = reinterpret_cast<_Ty *>(_aligned_malloc(sizeof(_Ty) * Count, Alignment));
+
+    if (Memory == nullptr)
+    {
+        std::cerr << "AlignedMalloc: memory allocation failed!\n";
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+template < typename _Ty = void >
+void AlignedFree(_Ty *&Memory)
+{
+    _aligned_free(Memory);
+    Memory = nullptr;
+}
+
+
 // Round_Div
 template < typename T >
 inline T Round_Div(T dividend, T divisor)

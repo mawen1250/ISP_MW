@@ -2,6 +2,7 @@
 #define IMAGE_STRUCT_H_
 
 
+#include <iostream>
 #include <vector>
 #include <array>
 #include <crtdefs.h>

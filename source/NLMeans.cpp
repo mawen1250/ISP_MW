@@ -147,7 +147,7 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block
 
 
 // Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
-Plane &NLMeans::process(Plane &dst, const Plane &src, const Plane &ref)
+Plane &NLMeans::process_Plane(Plane &dst, const Plane &src, const Plane &ref)
 {
     if (para.strength <= 0 || para.GroupSizeMax == 1 || para.BlockSize <= 0
         || para.BMrange <= 0 || para.BMrange < para.BMstep || para.thMSE <= 0)
@@ -247,7 +247,7 @@ Plane &NLMeans::process(Plane &dst, const Plane &src, const Plane &ref)
 
 
 // Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
-Frame &NLMeans::process(Frame &dst, const Frame &src, const Frame &ref)
+Frame &NLMeans::process_Frame(Frame &dst, const Frame &src, const Frame &ref)
 {
     if (para.strength <= 0 || para.GroupSizeMax == 1 || para.BlockSize <= 0
         || para.BMrange <= 0 || para.BMrange < para.BMstep || para.thMSE <= 0)

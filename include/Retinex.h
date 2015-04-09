@@ -2,7 +2,7 @@
 #define RETINEX_H_
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 #include "Histogram.h"
 
@@ -27,9 +27,11 @@ const struct Retinex_Para
 
 
 class Retinex
+    : public FilterIF
 {
 public:
     typedef Retinex _Myt;
+    typedef FilterIF _Mybase;
 
 protected:
     Retinex_Para para;
@@ -39,29 +41,14 @@ public:
         : para(_para)
     {}
 
-    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src) = 0;
-
-    Plane_FL operator()(const Plane_FL &src)
-    {
-        Plane_FL dst(src, false);
-        return process(dst, src);
-    }
-
-    virtual Plane &process(Plane &dst, const Plane &src) = 0;
-
-    Plane operator()(const Plane &src)
-    {
-        Plane dst(src, false);
-        return process(dst, src);
-    }
-
-    virtual Frame &process(Frame &dst, const Frame &src)
+protected:
+    virtual Frame &process_Frame(Frame &dst, const Frame &src)
     {
         if (src.isRGB())
         {
             for (Frame::PlaneCountType i = 0; i < src.PlaneCount(); i++)
             {
-                process(dst.P(i), src.P(i));
+                process_Plane(dst.P(i), src.P(i));
             }
         }
         else
@@ -74,13 +61,6 @@ public:
         return dst;
     }
 
-    Frame operator()(const Frame &src)
-    {
-        Frame dst(src, false);
-        return process(dst, src);
-    }
-
-protected:
     Plane_FL &Kernel(Plane_FL &dst, const Plane_FL &src);
 
     Plane_FL Kernel(const Plane_FL &src)
@@ -106,9 +86,10 @@ public:
         para.sigmaVector.push_back(para.sigma);
     }
 
-    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src);
+protected:
+    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src);
 
-    virtual Plane &process(Plane &dst, const Plane &src);
+    virtual Plane &process_Plane(Plane &dst, const Plane &src);
 };
 
 
@@ -124,9 +105,10 @@ public:
         : _Mybase(_para)
     {}
 
-    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src);
+protected:
+    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src);
 
-    virtual Plane &process(Plane &dst, const Plane &src);
+    virtual Plane &process_Plane(Plane &dst, const Plane &src);
 };
 
 
@@ -142,9 +124,10 @@ public:
         : _Mybase(_para)
     {}
 
-    virtual Plane_FL &process(Plane_FL &dst, const Plane_FL &src);
+protected:
+    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src);
 
-    virtual Plane &process(Plane &dst, const Plane &src);
+    virtual Plane &process_Plane(Plane &dst, const Plane &src);
 };
 
 
@@ -160,7 +143,8 @@ public:
         : _Mybase(_para)
     {}
 
-    virtual Frame &process(Frame &dst, const Frame &src);
+protected:
+    virtual Frame &process_Frame(Frame &dst, const Frame &src);
 };
 
 
@@ -176,7 +160,8 @@ public:
         : _Mybase(_para)
     {}
 
-    virtual Frame &process(Frame &dst, const Frame &src);
+protected:
+    virtual Frame &process_Frame(Frame &dst, const Frame &src);
 };
 
 

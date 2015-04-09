@@ -20,6 +20,7 @@
     <ClInclude Include="..\include\Convolution.h" />
     <ClInclude Include="..\include\CUDA\Gaussian.cuh" />
     <ClInclude Include="..\include\Conversion.hpp" />
+    <ClInclude Include="..\include\CUDA\Helper.cuh" />
     <ClInclude Include="..\include\Gaussian.h" />
     <ClInclude Include="..\include\Haze_Removal.h" />
     <ClInclude Include="..\include\Helper.h" />
@@ -29,7 +30,7 @@
     <ClInclude Include="..\include\ImageIO.h" />
     <ClInclude Include="..\include\Image_Type.h" />
     <ClInclude Include="..\include\Image_Type.hpp" />
-    <ClInclude Include="..\include\IO.h" />
+    <ClInclude Include="..\include\Filter.h" />
     <ClInclude Include="..\include\ISP_MW.h" />
     <ClInclude Include="..\include\LUT.h" />
     <ClInclude Include="..\include\LUT.hpp" />
@@ -59,6 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\source\CUDA\Gaussian.cu" />
+    <CudaCompile Include="..\source\CUDA\Helper.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8252F2AE-B042-44CC-82A9-6FB4CC727613}</ProjectGuid>

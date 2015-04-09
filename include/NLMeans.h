@@ -2,7 +2,7 @@
 #define NLMEANS_H_
 
 
-#include "IO.h"
+#include "Filter.h"
 #include "Image_Type.h"
 #include "Helper.h"
 #include "Block.h"
@@ -24,45 +24,24 @@ const struct NLMeans_Para
 
 // Non-local Means denoising algorithm based on block matching and weighted average of grouped blocks
 class NLMeans
+    : public FilterIF2
 {
+public:
+    typedef NLMeans _Myt;
+    typedef FilterIF2 _Mybase;
+
 protected:
     NLMeans_Para para;
 
 public:
-    NLMeans(const NLMeans_Para &_para = NLMeans_Default)
+    _Myt(const NLMeans_Para &_para = NLMeans_Default)
         : para(_para)
     {}
 
-    ~NLMeans()
-    {}
+protected:
+    virtual Plane &process_Plane(Plane &dst, const Plane &src, const Plane &ref);
 
-    Plane &process(Plane &dst, const Plane &src, const Plane &ref);
-
-    Plane operator()(const Plane &src, const Plane &ref)
-    {
-        Plane dst(src, false);
-        return process(dst, src, ref);
-    }
-
-    Plane operator()(const Plane &src)
-    {
-        Plane dst(src, false);
-        return process(dst, src, src);
-    }
-
-    Frame &process(Frame &dst, const Frame &src, const Frame &ref);
-
-    Frame operator()(const Frame &src, const Frame &ref)
-    {
-        Frame dst(src, false);
-        return process(dst, src, ref);
-    }
-
-    Frame operator()(const Frame &src)
-    {
-        Frame dst(src, false);
-        return process(dst, src, src);
-    }
+    virtual Frame &process_Frame(Frame &dst, const Frame &src, const Frame &ref);
 
 protected:
     template < typename _St1, typename _Ty, typename _FTy >
@@ -88,7 +67,7 @@ protected:
 
     virtual void arguments_process()
     {
-        FilterIO::arguments_process();
+        _Mybase::arguments_process();
 
         Args ArgsObj(argc, args);
 

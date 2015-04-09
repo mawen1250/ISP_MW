@@ -7,7 +7,7 @@
 
 
 // Functions for class Haze_Removal
-Frame &Haze_Removal::process(Frame &dst, const Frame &src)
+Frame &Haze_Removal::process_Frame(Frame &dst, const Frame &src)
 {
     height = dst.Height();
     width = dst.Width();
