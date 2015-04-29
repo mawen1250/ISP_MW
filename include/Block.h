@@ -81,14 +81,14 @@ public:
     Block(PCType _Height, PCType _Width, Pos pos, bool Init = true, value_type Value = 0)
         : Height_(_Height), Width_(_Width), PixelCount_(Height_ * Width_), pos_(pos)
     {
-        Data_ = new value_type[PixelCount_];
+        AlignedMalloc(Data_, PixelCount_);
 
         InitValue(Init, Value);
     }
 
     // Constructor from Plane-like classes and Pos
     template < typename _St1 >
-    explicit Block(const _St1 &src, PCType _Height = 16, PCType _Width = 16, Pos pos = Pos(0, 0))
+    explicit Block(const _St1 &src, PCType _Height, PCType _Width, Pos pos)
         : Block(_Height, _Width, pos, false)
     {
         From(src);
@@ -121,7 +121,7 @@ public:
     // Destructor
     ~Block()
     {
-        delete[] Data_;
+        AlignedFree(Data_);
     }
 
     // Copy assignment operator
@@ -155,7 +155,7 @@ public:
         PixelCount_ = src.PixelCount_;
         pos_ = src.pos_;
 
-        delete[] Data_;
+        AlignedFree(Data_);
         Data_ = src.Data_;
 
         src.Height_ = 0;
@@ -596,7 +596,7 @@ public:
     explicit BlockGroup(PCType _BlockCount, PCType _Height, PCType _Width, bool Init = true, value_type Value = 0)
         : BlockCount_(_BlockCount), Height_(_Height), Width_(_Width), PixelCount_(BlockCount_ * Height_ * Width_)
     {
-        Data_ = new value_type[PixelCount_];
+        AlignedMalloc(Data_, PixelCount_);
 
         InitValue(Init, Value);
     }
@@ -610,7 +610,7 @@ public:
 
         PixelCount_ = BlockCount_ * Height_ * Width_;
 
-        Data_ = new value_type[PixelCount_];
+        AlignedMalloc(Data_, PixelCount_);
 
         From(src);
     }
@@ -620,7 +620,7 @@ public:
         : BlockCount_(src.BlockCount_), Height_(src.Height_), Width_(src.Width_), PixelCount_(src.PixelCount_), 
         keyCode_(src.keyCode_), posCode_(src.posCode_)
     {
-        Data_ = new value_type[PixelCount_];
+        AlignedMalloc(Data_, PixelCount_);
 
         memcpy(Data_, src.Data_, sizeof(value_type) * PixelCount_);
     }
@@ -642,7 +642,7 @@ public:
     // Destructor
     ~BlockGroup()
     {
-        delete[] Data_;
+        AlignedFree(Data_);
     }
 
     // Copy assignment operator
@@ -680,7 +680,7 @@ public:
         keyCode_ = std::move(src.keyCode_);
         posCode_ = std::move(src.posCode_);
 
-        delete[] Data_;
+        AlignedFree(Data_);
         Data_ = src.Data_;
 
         src.BlockCount_ = 0;

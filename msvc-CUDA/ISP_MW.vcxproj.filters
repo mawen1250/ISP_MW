@@ -108,6 +108,24 @@
     <ClInclude Include="..\include\Filter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\CUDA\Transform.cuh">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\CUDA\Haze_Removal.cuh">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\CUDA\HelperCU.cuh">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\CUDA\Histogram.cuh">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\CUDA\Specification.cuh">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\CUDA\Conversion.cuh">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\AWB.cpp">
@@ -161,6 +179,15 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="..\source\CUDA\Helper.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\source\CUDA\Transform.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\source\CUDA\Haze_Removal.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\source\CUDA\Conversion.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
   </ItemGroup>

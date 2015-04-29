@@ -192,38 +192,17 @@ bool Plane::operator==(const _Myt &b) const
 
 Plane::value_type Plane::Min() const
 {
-    value_type min = value_type_MAX;
-
-    for_each([&](value_type x)
-    {
-        if (min > x) min = x;
-    });
-
-    return min;
+    return GetMin(*this);
 }
 
 Plane::value_type Plane::Max() const
 {
-    value_type max = value_type_MIN;
-
-    for_each([&](value_type x)
-    {
-        if (max < x) max = x;
-    });
-
-    return max;
+    return GetMax(*this);
 }
 
 void Plane::MinMax(reference min, reference max) const
 {
-    min = value_type_MAX;
-    max = value_type_MIN;
-
-    for_each([&](value_type x)
-    {
-        if (min > x) min = x;
-        if (max < x) max = x;
-    });
+    GetMinMax(*this, min, max);
 }
 
 FLType Plane::Mean() const
@@ -257,11 +236,25 @@ Plane &Plane::ReSize(PCType _Width, PCType _Height)
 {
     if (Width() != _Width || Height() != _Height)
     {
-        if (PixelCount() != _Width * _Height)
+        auto newPC = _Width * _Height;
+
+        if (PixelCount() != newPC)
         {
-            AlignedFree(Data_);
-            PixelCount_ = _Width * _Height;
-            AlignedMalloc(Data_, size());
+            auto originPC = PixelCount();
+            PixelCount_ = newPC;
+
+            if (newPC == 0)
+            {
+                AlignedFree(Data_);
+            }
+            else if (originPC == 0)
+            {
+                AlignedMalloc(Data_, newPC);
+            }
+            else
+            {
+                AlignedRealloc(Data_, newPC);
+            }
         }
 
         Width_ = _Width;
@@ -584,38 +577,17 @@ bool Plane_FL::operator==(const _Myt &b) const
 
 Plane_FL::value_type Plane_FL::Min() const
 {
-    value_type min = value_type_MAX;
-
-    for_each([&](value_type x)
-    {
-        if (min > x) min = x;
-    });
-
-    return min;
+    return GetMin(*this);
 }
 
 Plane_FL::value_type Plane_FL::Max() const
 {
-    value_type max = -value_type_MAX;
-
-    for_each([&](value_type x)
-    {
-        if (max < x) max = x;
-    });
-
-    return max;
+    return GetMax(*this);
 }
 
 void Plane_FL::MinMax(reference min, reference max) const
 {
-    min = value_type_MAX;
-    max = -value_type_MAX;
-
-    for_each([&](value_type x)
-    {
-        if (min > x) min = x;
-        if (max < x) max = x;
-    });
+    GetMinMax(*this, min, max);
 }
 
 Plane_FL::value_type Plane_FL::Mean() const
@@ -649,11 +621,25 @@ Plane_FL &Plane_FL::ReSize(PCType _Width, PCType _Height)
 {
     if (Width() != _Width || Height() != _Height)
     {
-        if (PixelCount() != _Width * _Height)
+        auto newPC = _Width * _Height;
+
+        if (PixelCount() != newPC)
         {
-            AlignedFree(Data_);
-            PixelCount_ = _Width * _Height;
-            AlignedMalloc(Data_, size());
+            auto originPC = PixelCount();
+            PixelCount_ = newPC;
+
+            if (newPC == 0)
+            {
+                AlignedFree(Data_);
+            }
+            else if (originPC == 0)
+            {
+                AlignedMalloc(Data_, newPC);
+            }
+            else
+            {
+                AlignedRealloc(Data_, newPC);
+            }
         }
 
         Width_ = _Width;

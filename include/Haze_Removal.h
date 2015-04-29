@@ -7,25 +7,30 @@
 #include "Histogram.h"
 
 
-const struct Haze_Removal_Para
+struct Haze_Removal_Para
 {
+    typedef Haze_Removal_Para _Myt;
+
     TransferChar TransferChar_ = TransferChar::bt709;
     double tMap_thr = 0.001;
     FLType ALmax = FLType(1);
     FLType tMapMin = FLType(0.1);
     FLType tMapMax = FLType(1.2);
-    FLType strength = FLType(0.8);
+    FLType strength = FLType(0.85);
     int ppmode = 3;
+    ldbl pp_sigma = 10.0L;
     double lower_thr = 0.05;
     double upper_thr = 0.03;
     Histogram<FLType>::BinType HistBins = 1024;
     int debug = 0;
 
     int Ymode = 1;
-    std::vector<double> sigmaVector;
+    std::vector<ldbl> sigmaVector;
 
-    Haze_Removal_Para() : sigmaVector({ 15.0, 120.0 }) {}
-} Haze_Removal_Default;
+    _Myt() : sigmaVector({ 15.0L, sizeof(FLType) ? 80.0L : 250.0L }) {}
+};
+
+extern const Haze_Removal_Para Haze_Removal_Default;
 
 
 class Haze_Removal
@@ -57,19 +62,20 @@ public:
     {}
 
 protected:
+    // Main process flow
     virtual Frame &process_Frame(Frame &dst, const Frame &src);
 
     // Generate the Inverted Transmission Map from intensity image
     virtual void GetTMapInv() = 0;
 
     // Get the Global Atmospheric Light from Inverted Transmission Map and src
-    void GetAtmosLight();
+    virtual void GetAtmosLight();
 
     // Generate the haze-free image
-    void RemoveHaze();
+    virtual void RemoveHaze();
 
     // Store the filtered result to a Frame with range scaling
-    void StoreResult(Frame &dst);
+    virtual void StoreResult(Frame &dst);
 };
 
 
@@ -144,6 +150,11 @@ protected:
                 ArgsObj.GetPara(i, para.ppmode);
                 continue;
             }
+            if (args[i] == "-PPS" || args[i] == "--pp_sigma")
+            {
+                ArgsObj.GetPara(i, para.pp_sigma);
+                continue;
+            }
             if (args[i] == "-L" || args[i] == "--lower_thr")
             {
                 ArgsObj.GetPara(i, para.lower_thr);
@@ -178,7 +189,8 @@ protected:
 
 public:
     _Myt(std::string _Tag = ".Haze_Removal")
-        : _Mybase(std::move(_Tag)) {}
+        : _Mybase(std::move(_Tag))
+    {}
 };
 
 
@@ -195,7 +207,7 @@ protected:
         _Mybase::arguments_process();
 
         Args ArgsObj(argc, args);
-        double sigma;
+        ldbl sigma;
         para.sigmaVector.clear();
 
         for (int i = 0; i < argc; i++)
@@ -234,7 +246,8 @@ protected:
 
 public:
     _Myt(std::string _Tag = ".Haze_Removal_Retinex")
-        : _Mybase(std::move(_Tag)) {}
+        : _Mybase(std::move(_Tag))
+    {}
 };
 
 

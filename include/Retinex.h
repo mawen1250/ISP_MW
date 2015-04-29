@@ -9,11 +9,11 @@
 
 const struct Retinex_Para
 {
-    double sigma = 100.0;
-    std::vector<double> sigmaVector;
+    ldbl sigma = 80.0L;
+    std::vector<ldbl> sigmaVector;
 
-    double lower_thr = 0.001;
-    double upper_thr = 0.001;
+    double lower_thr = 0.01;
+    double upper_thr = 0.01;
     Histogram<FLType>::BinType HistBins = 1024;
 
     double chroma_protect = 1.2;
@@ -22,7 +22,7 @@ const struct Retinex_Para
 
     FLType dynamic = FLType(10.0);
 
-    Retinex_Para() : sigmaVector({ 25.0, 80.0, 250.0 }) {}
+    Retinex_Para() : sigmaVector({ 15.0L, sizeof(FLType) ? 80.0L : 250.0L }) {}
 } Retinex_Default;
 
 
@@ -180,7 +180,7 @@ protected:
         _Mybase::arguments_process();
 
         Args ArgsObj(argc, args);
-        double sigma;
+        ldbl sigma;
         para.sigmaVector.clear();
 
         for (int i = 0; i < argc; i++)

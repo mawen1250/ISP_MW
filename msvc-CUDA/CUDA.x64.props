@@ -18,7 +18,7 @@
     <ClCompile>
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
-      <PreprocessorDefinitions>_CUDA_;_CUDA_1_1_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CUDA_;_CUDA_1_2_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <CudaCompile>
       <CodeGeneration>compute_12,sm_12;%(CodeGeneration)</CodeGeneration>

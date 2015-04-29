@@ -6,10 +6,6 @@
 #include "Gaussian.h"
 
 
-extern const CUDA_FilterMode CUDA_Gaussian2D_Default;
-extern const CUDA_FilterMode CUDA_RecursiveGaussian_Default;
-
-
 class CUDA_Gaussian2D
     : public Gaussian2D
 {
@@ -18,11 +14,11 @@ public:
     typedef Gaussian2D _Mybase;
 
 private:
-    CUDA_FilterMode cuFM;
+    CudaMemMode mem_mode;
 
 public:
-    _Myt(const Gaussian2D_Para &_para = Gaussian2D_Default, const CUDA_FilterMode &_cuFM = CUDA_Gaussian2D_Default)
-        : _Mybase(_para), cuFM(_cuFM)
+    _Myt(const Gaussian2D_Para &_para = Gaussian2D_Default, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
+        : _Mybase(_para), mem_mode(_mem_mode)
     {}
 
 protected:
@@ -50,9 +46,8 @@ public:
 };
 
 
-// Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
-// For 32bit float type, the maximum sigma with valid result is about 120.
-// CUDA version
+// CUDA Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
+// For 32bit float type, the maximum sigma with valid result is about 80.
 class CUDA_RecursiveGaussian
     : public RecursiveGaussian
 {
@@ -61,26 +56,29 @@ public:
     typedef RecursiveGaussian _Mybase;
     typedef CUDA_FilterData<FLType> _Dt;
 
+    static const cuIdx BLOCK_DIM = 64;
+
 private:
     _Dt d;
 
 public:
-    _Myt(long double sigma, const CUDA_FilterMode &_cuFM = CUDA_RecursiveGaussian_Default)
-        : _Mybase(sigma), d(_cuFM)
+    _Myt(long double sigma, bool _allow_negative = true, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
+        : _Mybase(sigma, _allow_negative), d(_mem_mode, BLOCK_DIM)
     {}
 
     __device__ const _Dt &D() const { return d; }
 
-    virtual void FilterV(Plane_FL &dst, const Plane_FL &src);
-    void FilterV(Plane_FL &data) { FilterV(data, data); }
-
-    virtual void FilterH(Plane_FL &dst, const Plane_FL &src);
-    void FilterH(Plane_FL &data) { FilterH(data, data); }
-
-    virtual void Filter(Plane_FL &dst, const Plane_FL &src);
-    void Filter(Plane_FL &data) { Filter(data, data); }
-
+    virtual void FilterV(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
+    virtual void FilterH(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
     virtual void Filter(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
+
+    virtual void FilterV(Plane_FL &dst, const Plane_FL &src);
+    virtual void FilterH(Plane_FL &dst, const Plane_FL &src);
+    virtual void Filter(Plane_FL &dst, const Plane_FL &src);
+
+    virtual void FilterV(Plane_FL &data) { FilterV(data, data); }
+    virtual void FilterH(Plane_FL &data) { FilterH(data, data); }
+    virtual void Filter(Plane_FL &data) { Filter(data, data); }
 };
 
 

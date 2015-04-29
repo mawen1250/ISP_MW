@@ -116,7 +116,7 @@ Plane &Bilateral2D_1(Plane &dst, const Plane &src, const Plane &ref, const Bilat
     }
 
     // Generate recursive Gaussian filter object
-    RecursiveGaussian GFilter(sigmaS);
+    RecursiveGaussian GFilter(sigmaS, true);
 
     // Generate quantized PBFICs
     Plane_FL * PBFIC = new Plane_FL[PBFICnum];

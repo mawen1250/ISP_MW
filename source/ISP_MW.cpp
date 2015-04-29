@@ -1,7 +1,9 @@
 #include <iostream>
-#include <cstdlib>
+#include <random>
 #include <algorithm>
+#include <cstdlib>
 #include <cctype>
+#include <ctime>
 #include "ISP_MW.h"
 
 
@@ -23,18 +25,22 @@
 //#define Histogram_Equalization_
 //#define AWB_
 //#define NLMeans_
-//#define Haze_Removal_
+#define Haze_Removal_
 
 #ifdef _CUDA_
 //#define CUDA_Gaussian_
+//#define CUDA_Transpose_
+//#define CUDA_Haze_Removal_
 #endif
 
 
 int Test_Speed()
 {
-    const int Loop = 50;
+    const int Loop = 20;
 
-    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\2\\1 tz WDR=on 2.png");
+    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
+    //Frame IFrame = ImageReader("D:\\Test Images\\Haze\\2\\1 tz WDR=on 2.png");
+    Frame PFrame(IFrame, false);
     const Plane &srcR = IFrame.R();
     Plane dstR(srcR, false);
 
@@ -59,7 +65,9 @@ int Test_Speed()
         Bilateral2D_Data bldata(IFrame, para);
         Bilateral2D(IFrame, bldata);
 #elif defined(Transpose_)
-        Transpose(IFrame);
+        Transpose(PFrame, IFrame);
+#elif defined(CUDA_Transpose_)
+        CUDA_Transpose(PFrame, IFrame);
 #elif defined(Specular_Highlight_Removal_)
         Specular_Highlight_Removal(IFrame);
 #elif defined(Retinex_MSRCP_)
@@ -79,6 +87,9 @@ int Test_Speed()
 #elif defined(Haze_Removal_)
         Haze_Removal_Retinex filter;
         filter(IFrame);
+#elif defined(CUDA_Haze_Removal_)
+        CUDA_Haze_Removal_Retinex filter;
+        filter(IFrame);
 #else
         const PCType pzero = 0;
         const PCType pcount = dstR.PixelCount();
@@ -94,7 +105,7 @@ int Test_Speed()
 int Test_Write()
 {
     Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
-    Frame PFrame;
+    Frame PFrame(IFrame, false);
 #if defined(Convolution_)
     PFrame = Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
 #elif defined(EdgeDetect_)
@@ -113,7 +124,9 @@ int Test_Write()
     Bilateral2D_Data bldata(IFrame, para);
     PFrame = Bilateral2D(IFrame, bldata);
 #elif defined(Transpose_)
-    PFrame = Transpose(IFrame);
+    Transpose(PFrame, IFrame);
+#elif defined(CUDA_Transpose_)
+    CUDA_Transpose(PFrame, IFrame);
 #elif defined(Specular_Highlight_Removal_)
     PFrame = Specular_Highlight_Removal(IFrame);
 #elif defined(Tone_Mapping_)
@@ -133,6 +146,9 @@ int Test_Write()
 #elif defined(Haze_Removal_)
     Haze_Removal_Retinex filter;
     PFrame = filter(IFrame);
+#elif defined(CUDA_Haze_Removal_)
+    CUDA_Haze_Removal_Retinex filter;
+    PFrame = filter(IFrame);
 #else
     PFrame = IFrame;
 #endif
@@ -144,9 +160,9 @@ int Test_Write()
 
 int Test_Other()
 {
-    const int Loop = 1;
+    const int Loop = 1000;
 
-    Frame IFrame = ImageReader("D:\\Project\\Retinex test\\_DSC8176.JPG");
+    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
     Plane &IR = IFrame.R();
 
     system("pause");
@@ -156,9 +172,17 @@ int Test_Other()
 
 int main(int argc, char ** argv)
 {
+    srand(static_cast<unsigned int>(time(0)));
+
+    std::cout.setf(std::ios_base::scientific, std::ios_base::floatfield);
+    std::cout.setf(std::ios_base::showpos);
+    std::cout.setf(std::ios_base::showpoint);
+    std::cout.precision(7);
+
 #ifdef _CUDA_
     checkCudaErrors(cudaSetDeviceFlags(cudaDeviceMapHost));
 #endif
+
 #ifdef Test
     return Test_Func();
 #else
@@ -236,7 +260,7 @@ int Filtering(const int argc, char ** argv)
     }
     else if (FilterName == "--hrr" || FilterName == "--haze_removal" || FilterName == "--haze_removal_retinex")
     {
-        filterIOPtr = new Haze_Removal_Retinex_IO;
+        filterIOPtr = new _Haze_Removal_Retinex_IO;
     }
     else
     {

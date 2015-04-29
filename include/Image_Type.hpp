@@ -115,7 +115,7 @@ bool isPCChroma(double Floor, double Neutral, double Ceil)
     return isPCChromaFloat(Floor, Neutral, Ceil);
 }
 template < > inline
-bool isPCChroma(long double Floor, long double Neutral, long double Ceil)
+bool isPCChroma(ldbl Floor, ldbl Neutral, ldbl Ceil)
 {
     return isPCChromaFloat(Floor, Neutral, Ceil);
 }
@@ -170,7 +170,7 @@ void ReSetChroma(double &Floor, double &Neutral, double &Ceil, bool Chroma)
     ReSetChromaFloat(Floor, Neutral, Ceil, Chroma);
 }
 template < > inline
-void ReSetChroma(long double &Floor, long double &Neutral, long double &Ceil, bool Chroma)
+void ReSetChroma(ldbl &Floor, ldbl &Neutral, ldbl &Ceil, bool Chroma)
 {
     ReSetChromaFloat(Floor, Neutral, Ceil, Chroma);
 }

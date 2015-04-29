@@ -387,12 +387,10 @@ inline ColorMatrix ColorMatrix_Default(int Width, int Height)
 
 // Conversion classes
 template < typename T = FLType >
-class TransferChar_Conv_Sub
+struct TransferChar_Conv_Sub
 {
-public:
     typedef TransferChar_Conv_Sub<T> _Myt;
 
-private:
     // General Parameters
     T k0 = 1;
     T k0Mphi;
@@ -404,18 +402,17 @@ private:
     T beta;
     T recBeta;
     T power = 1;
-    T recPower;
+    T gamma;
 
     // Parameters for log function
     T div = 1;
     T recDiv;
 
-public:
-    TransferChar_Conv_Sub(TransferChar _TransferChar)
+    _Myt(TransferChar _TransferChar)
     {
-        long double _k0 = 1, _phi = 1, _alpha = 0, _power = 1, _div = 1;
+        ldbl _k0 = 1.0L, _phi = 1.0L, _alpha = 0.0L, _power = 1.0L, _div = 1.0L;
         TransferChar_Parameter(_TransferChar, _k0, _phi, _alpha, _power, _div);
-        long double _beta = _alpha + 1;
+        ldbl _beta = _alpha + 1.0L;
 
         k0 = static_cast<T>(_k0);
         phi = static_cast<T>(_phi);
@@ -426,7 +423,7 @@ public:
         recPhi = static_cast<T>(1 / _phi);
         beta = static_cast<T>(_beta);
         recBeta = static_cast<T>(1 / _beta);
-        recPower = static_cast<T>(1 / _power);
+        gamma = static_cast<T>(1 / _power);
         recDiv = static_cast<T>(1 / _div);
     }
 
@@ -447,7 +444,7 @@ public:
 
     T gamma2linear(T x) const
     {
-        return x < k0Mphi ? x * recPhi : pow((x + alpha) * recBeta, recPower);
+        return x < k0Mphi ? x * recPhi : pow((x + alpha) * recBeta, gamma);
     }
 
     T linear2gamma(T x) const
@@ -467,11 +464,10 @@ public:
 };
 
 
-template < typename T = FLType >
-class TransferChar_Conv
+class TransferChar_Conv_Base
 {
 public:
-    typedef TransferChar_Conv<T> _Myt;
+    typedef TransferChar_Conv_Base _Myt;
 
     enum class TransferType
     {
@@ -493,9 +489,7 @@ public:
         log2log
     };
 
-private:
-    TransferChar_Conv_Sub<T> ToLinear;
-    TransferChar_Conv_Sub<T> LinearTo;
+protected:
     TransferType srcType_;
     TransferType dstType_;
     ConvType type_;
@@ -517,9 +511,9 @@ protected:
         }
     }
 
-    void ConvTypeDecision()
+    void ConvTypeDecision(bool same = false)
     {
-        if (ToLinear == LinearTo)
+        if (same)
         {
             type_ = ConvType::none;
         }
@@ -567,10 +561,34 @@ protected:
     }
 
 public:
-    TransferChar_Conv(TransferChar dst, TransferChar src)
-        : ToLinear(src), LinearTo(dst), srcType_(TransferTypeDecision(src)), dstType_(TransferTypeDecision(dst))
+    _Myt(TransferChar dst, TransferChar src)
+        : srcType_(TransferTypeDecision(src)), dstType_(TransferTypeDecision(dst))
+    {}
+
+    ConvType Type() const
     {
-        ConvTypeDecision();
+        return type_;
+    }
+};
+
+
+template < typename T = FLType >
+class TransferChar_Conv
+    : public TransferChar_Conv_Base
+{
+public:
+    typedef TransferChar_Conv<T> _Myt;
+    typedef TransferChar_Conv_Base _Mybase;
+
+protected:
+    TransferChar_Conv_Sub<T> ToLinear;
+    TransferChar_Conv_Sub<T> LinearTo;
+
+public:
+    _Myt(TransferChar dst, TransferChar src)
+        : _Mybase(dst, src), ToLinear(src), LinearTo(dst)
+    {
+        ConvTypeDecision(ToLinear == LinearTo);
     }
 
     T operator()(T x) const
@@ -643,11 +661,6 @@ public:
     T log2log(T x) const
     {
         return LinearTo.linear2log(ToLinear.log2linear(x));
-    }
-
-    ConvType Type() const
-    {
-        return type_;
     }
 };
 

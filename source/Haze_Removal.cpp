@@ -6,6 +6,9 @@
 #include "Gaussian.h"
 
 
+const Haze_Removal_Para Haze_Removal_Default;
+
+
 // Functions for class Haze_Removal
 Frame &Haze_Removal::process_Frame(Frame &dst, const Frame &src)
 {
@@ -25,18 +28,8 @@ Frame &Haze_Removal::process_Frame(Frame &dst, const Frame &src)
 
         GetTMapInv();
         GetAtmosLight();
-
-        if (para.debug == 2)
-        {
-            RangeConvert(dst.R(), tMapInv, true);
-            RangeConvert(dst.G(), tMapInv, true);
-            RangeConvert(dst.B(), tMapInv, true);
-        }
-        else
-        {
-            RemoveHaze();
-            StoreResult(dst);
-        }
+        RemoveHaze();
+        StoreResult(dst);
 
         if (para.TransferChar_ != TransferChar::linear)
             TransferConvert(dst, dst, para.TransferChar_, TransferChar::linear);
@@ -82,7 +75,16 @@ void Haze_Removal::RemoveHaze()
     const FLType mulG = para.strength / AL_G;
     const FLType mulB = para.strength / AL_B;
 
-    if (para.debug == 3)
+    if (para.debug == 2)
+    {
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dataR[i] = tMapInv[i];
+            dataG[i] = tMapInv[i];
+            dataB[i] = tMapInv[i];
+        });
+    }
+    else if (para.debug == 3)
     {
         LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
@@ -111,36 +113,41 @@ void Haze_Removal::StoreResult(Frame &dst)
     Plane &dstG = dst.G();
     Plane &dstB = dst.B();
 
-    if (para.debug == 3)
-    {
-        RangeConvert(dst.R(), dataR, true);
-        RangeConvert(dst.G(), dataG, true);
-        RangeConvert(dst.B(), dataB, true);
-        return;
-    }
+    FLType min, max;
 
-    if (para.ppmode <= 0) // No range scaling
+    if (para.debug >= 2 || para.ppmode <= 0) // No range scaling
     {
-        RangeConvert(dstR, dstG, dstB, dataR, dataG, dataB,
-            dstR.Floor(), dstR.Neutral(), dstR.Ceil(), dataR.Floor(), dataR.Neutral(), dataR.Ceil(), true);
+        min = dataR.Floor();
+        max = dataR.Ceil();
     }
     else if (para.ppmode == 1) // Canonical range scaling
     {
-        const FLType min = FLType(- 0.10); // Experimental lower limit
-        const FLType max = (AL_R + AL_G + AL_B) / FLType(3); // Take average Global Atmospheric Light as upper limit
-        RangeConvert(dstR, dstG, dstB, dataR, dataG, dataB,
-            dstR.Floor(), dstR.Neutral(), dstR.Ceil(), min, min, max, true);
+        min = FLType(0.13); // Experimental lower limit
+        max = (AL_R + AL_G + AL_B) / FLType(3); // Take average Global Atmospheric Light as upper limit
     }
-    else if (para.ppmode == 2) // Apply separate Simpliest Color Balance to each channel
+    else if (para.ppmode == 2) // Gaussian filtered average channel for range detection
     {
-        SimplestColorBalance(dstR, dataR, para.lower_thr, para.upper_thr, para.HistBins);
-        SimplestColorBalance(dstG, dataG, para.lower_thr, para.upper_thr, para.HistBins);
-        SimplestColorBalance(dstB, dataB, para.lower_thr, para.upper_thr, para.HistBins);
+        Plane_FL temp(dataR, false);
+        RecursiveGaussian GFilter(para.pp_sigma, true);
+
+        ConvertToY(temp, dataR, dataG, dataB, ColorMatrix::Average);
+
+        GFilter.Filter(temp, temp);
+        GetMinMax(temp, min, max);
+
+        if (max <= min)
+        {
+            min = dataR.Floor();
+            max = dataR.Ceil();
+        }
     }
-    else // Apply Simpliest Color Balance to all channels with the same range conversion
+    else // Simpliest Color Balance with all channels combined for range detection
     {
-        SimplestColorBalance(dst, dataR, dataG, dataB, para.lower_thr, para.upper_thr, para.HistBins);
+        ValidRange(dataR, dataG, dataB, min, max, para.lower_thr, para.upper_thr, para.HistBins, true);
     }
+
+    RangeConvert(dstR, dstG, dstB, dataR, dataG, dataB,
+        dstR.Floor(), dstR.Neutral(), dstR.Ceil(), min, min, max, true);
 }
 
 
@@ -168,7 +175,7 @@ void Haze_Removal_Retinex::GetTMapInv()
     if (scount == 1 && para.sigmaVector[0] > 0) // single-scale Gaussian filter
     {
         Plane_FL gauss(refY, false);
-        RecursiveGaussian GFilter(para.sigmaVector[0]);
+        RecursiveGaussian GFilter(para.sigmaVector[0], true);
         GFilter.Filter(gauss, refY);
 
         tMapInv = Plane_FL(refY, false);
@@ -188,11 +195,11 @@ void Haze_Removal_Retinex::GetTMapInv()
     else if (scount == 2 && para.sigmaVector[0] > 0 && para.sigmaVector[1] > 0) // double-scale Gaussian filter
     {
         Plane_FL gauss0(refY, false);
-        RecursiveGaussian GFilter0(para.sigmaVector[0]);
+        RecursiveGaussian GFilter0(para.sigmaVector[0], true);
         GFilter0.Filter(gauss0, refY);
 
         Plane_FL gauss1(refY, false);
-        RecursiveGaussian GFilter1(para.sigmaVector[1]);
+        RecursiveGaussian GFilter1(para.sigmaVector[1], true);
         GFilter1.Filter(gauss1, refY);
 
         tMapInv = Plane_FL(refY, false);
@@ -218,7 +225,7 @@ void Haze_Removal_Retinex::GetTMapInv()
         {
             if (para.sigmaVector[s] > 0)
             {
-                RecursiveGaussian GFilter(para.sigmaVector[s]);
+                RecursiveGaussian GFilter(para.sigmaVector[s], true);
                 GFilter.Filter(gauss, refY);
 
                 LOOP_VH_PPL(height, width, stride, [&](PCType i)
@@ -243,7 +250,7 @@ void Haze_Removal_Retinex::GetTMapInv()
         }
 
         // Calculate geometric mean of multiple scales
-        FLType scountRec = 1 / static_cast<FLType>(scount);
+        const FLType scountRec = FLType(1) / static_cast<FLType>(scount);
 
         LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {

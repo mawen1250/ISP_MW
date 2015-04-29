@@ -30,11 +30,14 @@
 #include "Haze_Removal.h"
 
 #ifdef _CUDA_
+#include "Transform.cuh"
 #include "Gaussian.cuh"
-
+#include "Haze_Removal.cuh"
 typedef CUDA_Gaussian2D_IO _Gaussian2D_IO;
+typedef CUDA_Haze_Removal_Retinex_IO _Haze_Removal_Retinex_IO;
 #else
 typedef Gaussian2D_IO _Gaussian2D_IO;
+typedef Haze_Removal_Retinex_IO _Haze_Removal_Retinex_IO;
 #endif
 
 

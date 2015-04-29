@@ -18,9 +18,15 @@
     <ClInclude Include="..\include\Block.hpp" />
     <ClInclude Include="..\include\BM3D.h" />
     <ClInclude Include="..\include\Convolution.h" />
+    <ClInclude Include="..\include\CUDA\Conversion.cuh" />
     <ClInclude Include="..\include\CUDA\Gaussian.cuh" />
     <ClInclude Include="..\include\Conversion.hpp" />
+    <ClInclude Include="..\include\CUDA\Haze_Removal.cuh" />
     <ClInclude Include="..\include\CUDA\Helper.cuh" />
+    <ClInclude Include="..\include\CUDA\HelperCU.cuh" />
+    <ClInclude Include="..\include\CUDA\Histogram.cuh" />
+    <ClInclude Include="..\include\CUDA\Specification.cuh" />
+    <ClInclude Include="..\include\CUDA\Transform.cuh" />
     <ClInclude Include="..\include\Gaussian.h" />
     <ClInclude Include="..\include\Haze_Removal.h" />
     <ClInclude Include="..\include\Helper.h" />
@@ -59,8 +65,11 @@
     <ClCompile Include="..\source\Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="..\source\CUDA\Conversion.cu" />
     <CudaCompile Include="..\source\CUDA\Gaussian.cu" />
+    <CudaCompile Include="..\source\CUDA\Haze_Removal.cu" />
     <CudaCompile Include="..\source\CUDA\Helper.cu" />
+    <CudaCompile Include="..\source\CUDA\Transform.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8252F2AE-B042-44CC-82A9-6FB4CC727613}</ProjectGuid>

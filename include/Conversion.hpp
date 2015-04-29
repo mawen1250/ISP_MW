@@ -8,11 +8,83 @@
 
 
 template < typename _St1 >
-void ValidRange(const _St1 &src, typename _St1::reference min, typename _St1::reference max, double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false)
+typename _St1::value_type GetMin(const _St1 &src)
 {
-    typedef typename _St1::value_type dataType;
+    typedef typename _St1::value_type srcType;
 
-    src.MinMax(min, max);
+    srcType min = src[0];
+
+    _For_each(src, [&](srcType x)
+    {
+        if (min > x) min = x;
+    });
+
+    return min;
+}
+
+template < typename _St1 >
+typename _St1::value_type GetMax(const _St1 &src)
+{
+    typedef typename _St1::value_type srcType;
+
+    srcType max = src[0];
+
+    _For_each(src, [&](srcType x)
+    {
+        if (max < x) max = x;
+    });
+
+    return max;
+}
+
+template < typename _St1 >
+void GetMinMax(const _St1 &src, typename _St1::reference min, typename _St1::reference max)
+{
+    typedef typename _St1::value_type srcType;
+
+    max = min = src[0];
+
+    _For_each(src, [&](srcType x)
+    {
+        if (min > x) min = x;
+        if (max < x) max = x;
+    });
+}
+
+template < typename _St1 >
+void GetMinMax(const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, typename _St1::reference min, typename _St1::reference max)
+{
+    typedef typename _St1::value_type srcType;
+
+    const bool srcFloat = isFloat(srcType);
+
+    max = min = srcR[0];
+
+    _For_each(srcR, [&](srcType x)
+    {
+        if (min > x) min = x;
+        if (max < x) max = x;
+    });
+    _For_each(srcG, [&](srcType x)
+    {
+        if (min > x) min = x;
+        if (max < x) max = x;
+    });
+    _For_each(srcB, [&](srcType x)
+    {
+        if (min > x) min = x;
+        if (max < x) max = x;
+    });
+}
+
+
+template < typename _St1 >
+void ValidRange(const _St1 &src, typename _St1::reference min, typename _St1::reference max,
+    double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false)
+{
+    typedef typename _St1::value_type srcType;
+
+    GetMinMax(src, min, max);
 
     if (protect && max <= min)
     {
@@ -21,7 +93,32 @@ void ValidRange(const _St1 &src, typename _St1::reference min, typename _St1::re
     }
     else if (lower_thr > 0 || upper_thr > 0)
     {
-        Histogram<dataType> hist(src, min, max, HistBins);
+        Histogram<srcType> hist(src, min, max, HistBins);
+
+        if (lower_thr > 0) min = hist.Min(lower_thr);
+        if (upper_thr > 0) max = hist.Max(upper_thr);
+    }
+}
+
+template < typename _St1 >
+void ValidRange(const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, typename _St1::reference min, typename _St1::reference max,
+    double lower_thr = 0., double upper_thr = 0., int HistBins = 1024, bool protect = false)
+{
+    typedef typename _St1::value_type srcType;
+
+    GetMinMax(srcR, srcG, srcB, min, max);
+
+    if (protect && max <= min)
+    {
+        min = srcR.Floor();
+        max = srcR.Ceil();
+    }
+    else if (lower_thr > 0 || upper_thr > 0)
+    {
+        Histogram<srcType> hist(srcR, min, max, HistBins);
+        hist.Add(srcG);
+        hist.Add(srcB);
+
         if (lower_thr > 0) min = hist.Min(lower_thr);
         if (upper_thr > 0) max = hist.Max(upper_thr);
     }
@@ -762,20 +859,7 @@ void SimplestColorBalance(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, 
     typedef typename _Dt1::value_type dstType;
 
     srcType min, max;
-    srcType minR, maxR, minG, maxG, minB, maxB;
-
-    ValidRange(srcR, minR, maxR, lower_thr, upper_thr, HistBins, false);
-    ValidRange(srcG, minG, maxG, lower_thr, upper_thr, HistBins, false);
-    ValidRange(srcB, minB, maxB, lower_thr, upper_thr, HistBins, false);
-
-    min = Min(minR, Min(minG, minB));
-    max = Max(maxR, Max(maxG, maxB));
-    if (min >= max)
-    {
-        min = srcR.Floor();
-        max = srcR.Ceil();
-    }
-
+    ValidRange(srcR, srcG, srcB, min, max, lower_thr, upper_thr, HistBins, true);
     RangeConvert(dstR, dstG, dstB, srcR, srcG, srcB,
         dstR.Floor(), dstR.Neutral(), dstR.Ceil(), min, min, max,
         lower_thr > 0 || upper_thr > 0);

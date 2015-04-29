@@ -2,7 +2,13 @@
 #define HELPER_H_
 
 
+#include <random>
 #include "Type.h"
+
+
+// Constants
+const ldbl Pi = std::_Pi;
+const ldbl Exp1 = std::_Exp1;
 
 
 // Memory allocation
@@ -21,6 +27,19 @@ void AlignedMalloc(_Ty *&Memory, size_t Count, size_t Alignment = MEMORY_ALIGNME
     if (Memory == nullptr)
     {
         std::cerr << "AlignedMalloc: memory allocation failed!\n";
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+template < typename _Ty = void >
+void AlignedRealloc(_Ty *&Memory, size_t NewCount, size_t Alignment = MEMORY_ALIGNMENT)
+{
+    Memory = reinterpret_cast<_Ty *>(_aligned_realloc(Memory, sizeof(_Ty) * NewCount, Alignment));
+
+    if (Memory == nullptr)
+    {
+        std::cerr << "AlignedRealloc: memory allocation failed!\n";
         exit(EXIT_FAILURE);
     }
 }
@@ -54,7 +73,7 @@ inline double Round_Div(double dividend, double divisor)
 }
 
 template < >
-inline long double Round_Div(long double dividend, long double divisor)
+inline ldbl Round_Div(ldbl dividend, ldbl divisor)
 {
     return dividend / divisor;
 }
@@ -72,49 +91,49 @@ inline T Round_BitRsh(T input, int shift)
 template < typename T >
 inline uint8 Round_U8(T input)
 {
-    return input <= 0 ? 0 : input >= T(_UI8_MAX) ? _UI8_MAX : static_cast<uint8>(input + T(0.5));
+    return input <= 0 ? 0 : input >= T(UINT8_MAX) ? UINT8_MAX : static_cast<uint8>(input + T(0.5));
 }
 
 template < typename T >
 inline uint16 Round_U16(T input)
 {
-    return input <= 0 ? 0 : input >= T(_UI16_MAX) ? _UI16_MAX : static_cast<uint16>(input + T(0.5));
+    return input <= 0 ? 0 : input >= T(UINT16_MAX) ? UINT16_MAX : static_cast<uint16>(input + T(0.5));
 }
 
 template < typename T >
 inline uint32 Round_U32(T input)
 {
-    return input <= 0 ? 0 : input >= T(_UI32_MAX) ? _UI32_MAX : static_cast<uint32>(input + T(0.5));
+    return input <= 0 ? 0 : input >= T(UINT32_MAX) ? UINT32_MAX : static_cast<uint32>(input + T(0.5));
 }
 
 template < typename T >
 inline uint64 Round_U64(T input)
 {
-    return input <= 0 ? 0 : input >= T(_UI64_MAX) ? _UI64_MAX : static_cast<uint64>(input + T(0.5));
+    return input <= 0 ? 0 : input >= T(UINT64_MAX) ? UINT64_MAX : static_cast<uint64>(input + T(0.5));
 }
 
 template < typename T >
 inline sint8 Round_S8(T input)
 {
-    return input <= T(_I8_MIN) ? _I8_MIN : input >= T(_I8_MAX) ? _I8_MAX : static_cast<sint8>(input + T(0.5));
+    return input <= T(INT8_MIN) ? INT8_MIN : input >= T(INT8_MAX) ? INT8_MAX : static_cast<sint8>(input + T(0.5));
 }
 
 template < typename T >
 inline sint16 Round_S16(T input)
 {
-    return input <= T(_I16_MIN) ? _I16_MIN : input >= T(_I16_MAX) ? _I16_MAX : static_cast<sint16>(input + T(0.5));
+    return input <= T(INT16_MIN) ? INT16_MIN : input >= T(INT16_MAX) ? INT16_MAX : static_cast<sint16>(input + T(0.5));
 }
 
 template < typename T >
 inline sint32 Round_S32(T input)
 {
-    return input <= T(_I32_MIN) ? _I32_MIN : input >= T(_I32_MAX) ? _I32_MAX : static_cast<sint32>(input + T(0.5));
+    return input <= T(INT32_MIN) ? INT32_MIN : input >= T(INT32_MAX) ? INT32_MAX : static_cast<sint32>(input + T(0.5));
 }
 
 template < typename T >
 inline sint64 Round_S64(T input)
 {
-    return input <= T(_I64_MIN) ? _I64_MIN : input >= T(_I64_MAX) ? _UI64_MAX : static_cast<sint64>(input + T(0.5));
+    return input <= T(INT64_MIN) ? INT64_MIN : input >= T(INT64_MAX) ? INT64_MAX : static_cast<sint64>(input + T(0.5));
 }
 
 
@@ -122,49 +141,49 @@ inline sint64 Round_S64(T input)
 template < typename T >
 inline uint8 Clip_U8(T input)
 {
-    return input >= _UI8_MAX ? _UI8_MAX : input <= 0 ? 0 : static_cast<uint8>(input);
+    return input >= UINT8_MAX ? UINT8_MAX : input <= 0 ? 0 : static_cast<uint8>(input);
 }
 
 template < typename T >
 inline uint16 Clip_U16(T input)
 {
-    return input >= _UI16_MAX ? _UI16_MAX : input <= 0 ? 0 : static_cast<uint16>(input);
+    return input >= UINT16_MAX ? UINT16_MAX : input <= 0 ? 0 : static_cast<uint16>(input);
 }
 
 template < typename T >
 inline uint32 Clip_U32(T input)
 {
-    return input >= _UI32_MAX ? _UI32_MAX : input <= 0 ? 0 : static_cast<uint32>(input);
+    return input >= UINT32_MAX ? UINT32_MAX : input <= 0 ? 0 : static_cast<uint32>(input);
 }
 
 template < typename T >
 inline uint64 Clip_U64(T input)
 {
-    return input >= _UI64_MAX ? _UI64_MAX : input <= 0 ? 0 : static_cast<uint64>(input);
+    return input >= UINT64_MAX ? UINT64_MAX : input <= 0 ? 0 : static_cast<uint64>(input);
 }
 
 template < typename T >
 inline sint8 Clip_S8(T input)
 {
-    return input >= _I8_MAX ? _I8_MAX : input <= _I8_MIN ? _I8_MIN : static_cast<sint8>(input);
+    return input >= INT8_MAX ? INT8_MAX : input <= INT8_MIN ? INT8_MIN : static_cast<sint8>(input);
 }
 
 template < typename T >
 inline sint16 Clip_S16(T input)
 {
-    return input >= _I16_MAX ? _I16_MAX : input <= _I16_MIN ? _I16_MIN : static_cast<sint16>(input);
+    return input >= INT16_MAX ? INT16_MAX : input <= INT16_MIN ? INT16_MIN : static_cast<sint16>(input);
 }
 
 template < typename T >
 inline sint32 Clip_S32(T input)
 {
-    return input >= _I32_MAX ? _I32_MAX : input <= _I32_MIN ? _I32_MIN : static_cast<sint32>(input);
+    return input >= INT32_MAX ? INT32_MAX : input <= INT32_MIN ? INT32_MIN : static_cast<sint32>(input);
 }
 
 template < typename T >
 inline sint64 Clip_S64(T input)
 {
-    return input >= _I64_MAX ? _I64_MAX : input <= _I64_MIN ? _I64_MIN : static_cast<sint64>(input);
+    return input >= INT64_MAX ? INT64_MAX : input <= INT64_MIN ? INT64_MIN : static_cast<sint64>(input);
 }
 
 

@@ -3,6 +3,7 @@
 
 
 #include <iostream>
+#include <xutility>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -437,9 +438,14 @@ void check(T result, char const *const func, const char *const file, int const l
     {
         fprintf(stderr, "CUDA error at %s:%d code=%d(%s) \"%s\" \n",
             file, line, static_cast<unsigned int>(result), _cudaGetErrorEnum(result), func);
-        DEVICE_RESET
-            // Make sure we call CUDA Device Reset before exiting
-            exit(EXIT_FAILURE);
+#ifdef _DEBUG
+        __debugbreak();
+        _STD _DEBUG_ERROR("check: CUDA debug error!");
+#else
+        // Make sure we call CUDA Device Reset before exiting
+        DEVICE_RESET;
+        exit(EXIT_FAILURE);
+#endif
     }
 }
 
@@ -458,8 +464,14 @@ inline void __getLastCudaError(const char *errorMessage, const char *file, const
     {
         fprintf(stderr, "%s(%i) : getLastCudaError() CUDA error : %s : (%d) %s.\n",
             file, line, errorMessage, (int)err, cudaGetErrorString(err));
-        DEVICE_RESET
-            exit(EXIT_FAILURE);
+#ifdef _DEBUG
+        __debugbreak();
+        _STD _DEBUG_ERROR("getLastCudaError: CUDA debug error!");
+#else
+        // Make sure we call CUDA Device Reset before exiting
+        DEVICE_RESET;
+        exit(EXIT_FAILURE);
+#endif
     }
 }
 #endif
@@ -484,7 +496,7 @@ enum class CudaMemMode
 
 
 template < typename _Ty >
-void CUDA_Malloc(_Ty *&devPtr, size_t count)
+void CUDA_Malloc(_Ty *&devPtr, size_t count = 1)
 {
     checkCudaErrors(cudaMalloc(&devPtr, sizeof(_Ty) * count));
 }
@@ -493,62 +505,61 @@ template < typename _Ty >
 void CUDA_Free(_Ty *&devPtr)
 {
     checkCudaErrors(cudaFree(devPtr));
-    devPtr = nullptr;
 }
 
-template < typename _Dt1, typename _St1 >
-void CUDA_Memcpy(_Dt1 *dst, const _St1 *src, size_t count, cudaMemcpyKind kind)
+template < typename _Ty >
+void CUDA_Memset(_Ty *data, size_t count = 1, int value = 0)
 {
-    checkCudaErrors(cudaMemcpy(dst, src, sizeof(_St1) * count, kind));
+    checkCudaErrors(cudaMemset(data, value, sizeof(_Ty) * count));
 }
 
 template < typename _Dt1, typename _St1 >
-void CUDA_MemcpyH2H(_Dt1 *dst, const _St1 *src, size_t count)
+void CUDA_Memcpy(const _Dt1 *dst, const _St1 *src, size_t count, cudaMemcpyKind kind)
+{
+    checkCudaErrors(cudaMemcpy(const_cast<_Dt1 *>(dst), src, sizeof(_St1) * count, kind));
+}
+
+template < typename _Dt1, typename _St1 >
+void CUDA_MemcpyH2H(_Dt1 *dst, const _St1 *src, size_t count = 1)
 {
     CUDA_Memcpy(dst, src, count, cudaMemcpyHostToHost);
 }
 
 template < typename _Dt1, typename _St1 >
-void CUDA_MemcpyH2D(_Dt1 *dst, const _St1 *src, size_t count)
+void CUDA_MemcpyH2D(_Dt1 *dst, const _St1 *src, size_t count = 1)
 {
     CUDA_Memcpy(dst, src, count, cudaMemcpyHostToDevice);
 }
 
 template < typename _Dt1, typename _St1 >
-void CUDA_MemcpyD2H(_Dt1 *dst, const _St1 *src, size_t count)
+void CUDA_MemcpyD2H(_Dt1 *dst, const _St1 *src, size_t count = 1)
 {
     CUDA_Memcpy(dst, src, count, cudaMemcpyDeviceToHost);
 }
 
 template < typename _Dt1, typename _St1 >
-void CUDA_MemcpyD2D(_Dt1 *dst, const _St1 *src, size_t count)
+void CUDA_MemcpyD2D(_Dt1 *dst, const _St1 *src, size_t count = 1)
 {
     CUDA_Memcpy(dst, src, count, cudaMemcpyDeviceToDevice);
 }
 
 template < typename _Ty >
-void CUDA_HostRegister(const _Ty *ptr, size_t count, cuIdx flags = CU_MEMHOSTALLOC_DEVICEMAP)
+void CUDA_HostRegister(const _Ty *ptr, size_t count = 1, cuIdx flags = CU_MEMHOSTALLOC_DEVICEMAP)
 {
-    checkCudaErrors(cudaHostRegister(
-        const_cast<_Ty *>(ptr),
-        sizeof(_Ty) * count, flags));
+    checkCudaErrors(cudaHostRegister(const_cast<_Ty *>(ptr), sizeof(_Ty) * count, flags));
 }
 
 template < typename _Ty >
 void CUDA_HostUnregister(const _Ty *ptr)
 {
-    checkCudaErrors(cudaHostUnregister(
-        const_cast<_Ty *>(ptr)));
+    checkCudaErrors(cudaHostUnregister(const_cast<_Ty *>(ptr)));
 }
 
 template < typename _Dt1, typename _St1 >
 void CUDA_HostGetDevicePointer(_Dt1 *&pDevice, const _St1 *pHost, cuIdx flags = 0)
 {
     void *pDeviceTemp = nullptr;
-    checkCudaErrors(cudaHostGetDevicePointer(
-        &pDeviceTemp,
-        const_cast<_St1 *>(pHost),
-        flags));
+    cudaHostGetDevicePointer(&pDeviceTemp, const_cast<_St1 *>(pHost), flags);
     pDevice = reinterpret_cast<_Dt1 *>(pDeviceTemp);
 }
 
@@ -562,12 +573,12 @@ inline cuIdx CudaGridDim(cuIdx _thread_count, cuIdx _block_dim)
 
 inline void CudaGlobalCheck()
 {
+    // Check for any errors launching the kernel
+    getLastCudaError("Kernel execution failed");
+
     // cudaDeviceSynchronize waits for the kernel to finish, and returns
     // any errors encountered during the launch
     checkCudaErrors(cudaDeviceSynchronize());
-
-    // Check for any errors launching the kernel
-    getLastCudaError("Kernel execution failed");
 }
 
 
@@ -604,6 +615,9 @@ struct CUDA_FilterData
     typedef CUDA_FilterData _Myt;
     typedef CUDA_FilterMode _Mybase;
 
+    int dst_mode;
+    int temp_mode;
+
     PCType height = 0;
     PCType width = 0;
     PCType stride = 0;
@@ -613,9 +627,10 @@ struct CUDA_FilterData
     const _Ty *src_data = nullptr;
     _Ty *dst_dev = nullptr;
     const _Ty *src_dev = nullptr;
+    _Ty *temp_dev = nullptr;
 
-    _Myt(CudaMemMode _mem_mode = CudaMemMode::Host2Device, cuIdx _block_dim = 256)
-        : _Mybase(_mem_mode, _block_dim)
+    _Myt(CudaMemMode _mem_mode = CudaMemMode::Host2Device, cuIdx _block_dim = 256, int _dst_mode = 0, int _temp_mode = 0)
+        : _Mybase(_mem_mode, _block_dim), dst_mode(_dst_mode), temp_mode(_temp_mode)
     {}
 
     _Myt(const _Mybase &_right)
@@ -635,87 +650,6 @@ struct CUDA_FilterData
         : _Mybase(_right), height(_right.height), width(_right.width), stride(_right.stride), count(_right.count),
         dst_data(_right.dst_data), src_data(_right.src_data), dst_dev(_right.dst_dev), src_dev(_right.src_dev)
     {}
-
-    template < typename _St1 >
-    void InitSize(const _St1 &dst)
-    {
-        height = dst.Height();
-        width = dst.Width();
-        stride = dst.Stride();
-        count = dst.size();
-    }
-
-    void InitSize(PCType _height, PCType _width, PCType _stride)
-    {
-        height = _height;
-        width = _width;
-        stride = _stride;
-        count = _height * _stride;
-    }
-
-    void EndSize()
-    {
-        height = 0;
-        width = 0;
-        stride = 0;
-        count = 0;
-    }
-
-    void InitMemory()
-    {
-        _Ty *src_data_temp = nullptr;
-
-        switch (mem_mode)
-        {
-        case CudaMemMode::Host2Device:
-            CUDA_Malloc(dst_dev, count);
-            CUDA_MemcpyH2D(dst_dev, src_data, count);
-            src_dev = dst_dev;
-            break;
-        case CudaMemMode::Device:
-            dst_dev = dst_data;
-            src_dev = src_data;
-            break;
-        case CudaMemMode::Host2PageLocked:
-            AlignedMalloc(src_data_temp, count);
-            memcpy(src_data_temp, src_data, sizeof(_Ty) * count);
-            src_data = src_data_temp;
-            CUDA_HostRegister(dst_data, count);
-            CUDA_HostRegister(src_data, count);
-        case CudaMemMode::PageLocked:
-            CUDA_HostGetDevicePointer(dst_dev, dst_data);
-            CUDA_HostGetDevicePointer(src_dev, src_data);
-            break;
-        default:
-            std::cerr << "CUDA_FilterData::InitMemory: Unsupported mem_mode!\n";
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    void EndMemory()
-    {
-        _Ty *src_data_temp = nullptr;
-
-        switch (mem_mode)
-        {
-        case CudaMemMode::Host2Device:
-            CUDA_MemcpyD2H(dst_data, dst_dev, count);
-            CUDA_Free(dst_dev);
-            break;
-        case CudaMemMode::Device:
-            break;
-        case CudaMemMode::Host2PageLocked:
-            CUDA_HostUnregister(dst_data);
-            CUDA_HostUnregister(src_data);
-            src_data_temp = const_cast<_Ty *>(src_data);
-            AlignedFree(src_data_temp);
-        case CudaMemMode::PageLocked:
-            break;
-        default:
-            std::cerr << "CUDA_FilterData::EndMemory: Unsupported mem_mode!\n";
-            exit(EXIT_FAILURE);
-        }
-    }
 
     template < typename _St1 >
     void Init(_St1 &dst, const _St1 &src)
@@ -755,7 +689,177 @@ struct CUDA_FilterData
 
         EndSize();
     }
+
+protected:
+    template < typename _St1 >
+    void InitSize(const _St1 &dst)
+    {
+        height = dst.Height();
+        width = dst.Width();
+        stride = dst.Stride();
+        count = dst.size();
+    }
+
+    void InitSize(PCType _height, PCType _width, PCType _stride)
+    {
+        height = _height;
+        width = _width;
+        stride = _stride;
+        count = _height * _stride;
+    }
+
+    void EndSize()
+    {
+        height = 0;
+        width = 0;
+        stride = 0;
+        count = 0;
+    }
+
+    void InitMemory()
+    {
+        _Ty *src_data_temp = nullptr;
+
+        switch (mem_mode)
+        {
+        case CudaMemMode::Host2Device:
+            CUDA_Malloc(temp_dev, count);
+            CUDA_MemcpyH2D(temp_dev, src_data, count);
+            src_dev = temp_dev;
+            if (dst_mode == 1) dst_dev = temp_dev;
+            else CUDA_Malloc(dst_dev, count);
+            temp_dev = nullptr;
+            break;
+        case CudaMemMode::Device:
+            dst_dev = dst_data;
+            src_dev = src_data;
+            break;
+        case CudaMemMode::Host2PageLocked:
+            AlignedMalloc(src_data_temp, count);
+            memcpy(src_data_temp, src_data, sizeof(_Ty) * count);
+            src_data = src_data_temp;
+            if (dst_data != src_data) CUDA_HostRegister(dst_data, count);
+            CUDA_HostRegister(src_data, count);
+        case CudaMemMode::PageLocked:
+            CUDA_HostGetDevicePointer(dst_dev, dst_data);
+            CUDA_HostGetDevicePointer(src_dev, src_data);
+            break;
+        default:
+            std::cerr << "CUDA_FilterData::InitMemory: Unsupported mem_mode!\n";
+            exit(EXIT_FAILURE);
+        }
+
+        switch (temp_mode)
+        {
+        case 1:
+            CUDA_Malloc(temp_dev, count);
+            break;
+        case 2:
+            temp_dev = const_cast<_Ty *>(src_dev);
+            break;
+        default:
+            break;
+        }
+    }
+
+    void EndMemory()
+    {
+        _Ty *src_data_temp = nullptr;
+
+        switch (temp_mode)
+        {
+        case 1:
+            CUDA_Free(temp_dev);
+            break;
+        case 2:
+            temp_dev = nullptr;
+            break;
+        default:
+            break;
+        }
+
+        switch (mem_mode)
+        {
+        case CudaMemMode::Host2Device:
+            CUDA_MemcpyD2H(dst_data, dst_dev, count);
+            if (dst_mode == 1) dst_dev = nullptr;
+            else CUDA_Free(dst_dev);
+            temp_dev = const_cast<_Ty *>(src_dev);
+            src_dev = nullptr;
+            CUDA_Free(temp_dev);
+            break;
+        case CudaMemMode::Device:
+            break;
+        case CudaMemMode::Host2PageLocked:
+            if (dst_data != src_data) CUDA_HostUnregister(dst_data);
+            CUDA_HostUnregister(src_data);
+            src_data_temp = const_cast<_Ty *>(src_data);
+            AlignedFree(src_data_temp);
+        case CudaMemMode::PageLocked:
+            break;
+        default:
+            std::cerr << "CUDA_FilterData::EndMemory: Unsupported mem_mode!\n";
+            exit(EXIT_FAILURE);
+        }
+    }
 };
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Max Min
+template < typename T >
+static __inline__ __device__ T cuMax(T a, T b)
+{
+    return a < b ? b : a;
+}
+
+template < typename T >
+static __inline__ __device__ T cuMin(T a, T b)
+{
+    return a > b ? b : a;
+}
+
+template < typename T >
+static __inline__ __device__ T cuClip(T input, T lower, T upper)
+{
+    return input >= upper ? upper : input <= lower ? lower : input;
+}
+
+
+// Abs
+template < typename T >
+static __inline__ __device__ T cuAbs(T input)
+{
+    return input < 0 ? -input : input;
+}
+
+template < typename T >
+static __inline__ __device__ T cuAbsSub(T a, T b)
+{
+    return a >= b ? a - b : b - a;
+}
+
+
+// Initialization
+template < typename _Ty >
+__global__ void CUDA_Set_Kernel(_Ty *dst, const cuIdx count, _Ty value)
+{
+    const cuIdx idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < count)
+    {
+        dst[idx] = value;
+    }
+}
+
+template < typename _Ty >
+inline void CUDA_Set(_Ty *dst, const cuIdx count, _Ty value = 0, cuIdx _block_dim = 256)
+{
+    if (count < _block_dim) _block_dim = count;
+    CudaGlobalCall(CUDA_Set_Kernel, CudaGridDim(count, _block_dim), _block_dim)(dst, count, value);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

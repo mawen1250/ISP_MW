@@ -289,7 +289,8 @@ protected:
 
 public:
     _Myt(std::string _Tag = "")
-        : Tag(std::move(_Tag)) {}
+        : Tag(std::move(_Tag))
+    {}
 
     virtual ~FilterIO() {}
 

@@ -1,62 +1,33 @@
 #include "Transform.h"
 
 
-Plane &Transpose(Plane &output, const Plane &input)
+template < typename _St1 >
+_St1 &TransposeT(_St1 &dst, const _St1 &src)
 {
-    PCType i, j, k;
-    PCType sw = input.Width();
-    PCType sh = input.Height();
-    PCType pcount = input.PixelCount();
-    k = pcount - 1;
+    const PCType src_width = src.Width();
+    const PCType src_height = src.Height();
 
     // Change Plane info
-    output.ReSize(sw, sh);
+    dst.ReSize(src_height, src_width);
 
+    const PCType src_stride = src.Stride();
+    const PCType dst_stride = dst.Stride();
+    
     // Apply transpose
-    for (i = 0, j = 0; i < pcount; i++, j+=sw)
-    {
-        if (j > k) j -= k;
-        output[i] = input[j];
-    }
+    Transpose(dst.data(), src.data(), src_width, src_height, src_stride, dst_stride);
 
     // Output
-    return output;
+    return dst;
 }
 
 
-Plane_FL &Transpose(Plane_FL &output, const Plane_FL &input)
+Plane &Transpose(Plane &dst, const Plane &src)
 {
-    PCType i, j, k;
-    PCType sw = input.Width();
-    PCType sh = input.Height();
-    PCType pcount = input.PixelCount();
-    k = pcount - 1;
-
-    // Change Plane info
-    output.ReSize(sw, sh);
-
-    // Apply transpose
-    for (i = 0, j = 0; i < pcount; i++, j += sw)
-    {
-        if (j > k) j -= k;
-        output[i] = input[j];
-    }
-
-    // Output
-    return output;
+    return TransposeT(dst, src);
 }
 
 
-void Transpose(FLType *output, const FLType *const input, const PCType sw, const PCType sh)
+Plane_FL &Transpose(Plane_FL &dst, const Plane_FL &src)
 {
-    PCType i, j, k;
-    PCType pcount = sw*sh;
-    k = pcount - 1;
-
-    // Apply transpose
-    for (i = 0, j = 0; i < pcount; i++, j += sw)
-    {
-        if (j > k) j -= k;
-        output[i] = input[j];
-    }
+    return TransposeT(dst, src);
 }

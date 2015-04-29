@@ -97,9 +97,9 @@ class Frame;
 
 class Plane
 {
+public:
     typedef DType _Ty;
 
-public:
     typedef Plane _Myt;
     typedef _Ty value_type;
     typedef size_t size_type;
@@ -113,8 +113,8 @@ public:
     typedef const_pointer const_iterator;
 
 public:
-    const value_type value_type_MIN = value_type(0);
-    const value_type value_type_MAX = value_type_MIN - 1;
+    const value_type value_type_MIN = UIntMin(value_type);
+    const value_type value_type_MAX = UIntMax(value_type);
     
 private:
     PCType Width_ = 0;
@@ -223,9 +223,9 @@ public:
 
 class Plane_FL
 {
+public:
     typedef FLType _Ty;
 
-public:
     typedef Plane_FL _Myt;
     typedef _Ty value_type;
     typedef size_t size_type;
@@ -239,8 +239,9 @@ public:
     typedef const_pointer const_iterator;
 
 public:
-    const value_type value_type_MIN = sizeof(value_type) < 8 ? FLT_MIN : DBL_MIN;
-    const value_type value_type_MAX = sizeof(value_type) < 8 ? FLT_MAX : DBL_MAX;
+    const value_type value_type_MIN = FltMin(value_type);
+    const value_type value_type_MAX = FltMax(value_type);
+    const value_type value_type_NEG_MAX = FltNegMax(value_type);
 
 private:
     PCType Width_ = 0;
@@ -339,9 +340,9 @@ public:
 
 class Frame
 {
+public:
     typedef DType _Ty;
 
-public:
     typedef Frame _Myt;
     typedef Plane _Mysub;
     typedef _Ty value_type;

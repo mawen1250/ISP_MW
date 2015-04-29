@@ -8,16 +8,15 @@
 #include "LUT.h"
 
 
-const double Pi = 3.1415926535897932384626433832795;
-const double sqrt_2Pi = sqrt(2 * Pi);
+const ldbl sqrt_2Pi = sqrt(2 * Pi);
 
-const double sigmaSMul = 2.;
-const double sigmaRMul = sizeof(FLType) < 8 ? 8. : 32.; // 8. when FLType is float, 32. when FLType is double
+const ldbl sigmaSMul = 2.0L;
+const ldbl sigmaRMul = sizeof(FLType) < 8 ? 8.0L : 32.0L; // 8. when FLType is float, 32. when FLType is double
 
 
 struct Gaussian2D_Para
 {
-    double sigma = 3.0;
+    ldbl sigma = 3.0L;
 };
 
 extern const Gaussian2D_Para Gaussian2D_Default;
@@ -84,34 +83,33 @@ protected:
 
 public:
     _Myt(std::string _Tag = ".Gaussian")
-        : _Mybase(std::move(_Tag)) {}
+        : _Mybase(std::move(_Tag))
+    {}
 };
 
 
 // Implementation of recursive Gaussian algorithm from "Ian T. Young, Lucas J. van Vliet - Recursive implementation of the Gaussian filter"
-// For 32bit float type, the maximum sigma with valid result is about 120.
+// For 32bit float type, the maximum sigma with valid result is about 80.
 class RecursiveGaussian
 {
 public:
     typedef RecursiveGaussian _Myt;
     typedef FilterData<FLType> _Dt;
 
-private:
-    _Dt d;
-
 public:
     FLType B;
     FLType B1;
     FLType B2;
     FLType B3;
+    bool allow_negative = true;
+    int iter = 1;
 
 public:
-    _Myt(long double sigma)
+    _Myt(ldbl sigma, bool _allow_negative = true)
+        : allow_negative(_allow_negative)
     {
         GetPara(sigma);
     }
-
-    const _Dt &D() const { return d; }
 
     Plane_FL operator()(const Plane_FL &src)
     {
@@ -120,22 +118,23 @@ public:
         return dst;
     }
 
-    void GetPara(long double sigma);
+    void GetPara(ldbl sigma);
 
-    virtual void FilterV(Plane_FL &dst, const Plane_FL &src);
-    void FilterV(Plane_FL &data) { FilterV(data, data); }
-
-    virtual void FilterH(Plane_FL &dst, const Plane_FL &src);
-    void FilterH(Plane_FL &data) { FilterH(data, data); }
-
-    virtual void Filter(Plane_FL &dst, const Plane_FL &src);
-    void Filter(Plane_FL &data) { Filter(data, data); }
-
+    virtual void FilterV(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
+    virtual void FilterH(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
     virtual void Filter(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
 
+    virtual void FilterV(Plane_FL &dst, const Plane_FL &src);
+    virtual void FilterH(Plane_FL &dst, const Plane_FL &src);
+    virtual void Filter(Plane_FL &dst, const Plane_FL &src);
+
+    virtual void FilterV(Plane_FL &data) { FilterV(data, data); }
+    virtual void FilterH(Plane_FL &data) { FilterH(data, data); }
+    virtual void Filter(Plane_FL &data) { Filter(data, data); }
+
 protected:
-    virtual void FilterV_Kernel(FLType *dst, const FLType *src) const;
-    virtual void FilterH_Kernel(FLType *dst, const FLType *src) const;
+    virtual void FilterV_Kernel(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride) const;
+    virtual void FilterH_Kernel(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride) const;
 };
 
 
@@ -232,38 +231,38 @@ public:
 };
 
 
-inline LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const double sigmaS)
+inline LUT<FLType> Gaussian_Function_Spatial_LUT_Generation(const PCType xUpper, const PCType yUpper, const ldbl sigmaS)
 {
-    GaussianFunction<double> GFunc(sigmaS);
+    GaussianFunction<ldbl> GFunc(sigmaS);
 
-    LUT<FLType> GS_LUT(xUpper*yUpper);
+    LUT<FLType> GS_LUT(xUpper * yUpper);
 
     for (PCType y = 0; y < yUpper; y++)
     {
         for (PCType x = 0; x < xUpper; x++)
         {
-            GS_LUT[y*xUpper + x] = static_cast<FLType>(GFunc(static_cast<double>(x*x + y*y)));
+            GS_LUT[y * xUpper + x] = static_cast<FLType>(GFunc(static_cast<ldbl>(x * x + y * y)));
         }
     }
 
     return GS_LUT;
 }
 
-inline LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange, const double sigmaR)
+inline LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange, const ldbl sigmaR)
 {
-    NormalizedGaussianFunctionX<double> NGFuncX(sigmaR);
+    NormalizedGaussianFunctionX<ldbl> NGFuncX(sigmaR);
 
     DType Levels = ValueRange + 1;
-    const DType upper = Min(ValueRange, static_cast<DType>(sigmaR*sigmaRMul*ValueRange + 0.5));
+    const DType upper = Min(ValueRange, static_cast<DType>(sigmaR * sigmaRMul * ValueRange + 0.5));
     LUT<FLType> GR_LUT(Levels);
 
     DType i = 0;
     for (; i <= upper; i++)
     {
-        GR_LUT[i] = static_cast<FLType>(NGFuncX(static_cast<double>(i) / ValueRange));
+        GR_LUT[i] = static_cast<FLType>(NGFuncX(static_cast<ldbl>(i) / ValueRange));
     }
     // For unknown reason, when more range weights are too small or equal 0, the runtime speed gets lower - mainly in function Recursive_Gaussian2D_Horizontal.
-    // To avoid this issue, we set range weights whose range values are larger than sigmaR*sigmaRMul to the Gaussian function value at sigmaR*sigmaRMul.
+    // To avoid this issue, we set range weights whose range values are larger than sigmaR * sigmaRMul to the Gaussian function value at sigmaR * sigmaRMul.
     if (i < Levels)
     {
         const FLType upperLUTvalue = GR_LUT[upper];
@@ -278,7 +277,7 @@ inline LUT<FLType> Gaussian_Function_Range_LUT_Generation(const DType ValueRange
 
 inline FLType Gaussian_Distribution2D_Spatial_LUT_Lookup(const LUT<FLType> &GS_LUT, const PCType xUpper, const PCType x, const PCType y)
 {
-    return GS_LUT[y*xUpper + x];
+    return GS_LUT[y * xUpper + x];
 }
 
 inline FLType Gaussian_Distribution2D_Range_LUT_Lookup(const LUT<FLType> &GR_LUT, const DType Value1, const DType Value2)

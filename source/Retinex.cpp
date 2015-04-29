@@ -28,7 +28,7 @@ Plane_FL &Retinex::Kernel(Plane_FL &dst, const Plane_FL &src)
 
     if (scount == 1 && para.sigmaVector[0] > 0) // single-scale Gaussian filter
     {
-        RecursiveGaussian GFilter(para.sigmaVector[0]);
+        RecursiveGaussian GFilter(para.sigmaVector[0], true);
         Plane_FL gauss = GFilter(src);
 
         for (j = 0; j < height; ++j)
@@ -55,7 +55,7 @@ Plane_FL &Retinex::Kernel(Plane_FL &dst, const Plane_FL &src)
         {
             if (para.sigmaVector[s] > 0)
             {
-                RecursiveGaussian GFilter(para.sigmaVector[s]);
+                RecursiveGaussian GFilter(para.sigmaVector[s], true);
                 GFilter.Filter(gauss, src);
 
                 for (j = 0; j < height; ++j)
