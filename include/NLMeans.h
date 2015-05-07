@@ -13,9 +13,9 @@ const struct NLMeans_Para
     bool correction = true;
     double sigma = 8.0;
     double strength = correction ? sigma * 5 : sigma * 1.5;
-    PCType GroupSizeMax = 16;
     PCType BlockSize = 8;
-    PCType Overlap = 4;
+    PCType BlockStep = 5;
+    PCType GroupSize = 16;
     PCType BMrange = 24;
     PCType BMstep = 3;
     double thMSE = correction ? sigma * 50 : sigma * 25;
@@ -39,18 +39,18 @@ public:
     {}
 
 protected:
+    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref);
     virtual Plane &process_Plane(Plane &dst, const Plane &src, const Plane &ref);
-
     virtual Frame &process_Frame(Frame &dst, const Frame &src, const Frame &ref);
 
 protected:
-    template < typename _St1, typename _Ty, typename _FTy >
-    void WeightedAverage(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
-        const typename Block<_Ty, _FTy>::PosPairCode &posPairCode);
+    template < typename _St1, typename _Ty1, typename _DTy1, typename _Ty2, typename _DTy2, typename _DTy3 >
+    void WeightedAverage(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _DTy2> &refBlock, const _St1 &src,
+        const std::vector<std::pair<_DTy3, Pos>> &posPairCode);
 
-    template < typename _St1, typename _Ty, typename _FTy >
-    void WeightedAverage_Correction(Block<_Ty, _FTy> &dstBlock, const Block<_Ty, _FTy> &refBlock, const _St1 &src,
-        const typename Block<_Ty, _FTy>::PosPairCode &posPairCode);
+    template < typename _St1, typename _Ty1, typename _DTy1, typename _Ty2, typename _DTy2, typename _DTy3 >
+    void WeightedAverage_Correction(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _DTy2> &refBlock, const _St1 &src,
+        const std::vector<std::pair<_DTy3, Pos>> &posPairCode);
 };
 
 
@@ -97,19 +97,19 @@ protected:
                 strength_def = true;
                 continue;
             }
-            if (args[i] == "-GSM" || args[i] == "--GroupSizeMax")
-            {
-                ArgsObj.GetPara(i, para.GroupSizeMax);
-                continue;
-            }
-            if (args[i] == "-B" || args[i] == "--BlockSize")
+            if (args[i] == "-BS" || args[i] == "--BlockSize")
             {
                 ArgsObj.GetPara(i, para.BlockSize);
                 continue;
             }
-            if (args[i] == "-O" || args[i] == "--Overlap")
+            if (args[i] == "-BSP" || args[i] == "--BlockStep")
             {
-                ArgsObj.GetPara(i, para.Overlap);
+                ArgsObj.GetPara(i, para.BlockStep);
+                continue;
+            }
+            if (args[i] == "-GS" || args[i] == "--GroupSize")
+            {
+                ArgsObj.GetPara(i, para.GroupSize);
                 continue;
             }
             if (args[i] == "-MR" || args[i] == "--BMrange")

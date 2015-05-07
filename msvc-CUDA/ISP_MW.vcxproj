@@ -27,6 +27,7 @@
     <ClInclude Include="..\include\CUDA\Histogram.cuh" />
     <ClInclude Include="..\include\CUDA\Specification.cuh" />
     <ClInclude Include="..\include\CUDA\Transform.cuh" />
+    <ClInclude Include="..\include\fftw3_helper.hpp" />
     <ClInclude Include="..\include\Gaussian.h" />
     <ClInclude Include="..\include\Haze_Removal.h" />
     <ClInclude Include="..\include\Helper.h" />
@@ -97,11 +98,13 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\OpenCV.Debug.x64.props" />
     <Import Project="CUDA.x64.props" />
+    <Import Project="..\FFTW3.x64.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\OpenCV.Release.x64.props" />
     <Import Project="CUDA.x64.props" />
+    <Import Project="..\FFTW3.x64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

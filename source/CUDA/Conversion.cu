@@ -133,7 +133,7 @@ void CUDA_ValidRange(const FLType *srcR, const FLType *srcG, const FLType *srcB,
 }
 
 
-static __global__ void CUDA_ConvertToY_Kernel_Average(FLType *dst, const FLType *srcR, const FLType *srcG, const FLType *srcB, const cuIdx pcount)
+static __global__ void CUDA_ConvertToY_Kernel_OPP(FLType *dst, const FLType *srcR, const FLType *srcG, const FLType *srcB, const cuIdx pcount)
 {
     const cuIdx lower = blockIdx.x * THREADS + threadIdx.x;
     const cuIdx step = BLOCKS * THREADS;
@@ -182,9 +182,9 @@ static __global__ void CUDA_ConvertToY_Kernel_Common(FLType *dst, const FLType *
 
 void CUDA_ConvertToY(FLType *dst, const FLType *srcR, const FLType *srcG, const FLType *srcB, const cuIdx pcount, ColorMatrix dstColorMatrix)
 {
-    if (dstColorMatrix == ColorMatrix::Average)
+    if (dstColorMatrix == ColorMatrix::OPP)
     {
-        CudaGlobalCall(CUDA_ConvertToY_Kernel_Average, BLOCKS, THREADS)(dst, srcR, srcG, srcB, pcount);
+        CudaGlobalCall(CUDA_ConvertToY_Kernel_OPP, BLOCKS, THREADS)(dst, srcR, srcG, srcB, pcount);
     }
     else if (dstColorMatrix == ColorMatrix::Minimum)
     {

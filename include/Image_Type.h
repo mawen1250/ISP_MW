@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include <vector>
-#include <array>
+#include <cassert>
 #include <crtdefs.h>
 #include "Type.h"
 #include "Helper.h"
@@ -113,8 +113,8 @@ public:
     typedef const_pointer const_iterator;
 
 public:
-    const value_type value_type_MIN = UIntMin(value_type);
-    const value_type value_type_MAX = UIntMax(value_type);
+    const value_type value_type_MIN = IntMin(value_type);
+    const value_type value_type_MAX = IntMax(value_type);
     
 private:
     PCType Width_ = 0;
@@ -409,8 +409,8 @@ public:
 
     FCType FrameNum() const { return FrameNum_; }
     PixelType GetPixelType() const { return PixelType_; }
-    ChromaPlacement GetChromaPlacement() const { return ChromaPlacement_; }
     QuantRange GetQuantRange() const { return QuantRange_; }
+    ChromaPlacement GetChromaPlacement() const { return ChromaPlacement_; }
     ColorPrim GetColorPrim() const { return ColorPrim_; }
     TransferChar GetTransferChar() const { return TransferChar_; }
     ColorMatrix GetColorMatrix() const { return ColorMatrix_; }
@@ -442,7 +442,11 @@ public:
     PCType PixelCount() const { return P_[0]->PixelCount(); }
     value_type BitDepth() const { return P_[0]->BitDepth(); }
 
+    _Myt &SetQuantRange(QuantRange _QuantRange) { QuantRange_ = _QuantRange; return *this; }
+    _Myt &SetChromaPlacement(ChromaPlacement _ChromaPlacement) { ChromaPlacement_ = _ChromaPlacement; return *this; }
+    _Myt &SetColorPrim(ColorPrim _ColorPrim) { ColorPrim_ = _ColorPrim; return *this; }
     _Myt &SetTransferChar(TransferChar _TransferChar) { TransferChar_ = _TransferChar; return *this; }
+    _Myt &SetColorMatrix(ColorMatrix _ColorMatrix) { ColorMatrix_ = _ColorMatrix; return *this; }
 };
 
 

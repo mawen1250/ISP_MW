@@ -21,7 +21,7 @@ public:
     typedef pointer iterator;
     typedef const_pointer const_iterator;
 
-    typedef uint32 LevelType;
+    typedef ptrdiff_t LevelType;
 
 private:
     LevelType Levels_ = 0;

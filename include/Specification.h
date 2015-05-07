@@ -3,6 +3,7 @@
 
 
 #include <cmath>
+#include "Type.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,7 +68,7 @@ enum class ColorMatrix
     YCgCo = 8,
     bt2020nc = 9,
     bt2020c = 10,
-    Average = 100,
+    OPP = 100, // opponent colorspace
     Minimum,
     Maximum
 };
@@ -165,6 +166,7 @@ void ColorPrim_Parameter(ColorPrim _ColorPrim, T &green_x, T &green_y, T &blue_x
     }
 }
 
+
 template < typename T >
 void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha, T &power, T &div)
 {
@@ -261,6 +263,21 @@ void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha,
 }
 
 template < typename T >
+void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha, T &power)
+{
+    T temp;
+    TransferChar_Parameter(_TransferChar, k0, phi, alpha, power, temp);
+}
+
+template < typename T >
+void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &div)
+{
+    T temp;
+    TransferChar_Parameter(_TransferChar, k0, temp, temp, temp, div);
+}
+
+
+template < typename T >
 void ColorMatrix_Parameter(ColorMatrix _ColorMatrix, T &Kr, T &Kg, T &Kb)
 {
     switch (_ColorMatrix)
@@ -310,7 +327,7 @@ void ColorMatrix_Parameter(ColorMatrix _ColorMatrix, T &Kr, T &Kg, T &Kb)
         Kg = T(0.6780);
         Kb = T(0.0593);
         break;
-    case ColorMatrix::Average:
+    case ColorMatrix::OPP:
         Kr = T(1. / 3.);
         Kg = T(1. / 3.);
         Kb = T(1. / 3.);
@@ -324,17 +341,87 @@ void ColorMatrix_Parameter(ColorMatrix _ColorMatrix, T &Kr, T &Kg, T &Kb)
 }
 
 template < typename T >
-void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha, T &power)
+void ColorMatrix_RGB2YUV_Parameter(ColorMatrix _ColorMatrix, T &Yr, T &Yg, T &Yb, T &Ur, T &Ug, T &Ub, T &Vr, T &Vg, T &Vb)
 {
-    T temp;
-    TransferChar_Parameter(_TransferChar, k0, phi, alpha, power, temp);
+    if (_ColorMatrix == ColorMatrix::OPP)
+    {
+        // E'Y  = 1 / 3 * E'R + 1 / 3 * E'G + 1 / 3 * E'B
+        Yr = static_cast<T>(1.0L / 3.0L);
+        Yg = static_cast<T>(1.0L / 3.0L);
+        Yb = static_cast<T>(1.0L / 3.0L);
+
+        // E'Pb = 1 / 2 * E'R               - 1 / 2 * E'B
+        Ur = static_cast<T>(1.0L / 2.0L);
+        Ug = static_cast<T>(0.0L);
+        Ub = static_cast<T>(-1.0L / 2.0L);
+
+        // E'Pr = 1 / 4 * E'R - 1 / 2 * E'G + 1 / 4 * E'B
+        Vr = static_cast<T>(1.0L / 4.0L);
+        Vg = static_cast<T>(-1.0L / 2.0L);
+        Vb = static_cast<T>(1.0L / 4.0L);
+    }
+    else
+    {
+        ldbl Kr, Kg, Kb;
+        ColorMatrix_Parameter(_ColorMatrix, Kr, Kg, Kb);
+
+        // E'Y = Kr * E'R + ( 1 - Kr - Kg ) * E'G + Kb * E'B
+        Yr = static_cast<T>(Kr);
+        Yg = static_cast<T>(Kg);
+        Yb = static_cast<T>(Kb);
+
+        // E'Pb = 0.5 * ( E'B - E'Y ) / ( 1 - Kb )
+        Ur = static_cast<T>(-Yr * 0.5L / (1.0L - Yb));
+        Ug = static_cast<T>(-Yg * 0.5L / (1.0L - Yb));
+        Ub = static_cast<T>(0.5L);
+
+        // E'Pr = 0.5 * ( E'R - E'Y ) / ( 1 - Kr )
+        Vr = static_cast<T>(0.5L);
+        Vg = static_cast<T>(-Yg * 0.5L / (1.0L - Yr));
+        Vb = static_cast<T>(-Yb * 0.5L / (1.0L - Yr));
+    }
 }
 
 template < typename T >
-void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &div)
+void ColorMatrix_YUV2RGB_Parameter(ColorMatrix _ColorMatrix, T &Ry, T &Ru, T &Rv, T &Gy, T &Gu, T &Gv, T &By, T &Bu, T &Bv)
 {
-    T temp;
-    TransferChar_Parameter(_TransferChar, k0, temp, temp, temp, div);
+    if (_ColorMatrix == ColorMatrix::OPP)
+    {
+        // E'R = E'Y + E'Pb + 2 / 3 * E'Pr
+        Ry = static_cast<T>(1.0L);
+        Ru = static_cast<T>(1.0L);
+        Rv = static_cast<T>(2.0L / 3.0L);
+
+        // E'G = E'Y        - 4 / 3 * E'Pr
+        Gy = static_cast<T>(1.0L);
+        Gu = static_cast<T>(0.0L);
+        Gv = static_cast<T>(-4.0L / 3.0L);
+
+        // E'B = E'Y - E'Pb + 2 / 3 * E'Pr
+        By = static_cast<T>(1.0L);
+        Bu = static_cast<T>(-1.0L);
+        Bv = static_cast<T>(2.0L / 3.0L);
+    }
+    else
+    {
+        ldbl Kr, Kg, Kb;
+        ColorMatrix_Parameter(_ColorMatrix, Kr, Kg, Kb);
+
+        // E'R = E'Y + 2 * ( 1 - Kr ) * E'Pr
+        Ry = static_cast<T>(1.0L);
+        Ru = static_cast<T>(0.0L);
+        Rv = static_cast<T>(2.0L * (1.0L - Kr));
+
+        // E'G = E'Y - 2 * Kb * ( 1 - Kb ) / ( 1 - Kr - Kb ) * E'Pb - 2 * Kr * ( 1 - Kr ) / ( 1 - Kr - Kb ) * E'Pr
+        Gy = static_cast<T>(1.0L);
+        Gu = static_cast<T>(2.0L * Kb * (1.0L - Kb) / Kg);
+        Gv = static_cast<T>(2.0L * Kr * (1.0L - Kr) / Kg);
+
+        // E'B = E'Y + 2 * ( 1 - Kb ) * E'Pb
+        By = static_cast<T>(1.0L);
+        Bu = static_cast<T>(2.0L * (1.0L - Kb));
+        Bv = static_cast<T>(0.0L);
+    }
 }
 
 

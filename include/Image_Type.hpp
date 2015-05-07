@@ -3,6 +3,7 @@
 
 
 #include <algorithm>
+#include "Type.h"
 
 
 // Enable C++ PPL Support
@@ -90,38 +91,23 @@ bool isChroma(_Ty Floor, _Ty Neutral)
 }
 
 template < typename _Ty > inline
-bool isPCChromaInt(_Ty Floor, _Ty Neutral, _Ty Ceil)
+bool _IsPCChroma(_Ty Floor, _Ty Neutral, _Ty Ceil, const std::false_type &)
 {
     return Floor < Neutral && (Floor + Ceil) % 2 == 1;
 }
 template < typename _Ty > inline
-bool isPCChromaFloat(_Ty Floor, _Ty Neutral, _Ty Ceil)
+bool _IsPCChroma(_Ty Floor, _Ty Neutral, _Ty Ceil, const std::true_type &)
 {
     return false;
 }
 template < typename _Ty > inline
 bool isPCChroma(_Ty Floor, _Ty Neutral, _Ty Ceil)
 {
-    return isPCChromaInt(Floor, Neutral, Ceil);
-}
-template < > inline
-bool isPCChroma(float Floor, float Neutral, float Ceil)
-{
-    return isPCChromaFloat(Floor, Neutral, Ceil);
-}
-template < > inline
-bool isPCChroma(double Floor, double Neutral, double Ceil)
-{
-    return isPCChromaFloat(Floor, Neutral, Ceil);
-}
-template < > inline
-bool isPCChroma(ldbl Floor, ldbl Neutral, ldbl Ceil)
-{
-    return isPCChromaFloat(Floor, Neutral, Ceil);
+    return _IsPCChroma(Floor, Neutral, Ceil, _IsFloat<_Ty>());
 }
 
 template < typename _Ty >
-void ReSetChromaInt(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
+void _ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma, const std::false_type &)
 {
     const bool srcChroma = isChroma(Floor, Neutral);
 
@@ -135,7 +121,7 @@ void ReSetChromaInt(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
     }
 }
 template < typename _Ty >
-void ReSetChromaFloat(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
+void _ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma, const std::true_type &)
 {
     const bool srcChroma = isChroma(Floor, Neutral);
 
@@ -157,22 +143,7 @@ void ReSetChromaFloat(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
 template < typename _Ty > inline
 void ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
 {
-    ReSetChromaInt(Floor, Neutral, Ceil, Chroma);
-}
-template < > inline
-void ReSetChroma(float &Floor, float &Neutral, float &Ceil, bool Chroma)
-{
-    ReSetChromaFloat(Floor, Neutral, Ceil, Chroma);
-}
-template < > inline
-void ReSetChroma(double &Floor, double &Neutral, double &Ceil, bool Chroma)
-{
-    ReSetChromaFloat(Floor, Neutral, Ceil, Chroma);
-}
-template < > inline
-void ReSetChroma(ldbl &Floor, ldbl &Neutral, ldbl &Ceil, bool Chroma)
-{
-    ReSetChromaFloat(Floor, Neutral, Ceil, Chroma);
+    _ReSetChroma(Floor, Neutral, Ceil, Chroma, _IsFloat<_Ty>());
 }
 
 
@@ -331,12 +302,12 @@ void _Convolute(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 
     LOOP_V(dst.Height(), [&](PCType j)
     {
-        auto dstp = dst.Data() + j * dst.Stride();
+        auto dstp = dst.data() + j * dst.Stride();
 
         typename _St1::const_pointer srcpV[VRad * 2 + 1];
         typename _St1::value_type srcb2D[VRad * 2 + 1][HRad * 2 + 1];
 
-        srcpV[VRad] = src.Data() + j * src.Stride();
+        srcpV[VRad] = src.data() + j * src.Stride();
         for (PCType y = 1; y <= VRad; ++y)
         {
             srcpV[VRad - y] = j < y ? srcpV[VRad - y + 1] : srcpV[VRad - y + 1] - src.Stride();
@@ -569,12 +540,12 @@ void _Convolute_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 
     LOOP_V_PPL(dst.Height(), [&](PCType j)
     {
-        auto dstp = dst.Data() + j * dst.Stride();
+        auto dstp = dst.data() + j * dst.Stride();
 
         typename _St1::const_pointer srcpV[VRad * 2 + 1];
         typename _St1::value_type srcb2D[VRad * 2 + 1][HRad * 2 + 1];
 
-        srcpV[VRad] = src.Data() + j * src.Stride();
+        srcpV[VRad] = src.data() + j * src.Stride();
         for (PCType y = 1; y <= VRad; ++y)
         {
             srcpV[VRad - y] = j < y ? srcpV[VRad - y + 1] : srcpV[VRad - y + 1] - src.Stride();

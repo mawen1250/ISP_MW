@@ -138,7 +138,7 @@ void CUDA_Haze_Removal_Retinex::GetTMapInv()
     FLType *refY = nullptr;
     CUDA_Malloc(refY, pcount);
     CUDA_ConvertToY(refY, Rdev, Gdev, Bdev, pcount, para.Ymode == 1 ? ColorMatrix::Minimum
-        : para.Ymode == 2 ? ColorMatrix::Maximum : ColorMatrix::Average);
+        : para.Ymode == 2 ? ColorMatrix::Maximum : ColorMatrix::OPP);
 
     const size_t scount = para.sigmaVector.size();
     size_t s;
@@ -425,7 +425,7 @@ void CUDA_Haze_Removal_Retinex::StoreResult(Frame &dst)
         CUDA_Malloc(temp, pcount);
         CUDA_RecursiveGaussian GFilter(para.pp_sigma, true, CudaMemMode::Device);
 
-        CUDA_ConvertToY(temp, Rdev, Gdev, Bdev, pcount, ColorMatrix::Average);
+        CUDA_ConvertToY(temp, Rdev, Gdev, Bdev, pcount, ColorMatrix::OPP);
 
         GFilter.Filter(temp, temp, height, width, stride);
         CUDA_GetMinMax(temp, pcount, min, max);

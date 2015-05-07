@@ -130,7 +130,7 @@ void Haze_Removal::StoreResult(Frame &dst)
         Plane_FL temp(dataR, false);
         RecursiveGaussian GFilter(para.pp_sigma, true);
 
-        ConvertToY(temp, dataR, dataG, dataB, ColorMatrix::Average);
+        ConvertToY(temp, dataR, dataG, dataB, ColorMatrix::OPP);
 
         GFilter.Filter(temp, temp);
         GetMinMax(temp, min, max);
@@ -156,7 +156,7 @@ void Haze_Removal_Retinex::GetTMapInv()
 {
     Plane_FL refY(dataR, false);
     ConvertToY(refY, dataR, dataG, dataB, para.Ymode == 1 ? ColorMatrix::Minimum
-        : para.Ymode == 2 ? ColorMatrix::Maximum : ColorMatrix::Average);
+        : para.Ymode == 2 ? ColorMatrix::Maximum : ColorMatrix::OPP);
 
     const size_t scount = para.sigmaVector.size();
     size_t s;

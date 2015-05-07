@@ -3,9 +3,9 @@
 
 
 template < typename _St1, typename _Fn1 > inline
-void Block_For_each(_St1 &data, _Fn1 &_Func)
+void Block_For_each(_St1 &data, _Fn1 &&_Func)
 {
-    auto datap = data.Data();
+    auto datap = data.data();
 
     for (auto upper = datap + data.PixelCount(); datap != upper; ++datap)
     {
@@ -14,10 +14,10 @@ void Block_For_each(_St1 &data, _Fn1 &_Func)
 }
 
 template < typename _St1, typename _St2, typename _Fn1 > inline
-void Block_For_each(_St1 &left, _St2 &right, _Fn1 &_Func)
+void Block_For_each(_St1 &left, _St2 &right, _Fn1 &&_Func)
 {
-    auto leftp = left.Data();
-    auto rightp = right.Data();
+    auto leftp = left.data();
+    auto rightp = right.data();
 
     for (auto upper = leftp + left.PixelCount(); leftp != upper; ++leftp, ++rightp)
     {
@@ -26,9 +26,9 @@ void Block_For_each(_St1 &left, _St2 &right, _Fn1 &_Func)
 }
 
 template < typename _St1, typename _Fn1 > inline
-void Block_Transform(_St1 &data, _Fn1 &_Func)
+void Block_Transform(_St1 &data, _Fn1 &&_Func)
 {
-    auto datap = data.Data();
+    auto datap = data.data();
 
     for (auto upper = datap + data.PixelCount(); datap != upper; ++datap)
     {
@@ -37,7 +37,7 @@ void Block_Transform(_St1 &data, _Fn1 &_Func)
 }
 
 template < typename _Dt1, typename _St1, typename _Fn1 > inline
-void Block_Transform(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
+void Block_Transform(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 {
     const char *FunctionName = "Block_Transform";
     if (dst.Width() != src.Width() || dst.Height() != src.Height() || dst.PixelCount() != src.PixelCount())
@@ -46,8 +46,8 @@ void Block_Transform(_Dt1 &dst, const _St1 &src, _Fn1 &_Func)
         exit(EXIT_FAILURE);
     }
 
-    auto dstp = dst.Data();
-    auto srcp = src.Data();
+    auto dstp = dst.data();
+    auto srcp = src.data();
 
     for (auto upper = dstp + dst.PixelCount(); dstp != upper; ++dstp, ++srcp)
     {
@@ -75,9 +75,9 @@ void ExpectationVarianceFromBlocks(Block<_Ty, _FTy> E, Block<_Ty, _FTy> V, const
     for (PCType k = 0; k < GroupSize; ++k)
     {
         Pos pos = posPairCode[k].second;
-        auto Ep = E.Data();
-        auto Vp = V.Data();
-        auto srcp = src.Data() + pos.y * src.Stride() + pos.x;
+        auto Ep = E.data();
+        auto Vp = V.data();
+        auto srcp = src.data() + pos.y * src.Stride() + pos.x;
 
         for (PCType y = 0; y < E.Height(); ++y)
         {
@@ -92,8 +92,8 @@ void ExpectationVarianceFromBlocks(Block<_Ty, _FTy> E, Block<_Ty, _FTy> V, const
         }
     }
 
-    auto Ep = E.Data();
-    auto Vp = V.Data();
+    auto Ep = E.data();
+    auto Vp = V.data();
 
     for (auto upper = Ep + E.PixelCount(); Ep != upper; ++Ep, ++Vp)
     {

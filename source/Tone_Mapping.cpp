@@ -16,7 +16,7 @@ Frame &Adaptive_Global_Tone_Mapping(Frame &dst, const Frame &src)
     else if (src.isRGB())
     {
         Plane srcY(src.R(), false);
-        ConvertToY(srcY, src, ColorMatrix::Average);
+        ConvertToY(srcY, src, ColorMatrix::OPP);
 
         LUT<FLType> _LUT = Adaptive_Global_Tone_Mapping_Gain_LUT_Generation(srcY);
 

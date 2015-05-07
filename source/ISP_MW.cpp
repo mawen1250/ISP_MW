@@ -25,7 +25,8 @@
 //#define Histogram_Equalization_
 //#define AWB_
 //#define NLMeans_
-#define Haze_Removal_
+#define BM3D_
+//#define Haze_Removal_
 
 #ifdef _CUDA_
 //#define CUDA_Gaussian_
@@ -36,10 +37,10 @@
 
 int Test_Speed()
 {
-    const int Loop = 20;
+    const int Loop = 1;
 
-    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
-    //Frame IFrame = ImageReader("D:\\Test Images\\Haze\\2\\1 tz WDR=on 2.png");
+    //Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
+    Frame IFrame = ImageReader("D:\\Test Images\\BM3D\\_DSC8263.1noised.png");
     Frame PFrame(IFrame, false);
     const Plane &srcR = IFrame.R();
     Plane dstR(srcR, false);
@@ -84,6 +85,9 @@ int Test_Speed()
 #elif defined(NLMeans_)
         NLMeans filter;
         filter(IFrame);
+#elif defined(BM3D_)
+        BM3D filter;
+        filter(IFrame);
 #elif defined(Haze_Removal_)
         Haze_Removal_Retinex filter;
         filter(IFrame);
@@ -104,7 +108,7 @@ int Test_Speed()
 
 int Test_Write()
 {
-    Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
+    Frame IFrame = ImageReader("D:\\Test Images\\BM3D\\_DSC8263.1noised.png");
     Frame PFrame(IFrame, false);
 #if defined(Convolution_)
     PFrame = Convolution3(IFrame, 1, 2, 1, 2, 4, 2, 1, 2, 1);
@@ -143,6 +147,9 @@ int Test_Write()
 #elif defined(NLMeans_)
     NLMeans filter;
     PFrame = filter(IFrame);
+#elif defined(BM3D_)
+    BM3D filter;
+    PFrame = filter(IFrame);
 #elif defined(Haze_Removal_)
     Haze_Removal_Retinex filter;
     PFrame = filter(IFrame);
@@ -152,7 +159,7 @@ int Test_Write()
 #else
     PFrame = IFrame;
 #endif
-    ImageWriter(PFrame, "D:\\Test Images\\Haze\\20150202_132636.0.png");
+    ImageWriter(PFrame, "D:\\Test Images\\BM3D\\_DSC8263.2bm3d.png");
 
     system("pause");
     return 0;
@@ -258,6 +265,10 @@ int Filtering(const int argc, char ** argv)
     {
         filterIOPtr = new NLMeans_IO;
     }
+    else if (FilterName == "--bm3d")
+    {
+        filterIOPtr = new BM3D_IO;
+    }
     else if (FilterName == "--hrr" || FilterName == "--haze_removal" || FilterName == "--haze_removal_retinex")
     {
         filterIOPtr = new _Haze_Removal_Retinex_IO;
@@ -267,7 +278,7 @@ int Filtering(const int argc, char ** argv)
         return 1;
     }
 
-    if (filterIOPtr)
+    if (filterIOPtr != nullptr)
     {
         filterIOPtr->SetArgs(argc2, args);
         filterIOPtr->operator()();

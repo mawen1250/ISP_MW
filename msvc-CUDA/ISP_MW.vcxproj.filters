@@ -126,6 +126,9 @@
     <ClInclude Include="..\include\CUDA\Conversion.cuh">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\fftw3_helper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\AWB.cpp">

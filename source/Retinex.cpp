@@ -237,7 +237,7 @@ Frame &Retinex_MSRCP::process_Frame(Frame &dst, const Frame &src)
         FLType sRangeFL = static_cast<FLType>(srcR.ValueRange());
 
         Plane_FL idata(srcR, false);
-        ConvertToY(idata, src, ColorMatrix::Average);
+        ConvertToY(idata, src, ColorMatrix::OPP);
         
         Plane_FL odata = operator()(idata);
         

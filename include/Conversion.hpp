@@ -56,8 +56,6 @@ void GetMinMax(const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, typename _S
 {
     typedef typename _St1::value_type srcType;
 
-    const bool srcFloat = isFloat(srcType);
-
     max = min = srcR[0];
 
     _For_each(srcR, [&](srcType x)
@@ -369,12 +367,11 @@ void RangeConvert(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB, const _St1 &srcR, const _S
 
 
 template < typename _Dt1, typename _St1 >
-void ConvertToY(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, ColorMatrix dstColorMatrix = ColorMatrix::Average)
+void ConvertToY(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, ColorMatrix dstColorMatrix = ColorMatrix::OPP)
 {
     typedef typename _St1::value_type srcType;
     typedef typename _Dt1::value_type dstType;
 
-    const bool srcFloat = isFloat(srcType);
     const bool dstFloat = isFloat(dstType);
 
     if (dst.isChroma())
@@ -393,14 +390,11 @@ void ConvertToY(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
     const auto dFloor = dst.Floor();
     const auto dRange = dst.ValueRange();
 
-    FLType gain = static_cast<FLType>(dRange) / sRange;
-    FLType offset = dFloor - sFloor * gain;
-    if (!dstFloat) offset += FLType(0.5);
-
-    if (dstColorMatrix == ColorMatrix::Average)
+    if (dstColorMatrix == ColorMatrix::OPP)
     {
-        gain = static_cast<FLType>(dRange) / (sRange * 3);
-        offset = dFloor - sFloor * 3 * gain;
+        FLType gain = static_cast<FLType>(dRange) / (sRange * FLType(3));
+        FLType offset = -sFloor * 3 * gain + dFloor;
+        if (!dstFloat) offset += FLType(0.5);
 
         LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
@@ -409,6 +403,10 @@ void ConvertToY(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
     }
     else if (dstColorMatrix == ColorMatrix::Minimum)
     {
+        FLType gain = static_cast<FLType>(dRange) / sRange;
+        FLType offset = -sFloor * gain + dFloor;
+        if (!dstFloat) offset += FLType(0.5);
+
         LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
             dst[i] = static_cast<dstType>(static_cast<FLType>(::Min(srcR[i], ::Min(srcG[i], srcB[i]))) * gain + offset);
@@ -416,13 +414,25 @@ void ConvertToY(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
     }
     else if (dstColorMatrix == ColorMatrix::Maximum)
     {
+        FLType gain = static_cast<FLType>(dRange) / sRange;
+        FLType offset = -sFloor * gain + dFloor;
+        if (!dstFloat) offset += FLType(0.5);
+
         LOOP_VH_PPL(height, width, stride, [&](PCType i)
         {
             dst[i] = static_cast<dstType>(static_cast<FLType>(::Max(srcR[i], ::Max(srcG[i], srcB[i]))) * gain + offset);
         });
     }
+    else if (dstColorMatrix == ColorMatrix::GBR)
+    {
+        RangeConvert(dst, srcG);
+    }
     else
     {
+        FLType gain = static_cast<FLType>(dRange) / sRange;
+        FLType offset = -sFloor * gain + dFloor;
+        if (!dstFloat) offset += FLType(0.5);
+
         FLType Kr, Kg, Kb;
         ColorMatrix_Parameter(dstColorMatrix, Kr, Kg, Kb);
 
@@ -439,7 +449,7 @@ void ConvertToY(_Dt1 &dst, const _St1 &srcR, const _St1 &srcG, const _St1 &srcB,
 }
 
 template < typename _Dt1, typename _St1 > inline
-void ConvertToY(_Dt1 &dst, const _St1 &src, ColorMatrix dstColorMatrix = ColorMatrix::Average)
+void ConvertToY(_Dt1 &dst, const _St1 &src, ColorMatrix dstColorMatrix = ColorMatrix::OPP)
 {
     if (src.isRGB())
     {
@@ -448,6 +458,253 @@ void ConvertToY(_Dt1 &dst, const _St1 &src, ColorMatrix dstColorMatrix = ColorMa
     else if (src.isYUV())
     {
         RangeConvert(dst, src.Y());
+    }
+}
+
+
+template < typename _Dt1, typename _St1 >
+void MatrixConvert_RGB2YUV(_Dt1 &dstY, _Dt1 &dstU, _Dt1 &dstV,
+    const _St1 &srcR, const _St1 &srcG, const _St1 &srcB, ColorMatrix dstColorMatrix = ColorMatrix::OPP)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool dstFloat = isFloat(dstType);
+
+    dstY.ReSize(srcR.Width(), srcR.Height());
+    dstU.ReSize(srcR.Width(), srcR.Height());
+    dstV.ReSize(srcR.Width(), srcR.Height());
+    dstY.ReSetChroma(false);
+    dstU.ReSetChroma(true);
+    dstV.ReSetChroma(true);
+
+    const PCType height = dstY.Height();
+    const PCType width = dstY.Width();
+    const PCType stride = dstY.Stride();
+
+    const FLType sFloor = static_cast<FLType>(srcR.Floor());
+    const FLType sRange = static_cast<FLType>(srcR.ValueRange());
+    const FLType dFloorY = static_cast<FLType>(dstY.Floor());
+    const FLType dRangeY = static_cast<FLType>(dstY.ValueRange());
+    const FLType dNeutralC = static_cast<FLType>(dstU.Neutral());
+    const FLType dRangeC = static_cast<FLType>(dstU.ValueRange());
+
+    if (dstColorMatrix == ColorMatrix::OPP)
+    {
+        FLType gainY = dRangeY / (sRange * FLType(3));
+        FLType offsetY = -sFloor * 3 * gainY + dFloorY;
+        if (!dstFloat) offsetY += FLType(0.5);
+        FLType gainU = dRangeC / (sRange * FLType(2));
+        FLType gainV = dRangeC / (sRange * FLType(4));
+        FLType offsetC = dNeutralC;
+        if (!dstFloat) offsetC += FLType(dstU.isPCChroma() ? 0.499999 : 0.5);
+
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dstY[i] = static_cast<dstType>(
+                static_cast<FLType>(srcR[i] + srcG[i] + srcB[i]) * gainY + offsetY
+                );
+            dstU[i] = static_cast<dstType>(
+                static_cast<FLType>(srcR[i] - srcB[i]) * gainU + offsetC
+                );
+            dstV[i] = static_cast<dstType>(
+                static_cast<FLType>(srcR[i] - srcG[i] * 2 + srcB[i]) * gainV + offsetC
+                );
+        });
+    }
+    else if (dstColorMatrix == ColorMatrix::Minimum || dstColorMatrix == ColorMatrix::Maximum)
+    {
+        std::cerr << "MatrixConvert_RGB2YUV: ColorMatrix::Minimum or ColorMatrix::Maximum is invalid!\n";
+        return;
+    }
+    else if (dstColorMatrix == ColorMatrix::GBR)
+    {
+        dstY.ReSetChroma(false);
+        dstU.ReSetChroma(false);
+        dstV.ReSetChroma(false);
+        RangeConvert(dstY, dstU, dstV, srcG, srcB, srcR);
+    }
+    else
+    {
+        FLType gainY = dRangeY / sRange;
+        FLType offsetY = -sFloor * gainY + dFloorY;
+        if (!dstFloat) offsetY += FLType(0.5);
+        FLType gainC = dRangeC / sRange;
+        FLType offsetC = dNeutralC;
+        if (!dstFloat) offsetC += FLType(dstU.isPCChroma() ? 0.499999 : 0.5);
+
+        FLType Yr, Yg, Yb, Ur, Ug, Ub, Vr, Vg, Vb;
+        ColorMatrix_RGB2YUV_Parameter(dstColorMatrix, Yr, Yg, Yb, Ur, Ug, Ub, Vr, Vg, Vb);
+
+        Yr *= gainY;
+        Yg *= gainY;
+        Yb *= gainY;
+        Ur *= gainC;
+        Ug *= gainC;
+        Ub *= gainC;
+        Vr *= gainC;
+        Vg *= gainC;
+        Vb *= gainC;
+
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dstY[i] = static_cast<dstType>(Yr * static_cast<FLType>(srcR[i])
+                + Yg * static_cast<FLType>(srcG[i])
+                + Yb * static_cast<FLType>(srcB[i])
+                + offsetY);
+            dstU[i] = static_cast<dstType>(Ur * static_cast<FLType>(srcR[i])
+                + Ug * static_cast<FLType>(srcG[i])
+                + Ub * static_cast<FLType>(srcB[i])
+                + offsetC);
+            dstV[i] = static_cast<dstType>(Vr * static_cast<FLType>(srcR[i])
+                + Vg * static_cast<FLType>(srcG[i])
+                + Vb * static_cast<FLType>(srcB[i])
+                + offsetC);
+        });
+    }
+}
+
+template < typename _Dt1, typename _St1 >
+void MatrixConvert_YUV2RGB(_Dt1 &dstR, _Dt1 &dstG, _Dt1 &dstB,
+    const _St1 &srcY, const _St1 &srcU, const _St1 &srcV, ColorMatrix dstColorMatrix = ColorMatrix::OPP)
+{
+    typedef typename _St1::value_type srcType;
+    typedef typename _Dt1::value_type dstType;
+
+    const bool dstFloat = isFloat(dstType);
+
+    dstR.ReSize(srcY.Width(), srcY.Height());
+    dstG.ReSize(srcY.Width(), srcY.Height());
+    dstB.ReSize(srcY.Width(), srcY.Height());
+    dstR.ReSetChroma(false);
+    dstG.ReSetChroma(false);
+    dstB.ReSetChroma(false);
+
+    const PCType height = dstR.Height();
+    const PCType width = dstR.Width();
+    const PCType stride = dstR.Stride();
+
+    const FLType sFloorY = static_cast<FLType>(srcY.Floor());
+    const FLType sRangeY = static_cast<FLType>(srcY.ValueRange());
+    const FLType sNeutralC = static_cast<FLType>(srcU.Neutral());
+    const FLType sRangeC = static_cast<FLType>(srcU.ValueRange());
+    const FLType dFloor = static_cast<FLType>(dstR.Floor());
+    const FLType dCeil = static_cast<FLType>(dstR.Ceil());
+    const FLType dRange = static_cast<FLType>(dstR.ValueRange());
+
+    if (dstColorMatrix == ColorMatrix::OPP)
+    {
+        FLType gainY = dRange / sRangeY;
+        FLType gainC = dRange / sRangeC;
+
+        FLType Ry = gainY;
+        FLType Ru = gainC;
+        FLType Rv = gainC * FLType(2. / 3.);
+        FLType Gy = gainY;
+        FLType Gv = gainC * FLType(-4. / 3.);
+        FLType By = gainY;
+        FLType Bu = gainC * FLType(-1);
+        FLType Bv = gainC * FLType(2. / 3.);
+
+        FLType offsetR = -sFloorY * gainY - sNeutralC * gainC * FLType(5. / 3.) + dFloor;
+        if (!dstFloat) offsetR += FLType(0.5);
+        FLType offsetG = -sFloorY * gainY - sNeutralC * gainC * FLType(-4. / 3.) + dFloor;
+        if (!dstFloat) offsetG += FLType(0.5);
+        FLType offsetB = -sFloorY * gainY - sNeutralC * gainC * FLType(-1. / 3.) + dFloor;
+        if (!dstFloat) offsetB += FLType(0.5);
+
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dstR[i] = static_cast<dstType>(Clip(
+                Ry * static_cast<FLType>(srcY[i])
+                + Ru * static_cast<FLType>(srcU[i]) 
+                + Rv * static_cast<FLType>(srcV[i])
+                + offsetR, dFloor, dCeil));
+            dstG[i] = static_cast<dstType>(Clip(
+                Gy * static_cast<FLType>(srcY[i])
+                + Gv * static_cast<FLType>(srcV[i])
+                + offsetG, dFloor, dCeil));
+            dstB[i] = static_cast<dstType>(Clip(
+                By * static_cast<FLType>(srcY[i])
+                + Bu * static_cast<FLType>(srcU[i])
+                + Bv * static_cast<FLType>(srcV[i])
+                + offsetB, dFloor, dCeil));
+        });
+    }
+    else if (dstColorMatrix == ColorMatrix::Minimum || dstColorMatrix == ColorMatrix::Maximum)
+    {
+        std::cerr << "MatrixConvert_YUV2RGB: ColorMatrix::Minimum or ColorMatrix::Maximum is invalid!\n";
+        return;
+    }
+    else if (dstColorMatrix == ColorMatrix::GBR)
+    {
+        RangeConvert(dstG, dstB, dstR, srcY, srcU, srcV);
+    }
+    else
+    {
+        FLType gainY = dRange / sRangeY;
+        FLType gainC = dRange / sRangeC;
+
+        FLType Ry, Ru, Rv, Gy, Gu, Gv, By, Bu, Bv;
+        ColorMatrix_YUV2RGB_Parameter(dstColorMatrix, Ry, Ru, Rv, Gy, Gu, Gv, By, Bu, Bv);
+
+        Ry *= gainY;
+        Rv *= gainC;
+        Gy *= gainY;
+        Gu *= gainC;
+        Gv *= gainC;
+        By *= gainY;
+        Bu *= gainC;
+
+        FLType offsetR = -sFloorY * Ry - sNeutralC * Rv + dFloor;
+        if (!dstFloat) offsetR += FLType(0.5);
+        FLType offsetG = -sFloorY * Gy - sNeutralC * (Gu + Gv) + dFloor;
+        if (!dstFloat) offsetG += FLType(0.5);
+        FLType offsetB = -sFloorY * By - sNeutralC * Bu + dFloor;
+        if (!dstFloat) offsetB += FLType(0.5);
+
+        LOOP_VH_PPL(height, width, stride, [&](PCType i)
+        {
+            dstR[i] = static_cast<dstType>(Clip(
+                Ry * static_cast<FLType>(srcY[i])
+                + Rv * static_cast<FLType>(srcV[i])
+                + offsetR, dFloor, dCeil));
+            dstG[i] = static_cast<dstType>(Clip(
+                Gy * static_cast<FLType>(srcY[i])
+                + Gu * static_cast<FLType>(srcU[i])
+                + Gv * static_cast<FLType>(srcV[i])
+                + offsetG, dFloor, dCeil));
+            dstB[i] = static_cast<dstType>(Clip(
+                By * static_cast<FLType>(srcY[i])
+                + Bu * static_cast<FLType>(srcU[i])
+                + offsetB, dFloor, dCeil));
+        });
+    }
+}
+
+template < typename _Dt1, typename _St1 > inline
+void MatrixConvert(_Dt1 &dst, const _St1 &src, ColorMatrix _ColorMatrix = ColorMatrix::Unspecified)
+{
+    if (_ColorMatrix == ColorMatrix::Unspecified)
+    {
+        _ColorMatrix = dst.GetColorMatrix();
+    }
+    else
+    {
+        dst.SetColorMatrix(_ColorMatrix);
+    }
+
+    if (src.isRGB() && dst.isYUV())
+    {
+        MatrixConvert_RGB2YUV(dst.Y(), dst.U(), dst.V(), src.R(), src.G(), src.B(), _ColorMatrix);
+    }
+    else if (src.isYUV() && dst.isRGB())
+    {
+        MatrixConvert_YUV2RGB(dst.Y(), dst.U(), dst.V(), src.R(), src.G(), src.B(), _ColorMatrix);
+    }
+    else
+    {
+        dst = src;
     }
 }
 

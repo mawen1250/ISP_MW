@@ -65,9 +65,9 @@ Frame ImageReader(const std::string &filename, const FCType FrameNum, const DTyp
     }
     else
     {
-        LUT<DType>::LevelType k;
-        const LUT<DType>::LevelType iLevels = 256;
-        LUT<DType> ConvertLUT(iLevels);
+        LUT<Plane::value_type>::LevelType k;
+        const LUT<Plane::value_type>::LevelType iLevels = 256;
+        LUT<Plane::value_type> ConvertLUT(iLevels);
 
         for (k = 0; k < iLevels; k++)
         {
@@ -141,13 +141,12 @@ bool ImageWriter(const Frame &src, const std::string &filename, int _type)
     }
     else
     {
-        LUT<uchar>::LevelType k;
         LUT<uchar> ConvertLUT(R);
 
-        for (k = R.Floor(); k < R.Ceil(); k++)
+        ConvertLUT.Set(R, [&](Plane::value_type i)
         {
-            ConvertLUT.Set(R, k, static_cast<uchar>(R.GetFL(k) * 255. + 0.5));
-        }
+            return static_cast<uchar>(R.GetFL(i) * FLType(255) + FLType(0.5));
+        });
 
         for (PCType j = 0; j < height; ++j)
         {
