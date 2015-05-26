@@ -45,6 +45,7 @@ struct fftwh
 
         plan &operator=(plan &&right)
         {
+            destroy_plan();
             p = right.p;
             right.p = nullptr;
             return *this;
@@ -113,7 +114,7 @@ struct fftwh
         {
             static_assert(sizeof(C) == sizeof(CType), "Invalid arguments for template instantiation!");
             destroy_plan();
-            p = ::fftw_plan_guru_dft(rank, dims, howmany_rank, howmany_dims,
+            p = ::fftw_plan_guru64_dft(rank, dims, howmany_rank, howmany_dims,
                 reinterpret_cast<CType *>(in), reinterpret_cast<CType *>(out), sign, flags);
         }
 
@@ -121,7 +122,7 @@ struct fftwh
             R *ri, R *ii, R *ro, R *io, unsigned flags = FFTW_MEASURE)
         {
             destroy_plan();
-            p = ::fftw_plan_guru_split_dft(rank, dims, howmany_rank, howmany_dims, ri, ii, ro, io, flags);
+            p = ::fftw_plan_guru64_split_dft(rank, dims, howmany_rank, howmany_dims, ri, ii, ro, io, flags);
         }
 
 
@@ -239,7 +240,7 @@ struct fftwh
         {
             static_assert(sizeof(C) == sizeof(CType), "Invalid arguments for template instantiation!");
             destroy_plan();
-            p = ::fftw_plan_guru_dft_r2c(rank, dims, howmany_rank, howmany_dims,
+            p = ::fftw_plan_guru64_dft_r2c(rank, dims, howmany_rank, howmany_dims,
                 in, reinterpret_cast<CType *>(out), flags);
         }
 
@@ -249,7 +250,7 @@ struct fftwh
         {
             static_assert(sizeof(C) == sizeof(CType), "Invalid arguments for template instantiation!");
             destroy_plan();
-            p = ::fftw_plan_guru_dft_c2r(rank, dims, howmany_rank, howmany_dims,
+            p = ::fftw_plan_guru64_dft_c2r(rank, dims, howmany_rank, howmany_dims,
                 reinterpret_cast<CType *>(in), out, flags);
         }
 
@@ -259,7 +260,7 @@ struct fftwh
             R *in, R *ro, R *io, unsigned flags = FFTW_MEASURE)
         {
             destroy_plan();
-            p = ::fftw_plan_guru_split_dft_r2c(rank, dims, howmany_rank, howmany_dims, in, ro, io, flags);
+            p = ::fftw_plan_guru64_split_dft_r2c(rank, dims, howmany_rank, howmany_dims, in, ro, io, flags);
         }
 
         void guru_split_dft_c2r(int rank, const iodim *dims,
@@ -267,7 +268,7 @@ struct fftwh
             R *ri, R *ii, R *out, unsigned flags = FFTW_MEASURE)
         {
             destroy_plan();
-            p = ::fftw_plan_guru_split_dft_c2r(rank, dims, howmany_rank, howmany_dims, ri, ii, out, flags);
+            p = ::fftw_plan_guru64_split_dft_c2r(rank, dims, howmany_rank, howmany_dims, ri, ii, out, flags);
         }
 
 
@@ -340,7 +341,7 @@ struct fftwh
             R *in, R *out, const r2r_kind *kind, unsigned flags = FFTW_MEASURE)
         {
             destroy_plan();
-            p = ::fftw_plan_guru_r2r(rank, dims, howmany_rank, howmany_dims, in, out, kind, flags);
+            p = ::fftw_plan_guru64_r2r(rank, dims, howmany_rank, howmany_dims, in, out, kind, flags);
         }
 
 
@@ -549,6 +550,7 @@ struct fftwh<float>
 
         plan &operator=(plan &&right)
         {
+            destroy_plan();
             p = right.p;
             right.p = nullptr;
             return *this;
@@ -1053,6 +1055,7 @@ struct fftwh<long double>
 
         plan &operator=(plan &&right)
         {
+            destroy_plan();
             p = right.p;
             right.p = nullptr;
             return *this;

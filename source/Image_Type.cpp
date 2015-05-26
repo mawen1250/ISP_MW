@@ -38,7 +38,7 @@ void Plane::InitValue(value_type Value, bool Init)
         }
         else
         {
-            memset(Data(), Value, sizeof(value_type) * size());
+            memset(data(), Value, sizeof(value_type) * size());
         }
     }
 }
@@ -57,22 +57,22 @@ Plane::Plane(value_type Value, PCType _Width, PCType _Height, value_type _BitDep
     if (_BitDepth > MaxBitDepth)
     {
         std::cerr << FunctionName << ": \"BitDepth=" << _BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
-        exit(EXIT_FAILURE);
+        DEBUG_BREAK;
     }
     if (_Ceil <= _Floor)
     {
         std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_BREAK;
     }
     if (ValueRange() >= value_type(1) << _BitDepth)
     {
         std::cerr << FunctionName << ": \"Ceil-Floor=" << ValueRange() << "\" exceeds \"BitDepth=" << _BitDepth << "\" limit.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_BREAK;
     }
     if (_Neutral > _Floor && _Neutral != (_Floor + _Ceil + 1) / 2)
     {
         std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor << "\", \"Neutral=" << _Neutral << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_BREAK;
     }
 
     AlignedMalloc(Data_, size());
@@ -83,7 +83,7 @@ Plane::Plane(value_type Value, PCType _Width, PCType _Height, value_type _BitDep
 Plane::Plane(const _Myt &src)
     : _Myt(src, false)
 {
-    memcpy(Data(), src.Data(), sizeof(value_type) * size());
+    memcpy(data(), src.data(), sizeof(value_type) * size());
 }
 
 Plane::Plane(const _Myt &src, bool Init, value_type Value)
@@ -94,7 +94,7 @@ Plane::Plane(_Myt &&src)
     : Width_(src.Width()), Height_(src.Height()), PixelCount_(src.PixelCount()), BitDepth_(src.BitDepth()),
     Floor_(src.Floor()), Neutral_(src.Neutral()), Ceil_(src.Ceil()), TransferChar_(src.GetTransferChar())
 {
-    Data_ = src.Data();
+    Data_ = src.data();
 
     src.Width_ = 0;
     src.Height_ = 0;
@@ -139,7 +139,7 @@ Plane &Plane::operator=(const _Myt &src)
     AlignedFree(Data_);
     AlignedMalloc(Data_, size());
 
-    memcpy(Data(), src.Data(), sizeof(value_type) * size());
+    memcpy(data(), src.data(), sizeof(value_type) * size());
 
     return *this;
 }
@@ -154,7 +154,7 @@ Plane &Plane::operator=(_Myt &&src)
     CopyParaFrom(src);
 
     AlignedFree(Data_);
-    Data_ = src.Data();
+    Data_ = src.data();
 
     src.Width_ = 0;
     src.Height_ = 0;
@@ -269,8 +269,9 @@ Plane &Plane::ReQuantize(value_type _BitDepth, QuantRange _QuantRange, bool scal
     const char *FunctionName = "Plane::ReQuantize";
     if (_BitDepth > MaxBitDepth)
     {
-        std::cerr << FunctionName << ": \"BitDepth=" << _BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": \"BitDepth=" << _BitDepth
+            << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        DEBUG_BREAK;
     }
 
     value_type _Floor, _Neutral, _Ceil;
@@ -285,26 +286,30 @@ Plane &Plane::ReQuantize(value_type _BitDepth, value_type _Floor, value_type _Ne
     const char *FunctionName = "Plane::ReQuantize";
     if (_BitDepth > MaxBitDepth)
     {
-        std::cerr << FunctionName << ": \"BitDepth=" << _BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": \"BitDepth=" << _BitDepth
+            << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        DEBUG_BREAK;
     }
     if (_Ceil <= _Floor)
     {
-        std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": invalid values of \"Floor="
+            << _Floor << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
+        DEBUG_BREAK;
     }
     if (_ValueRange >= value_type(1) << _BitDepth)
     {
-        std::cerr << FunctionName << ": \"Ceil-Floor=" << _ValueRange << "\" exceeds \"BitDepth=" << _BitDepth << "\" limit.\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": \"Ceil-Floor=" << _ValueRange
+            << "\" exceeds \"BitDepth=" << _BitDepth << "\" limit.\n";
+        DEBUG_BREAK;
     }
     if (_Neutral > _Floor && _Neutral != (_Floor + _Ceil + 1) / 2)
     {
-        std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor << "\", \"Neutral=" << _Neutral << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor
+            << "\", \"Neutral=" << _Neutral << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
+        DEBUG_BREAK;
     }
 
-    if (scale && Data() && (Floor() != _Floor || Neutral() != _Neutral || Ceil() != _Ceil))
+    if (scale && data() && (Floor() != _Floor || Neutral() != _Neutral || Ceil() != _Ceil))
     {
         FLType gain = static_cast<FLType>(_ValueRange) / ValueRange();
         FLType offset = _Neutral - Neutral() * gain + FLType(_Floor < _Neutral && (_Floor + _Ceil) % 2 == 1 ? 0.499999 : 0.5);
@@ -461,7 +466,7 @@ Plane_FL::Plane_FL(value_type Value, PCType _Width, PCType _Height, value_type _
 Plane_FL::Plane_FL(const _Myt &src)
     : _Myt(src, false)
 {
-    memcpy(Data(), src.Data(), sizeof(value_type) * size());
+    memcpy(data(), src.data(), sizeof(value_type) * size());
 }
 
 Plane_FL::Plane_FL(const _Myt &src, bool Init, value_type Value)
@@ -472,7 +477,7 @@ Plane_FL::Plane_FL(_Myt &&src)
     : Width_(src.Width()), Height_(src.Height()), PixelCount_(src.PixelCount()),
     Floor_(src.Floor()), Neutral_(src.Neutral()), Ceil_(src.Ceil()), TransferChar_(src.GetTransferChar())
 {
-    Data_ = src.Data();
+    Data_ = src.data();
 
     src.Width_ = 0;
     src.Height_ = 0;
@@ -524,7 +529,7 @@ Plane_FL &Plane_FL::operator=(const _Myt &src)
     AlignedFree(Data_);
     AlignedMalloc(Data_, size());
 
-    memcpy(Data(), src.Data(), sizeof(value_type) * size());
+    memcpy(data(), src.data(), sizeof(value_type) * size());
 
     return *this;
 }
@@ -539,7 +544,7 @@ Plane_FL &Plane_FL::operator=(_Myt &&src)
     CopyParaFrom(src);
 
     AlignedFree(Data_);
-    Data_ = src.Data();
+    Data_ = src.data();
 
     src.Width_ = 0;
     src.Height_ = 0;
@@ -656,16 +661,18 @@ Plane_FL &Plane_FL::ReQuantize(value_type _Floor, value_type _Neutral, value_typ
     const char *FunctionName = "Plane_FL::ReQuantize";
     if (_Ceil <= _Floor)
     {
-        std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": invalid values of \"Floor="
+            << _Floor << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
+        DEBUG_BREAK;
     }
     if (_Neutral > _Floor && _Neutral != (_Floor + _Ceil) / 2.)
     {
-        std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor << "\", \"Neutral=" << _Neutral << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": invalid values of \"Floor=" << _Floor
+            << "\", \"Neutral=" << _Neutral << "\" and \"Ceil=" << _Ceil << "\" are set.\n";
+        DEBUG_BREAK;
     }
 
-    if (scale && Data() && (Floor() != _Floor || Neutral() != _Neutral || Ceil() != _Ceil))
+    if (scale && data() && (Floor() != _Floor || Neutral() != _Neutral || Ceil() != _Ceil))
     {
         value_type gain = (_Ceil - _Floor) / ValueRange();
         value_type offset = _Neutral - Neutral() * gain;
@@ -1038,8 +1045,9 @@ Frame::Frame(FCType _FrameNum, PixelType _PixelType, PCType _Width, PCType _Heig
     const char *FunctionName = "class Frame constructor";
     if (_BitDepth > MaxBitDepth)
     {
-        std::cerr << FunctionName << ": \"BitDepth=" << _BitDepth << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
-        exit(EXIT_FAILURE);
+        std::cerr << FunctionName << ": \"BitDepth=" << _BitDepth
+            << "\" is invalid, maximum allowed bit depth is " << MaxBitDepth << ".\n";
+        DEBUG_BREAK;
     }
 
     InitPlanes(_Width, _Height, _BitDepth, Init);

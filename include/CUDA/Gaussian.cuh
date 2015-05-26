@@ -17,7 +17,7 @@ private:
     CudaMemMode mem_mode;
 
 public:
-    _Myt(const Gaussian2D_Para &_para = Gaussian2D_Default, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
+    CUDA_Gaussian2D(const Gaussian2D_Para &_para = Gaussian2D_Default, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
         : _Mybase(_para), mem_mode(_mem_mode)
     {}
 
@@ -41,7 +41,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".Gaussian")
+    CUDA_Gaussian2D_IO(std::string _Tag = ".Gaussian")
         : _Mybase(std::move(_Tag)) {}
 };
 
@@ -62,7 +62,7 @@ private:
     _Dt d;
 
 public:
-    _Myt(long double sigma, bool _allow_negative = true, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
+    CUDA_RecursiveGaussian(long double sigma, bool _allow_negative = true, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
         : _Mybase(sigma, _allow_negative), d(_mem_mode, BLOCK_DIM)
     {}
 

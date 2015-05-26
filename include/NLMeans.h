@@ -30,11 +30,19 @@ public:
     typedef NLMeans _Myt;
     typedef FilterIF2 _Mybase;
 
+    typedef Block<FLType, FLType> block_type;
+    typedef block_type::KeyType KeyType;
+    typedef block_type::PosType PosType;
+    typedef block_type::PosPair PosPair;
+    typedef block_type::KeyCode KeyCode;
+    typedef block_type::PosCode PosCode;
+    typedef block_type::PosPairCode PosPairCode;
+
 protected:
     NLMeans_Para para;
 
 public:
-    _Myt(const NLMeans_Para &_para = NLMeans_Default)
+    NLMeans(const NLMeans_Para &_para = NLMeans_Default)
         : para(_para)
     {}
 
@@ -44,13 +52,13 @@ protected:
     virtual Frame &process_Frame(Frame &dst, const Frame &src, const Frame &ref);
 
 protected:
-    template < typename _St1, typename _Ty1, typename _DTy1, typename _Ty2, typename _DTy2, typename _DTy3 >
-    void WeightedAverage(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _DTy2> &refBlock, const _St1 &src,
-        const std::vector<std::pair<_DTy3, Pos>> &posPairCode);
+    template < typename _St1 >
+    void WeightedAverage(block_type &dstBlock, const block_type &refBlock, const _St1 &src,
+        const PosPairCode &code);
 
-    template < typename _St1, typename _Ty1, typename _DTy1, typename _Ty2, typename _DTy2, typename _DTy3 >
-    void WeightedAverage_Correction(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _DTy2> &refBlock, const _St1 &src,
-        const std::vector<std::pair<_DTy3, Pos>> &posPairCode);
+    template < typename _St1 >
+    void WeightedAverage_Correction(block_type &dstBlock, const block_type &refBlock, const _St1 &src,
+        const PosPairCode &code);
 };
 
 
@@ -157,7 +165,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".NLMeans")
+    NLMeans_IO(std::string _Tag = ".NLMeans")
         : _Mybase(std::move(_Tag)) {}
 };
 

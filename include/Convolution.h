@@ -155,7 +155,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".EdgeDetect")
+    EdgeDetect_IO(std::string _Tag = ".EdgeDetect")
         : _Mybase(std::move(_Tag)) {}
 };
 

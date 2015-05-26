@@ -118,9 +118,9 @@ bool ImageWriter(const Frame &src, const std::string &filename, int _type)
 
             for (const PCType upper = i + width; i < upper; ++i)
             {
-                *p++ = static_cast<uchar>(Round_Div(B[i], DType(257)));
-                *p++ = static_cast<uchar>(Round_Div(G[i], DType(257)));
-                *p++ = static_cast<uchar>(Round_Div(R[i], DType(257)));
+                *p++ = static_cast<uchar>(RoundDiv(B[i], DType(257)));
+                *p++ = static_cast<uchar>(RoundDiv(G[i], DType(257)));
+                *p++ = static_cast<uchar>(RoundDiv(R[i], DType(257)));
             }
         }
     }

@@ -37,7 +37,7 @@ protected:
     Retinex_Para para;
 
 public:
-    _Myt(const Retinex_Para _para = Retinex_Default)
+    Retinex(const Retinex_Para _para = Retinex_Default)
         : para(_para)
     {}
 
@@ -53,9 +53,7 @@ protected:
         }
         else
         {
-            const char *FunctionName = "Retinex::process";
-            std::cerr << FunctionName << ": invalid PixelType of Frame \"src=\", should be RGB.\n";
-            exit(EXIT_FAILURE);
+            DEBUG_FAIL("Retinex::process: invalid PixelType of Frame \"src\", should be RGB.");
         }
 
         return dst;
@@ -79,7 +77,7 @@ public:
     typedef Retinex _Mybase;
 
 public:
-    _Myt(const Retinex_Para _para = Retinex_Default)
+    Retinex_SSR(const Retinex_Para _para = Retinex_Default)
         : _Mybase(_para)
     {
         para.sigmaVector.clear();
@@ -101,7 +99,7 @@ public:
     typedef Retinex _Mybase;
 
 public:
-    _Myt(const Retinex_Para _para = Retinex_Default)
+    Retinex_MSR(const Retinex_Para _para = Retinex_Default)
         : _Mybase(_para)
     {}
 
@@ -120,7 +118,7 @@ public:
     typedef Retinex_MSR _Mybase;
 
 public:
-    _Myt(const Retinex_Para _para = Retinex_Default)
+    Retinex_MSRCR_GIMP(const Retinex_Para _para = Retinex_Default)
         : _Mybase(_para)
     {}
 
@@ -139,7 +137,7 @@ public:
     typedef Retinex_MSR _Mybase;
 
 public:
-    _Myt(const Retinex_Para _para = Retinex_Default)
+    Retinex_MSRCP(const Retinex_Para _para = Retinex_Default)
         : _Mybase(_para)
     {}
 
@@ -156,7 +154,7 @@ public:
     typedef Retinex_MSR _Mybase;
 
 public:
-    _Myt(const Retinex_Para _para = Retinex_Default)
+    Retinex_MSRCR(const Retinex_Para _para = Retinex_Default)
         : _Mybase(_para)
     {}
 
@@ -219,7 +217,7 @@ protected:
     virtual Frame process(const Frame &src) = 0;
 
 public:
-    _Myt(std::string _Tag = ".MSR")
+    Retinex_MSR_IO(std::string _Tag = ".MSR")
         : _Mybase(std::move(_Tag)) {}
 };
 
@@ -262,7 +260,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".MSRCP")
+    Retinex_MSRCP_IO(std::string _Tag = ".MSRCP")
         : _Mybase(std::move(_Tag)) {}
 };
 
@@ -305,7 +303,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".MSRCR")
+    Retinex_MSRCR_IO(std::string _Tag = ".MSRCR")
         : _Mybase(std::move(_Tag)) {}
 };
 
@@ -348,7 +346,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".MSRCR_GIMP")
+    Retinex_MSRCR_GIMP_IO(std::string _Tag = ".MSRCR_GIMP")
         : _Mybase(std::move(_Tag)) {}
 };
 

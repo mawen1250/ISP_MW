@@ -27,7 +27,7 @@ struct Haze_Removal_Para
     int Ymode = 1;
     std::vector<ldbl> sigmaVector;
 
-    _Myt() : sigmaVector({ 15.0L, sizeof(FLType) ? 80.0L : 250.0L }) {}
+    Haze_Removal_Para() : sigmaVector({ 15.0L, sizeof(FLType) ? 80.0L : 250.0L }) {}
 };
 
 extern const Haze_Removal_Para Haze_Removal_Default;
@@ -57,7 +57,7 @@ protected:
     FLType AL_B;
 
 public:
-    _Myt(const Haze_Removal_Para &_para = Haze_Removal_Default)
+    Haze_Removal(const Haze_Removal_Para &_para = Haze_Removal_Default)
         : para(_para)
     {}
 
@@ -87,7 +87,7 @@ public:
     typedef Haze_Removal _Mybase;
 
 public:
-    _Myt(const Haze_Removal_Para &_para = Haze_Removal_Default)
+    Haze_Removal_Retinex(const Haze_Removal_Para &_para = Haze_Removal_Default)
         : _Mybase(_para)
     {}
 
@@ -188,7 +188,7 @@ protected:
     virtual Frame process(const Frame &src) = 0;
 
 public:
-    _Myt(std::string _Tag = ".Haze_Removal")
+    Haze_Removal_IO(std::string _Tag = ".Haze_Removal")
         : _Mybase(std::move(_Tag))
     {}
 };
@@ -245,7 +245,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".Haze_Removal_Retinex")
+    Haze_Removal_Retinex_IO(std::string _Tag = ".Haze_Removal_Retinex")
         : _Mybase(std::move(_Tag))
     {}
 };

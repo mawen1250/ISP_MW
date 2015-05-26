@@ -8,10 +8,7 @@ Frame &Specular_Highlight_Removal(Frame &dst, const Frame &src, const double thr
 {
     if (!(src.isRGB() && dst.isRGB()))
     {
-        std::cerr <<
-            "Frame &Specular_Highlight_Removal(Frame &dst, const Frame &src...) :\n"
-            "    only Frame of RGB PixelType is supported.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("Specular_Highlight_Removal: only Frame of RGB PixelType is supported.");
     }
 
     const Plane &srcR = src.R();

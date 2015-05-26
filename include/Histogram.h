@@ -258,7 +258,7 @@ _Ty Histogram<_Ty>::Min(double ratio) const
     if (ratio < 0 || ratio >= 1)
     {
         std::cerr << FunctionName << ": invalid value of \"ratio=" << ratio << "\" is set, should be within [0, 1).\n";
-        exit(EXIT_FAILURE);
+        DEBUG_BREAK;
     }
 
     BinType i;
@@ -281,7 +281,7 @@ _Ty Histogram<_Ty>::Max(double ratio) const
     if (ratio < 0 || ratio >= 1)
     {
         std::cerr << FunctionName << ": invalid value of \"ratio=" << ratio << "\" is set, should be within [0, 1).\n";
-        exit(EXIT_FAILURE);
+        DEBUG_BREAK;
     }
 
     BinType i;

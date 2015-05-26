@@ -11,7 +11,7 @@ Plane &Bilateral2D(Plane &dst, const Plane &src, const Plane &ref, const Bilater
         return dst;
     }
 
-    bool joint = src.Data() != ref.Data();
+    bool joint = src.data() != ref.data();
 
     switch (d.algorithm[plane])
     {
@@ -49,7 +49,7 @@ Plane &Bilateral2D_0(Plane &dst, const Plane &src, const Plane &ref, const Bilat
     const LUT<FLType> &GR_LUT = d.GR_LUT[plane];
 
     index0 = radiusy*src.Width();
-    memcpy(dst.Data(), src.Data(), index0*sizeof(DType));
+    memcpy(dst.data(), src.data(), index0 * sizeof(DType));
     for (j = radiusy; j < src.Height() - radiusy; ++j)
     {
         for (i = 0; i < radiusx; ++i, ++index0)
@@ -77,7 +77,7 @@ Plane &Bilateral2D_0(Plane &dst, const Plane &src, const Plane &ref, const Bilat
             dst[index0] = src[index0];
         }
     }
-    memcpy(dst.Data() + index0, src.Data() + index0, radiusy*src.Width()*sizeof(DType));
+    memcpy(dst.data() + index0, src.data() + index0, radiusy*src.Width()*sizeof(DType));
 
     return dst;
 }
@@ -227,9 +227,9 @@ Plane &Bilateral2D_2(Plane &dst, const Plane &src, const Plane &ref, const Bilat
     int bufwidth = src.Width() + radiusx * 2;
     int bufstride = src.Width() + radiusx * 2;
 
-    const DType * srcp = src.Data();
-    const DType * refp = ref.Data();
-    DType * dstp = dst.Data();
+    const DType * srcp = src.data();
+    const DType * refp = ref.data();
+    DType * dstp = dst.data();
 
     const LUT<FLType> &GS_LUT = d.GS_LUT[plane];
     const LUT<FLType> &GR_LUT = d.GR_LUT[plane];
@@ -311,8 +311,8 @@ Plane &Bilateral2D_2(Plane &dst, const Plane &src, const Bilateral2D_Data &d, in
     int bufwidth = src.Width() + radiusx * 2;
     int bufstride = src.Width() + radiusx * 2;
 
-    const DType * srcp = src.Data();
-    DType * dstp = dst.Data();
+    const DType * srcp = src.data();
+    DType * dstp = dst.data();
 
     const LUT<FLType> &GS_LUT = d.GS_LUT[plane];
     const LUT<FLType> &GR_LUT = d.GR_LUT[plane];

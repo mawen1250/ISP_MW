@@ -72,9 +72,7 @@ public:
     {
         if (!src.isRGB())
         {
-            const char * FunctionName = "class AWB";
-            std::cerr << FunctionName << ": invalid PixelType of Frame \"src\", should be RGB.\n";
-            exit(EXIT_FAILURE);
+            DEBUG_FAIL("AWB: invalid PixelType of Frame \"src\", should be RGB.");
         }
     }
 
@@ -126,7 +124,7 @@ protected:
     virtual Frame process(const Frame &src) = 0;
 
 public:
-    _Myt(std::string _Tag = ".AWB")
+    AWB_IO(std::string _Tag = ".AWB")
         : _Mybase(std::move(_Tag)) {}
 };
 
@@ -151,7 +149,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".AWB1")
+    AWB1_IO(std::string _Tag = ".AWB1")
         : _Mybase(std::move(_Tag)) {}
 };
 
@@ -176,7 +174,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".AWB2")
+    AWB2_IO(std::string _Tag = ".AWB2")
         : _Mybase(std::move(_Tag)) {}
 };
 

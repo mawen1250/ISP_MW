@@ -8,7 +8,8 @@
 #include "Histogram.h"
 
 
-const struct AGTM_Para {
+const struct AGTM_Para
+{
     const Histogram<DType>::BinType HistBins = 8;
 } AGTM_Default;
 
@@ -35,7 +36,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".AGTM")
+    Adaptive_Global_Tone_Mapping_IO(std::string _Tag = ".AGTM")
         : _Mybase(std::move(_Tag)) {}
 };
 

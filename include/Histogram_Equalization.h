@@ -86,7 +86,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".HE")
+    Histogram_Equalization_IO(std::string _Tag = ".HE")
         : _Mybase(std::move(_Tag)) {}
 };
 

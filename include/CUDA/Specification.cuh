@@ -32,7 +32,7 @@ struct CUDA_TransferChar_Conv_Sub
     // Parameters for log function
     T div = 1;
 
-    _Myt(TransferChar _TransferChar)
+    CUDA_TransferChar_Conv_Sub(TransferChar _TransferChar)
     {
         ldbl _k0 = 1.0L, _phi = 1.0L, _alpha = 0.0L, _power = 1.0L, _div = 1.0L;
         TransferChar_Parameter(_TransferChar, _k0, _phi, _alpha, _power, _div);
@@ -98,7 +98,7 @@ protected:
     CUDA_TransferChar_Conv_Sub<T> LinearTo;
 
 public:
-    _Myt(TransferChar dst, TransferChar src)
+    CUDA_TransferChar_Conv(TransferChar dst, TransferChar src)
         : _Mybase(dst, src), ToLinear(src), LinearTo(dst)
     {
         ConvTypeDecision(ToLinear == LinearTo);

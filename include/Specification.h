@@ -9,10 +9,10 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const int HD_Width_U = 2048;
-const int HD_Height_U = 1536;
-const int SD_Width_U = 1024;
-const int SD_Height_U = 576;
+const PCType HD_Width_U = 2048;
+const PCType HD_Height_U = 1536;
+const PCType SD_Width_U = 1024;
+const PCType SD_Height_U = 576;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,6 +26,7 @@ enum class ResLevel
     Unknown,
 };
 
+
 enum class ColorPrim
 {
     bt709 = 1,
@@ -37,6 +38,7 @@ enum class ColorPrim
     film = 8,
     bt2020 = 9
 };
+
 
 enum class TransferChar
 {
@@ -55,6 +57,7 @@ enum class TransferChar
     bt2020_10 = 14,
     bt2020_12 = 15
 };
+
 
 enum class ColorMatrix
 {
@@ -167,6 +170,9 @@ void ColorPrim_Parameter(ColorPrim _ColorPrim, T &green_x, T &green_y, T &blue_x
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 template < typename T >
 void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha, T &power, T &div)
 {
@@ -262,6 +268,7 @@ void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha,
     }
 }
 
+
 template < typename T >
 void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &phi, T &alpha, T &power)
 {
@@ -275,6 +282,9 @@ void TransferChar_Parameter(TransferChar _TransferChar, T &k0, T &div)
     T temp;
     TransferChar_Parameter(_TransferChar, k0, temp, temp, temp, div);
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 template < typename T >
@@ -340,10 +350,45 @@ void ColorMatrix_Parameter(ColorMatrix _ColorMatrix, T &Kr, T &Kg, T &Kb)
     }
 }
 
+
 template < typename T >
 void ColorMatrix_RGB2YUV_Parameter(ColorMatrix _ColorMatrix, T &Yr, T &Yg, T &Yb, T &Ur, T &Ug, T &Ub, T &Vr, T &Vg, T &Vb)
 {
-    if (_ColorMatrix == ColorMatrix::OPP)
+    if (_ColorMatrix == ColorMatrix::GBR)
+    {
+        // E'Y = 1 * E'G
+        Yr = static_cast<T>(0.0L);
+        Yg = static_cast<T>(1.0L);
+        Yb = static_cast<T>(0.0L);
+
+        // E'Pb = 1 * E'B
+        Ur = static_cast<T>(0.0L);
+        Ug = static_cast<T>(0.0L);
+        Ub = static_cast<T>(1.0L);
+
+        // E'Pr = 1 * E'R
+        Vr = static_cast<T>(1.0L);
+        Vg = static_cast<T>(0.0L);
+        Vb = static_cast<T>(0.0L);
+    }
+    else if (_ColorMatrix == ColorMatrix::YCgCo)
+    {
+        // E'Y  =   1 / 4 * E'R + 1 / 2 * E'G + 1 / 4 * E'B
+        Yr = static_cast<T>(1.0L / 4.0L);
+        Yg = static_cast<T>(1.0L / 2.0L);
+        Yb = static_cast<T>(1.0L / 4.0L);
+
+        // E'Pg = - 1 / 4 * E'R + 1 / 2 * E'G - 1 / 4 * E'B
+        Ur = static_cast<T>(-1.0L / 4.0L);
+        Ug = static_cast<T>(1.0L / 2.0L);
+        Ub = static_cast<T>(-1.0L / 4.0L);
+
+        // E'Po = 1 / 2 * E'R                 - 1 / 2 * E'B
+        Vr = static_cast<T>(1.0L / 2.0L);
+        Vg = static_cast<T>(0.0L);
+        Vb = static_cast<T>(-1.0L / 2.0L);
+    }
+    else if (_ColorMatrix == ColorMatrix::OPP)
     {
         // E'Y  = 1 / 3 * E'R + 1 / 3 * E'G + 1 / 3 * E'B
         Yr = static_cast<T>(1.0L / 3.0L);
@@ -382,10 +427,45 @@ void ColorMatrix_RGB2YUV_Parameter(ColorMatrix _ColorMatrix, T &Yr, T &Yg, T &Yb
     }
 }
 
+
 template < typename T >
 void ColorMatrix_YUV2RGB_Parameter(ColorMatrix _ColorMatrix, T &Ry, T &Ru, T &Rv, T &Gy, T &Gu, T &Gv, T &By, T &Bu, T &Bv)
 {
-    if (_ColorMatrix == ColorMatrix::OPP)
+    if (_ColorMatrix == ColorMatrix::GBR)
+    {
+        // E'R = 1 * E'Pr
+        Ry = static_cast<T>(0.0L);
+        Ru = static_cast<T>(0.0L);
+        Rv = static_cast<T>(1.0L);
+
+        // E'G = 1 * E'Y
+        Gy = static_cast<T>(1.0L);
+        Gu = static_cast<T>(0.0L);
+        Gv = static_cast<T>(0.0L);
+
+        // E'B = 1 * E'Pb
+        By = static_cast<T>(0.0L);
+        Bu = static_cast<T>(1.0L);
+        Bv = static_cast<T>(0.0L);
+    }
+    else if (_ColorMatrix == ColorMatrix::YCgCo)
+    {
+        // E'R = E'Y - E'Pg + E'Po
+        Ry = static_cast<T>(1.0L);
+        Ru = static_cast<T>(-1.0L);
+        Rv = static_cast<T>(1.0L);
+
+        // E'G = E'Y + E'Pg
+        Gy = static_cast<T>(1.0L);
+        Gu = static_cast<T>(1.0L);
+        Gv = static_cast<T>(0.0L);
+
+        // E'B = E'Y - E'Pg - E'Po
+        By = static_cast<T>(1.0L);
+        Bu = static_cast<T>(-1.0L);
+        Bv = static_cast<T>(-1.0L);
+    }
+    else if (_ColorMatrix == ColorMatrix::OPP)
     {
         // E'R = E'Y + E'Pb + 2 / 3 * E'Pr
         Ry = static_cast<T>(1.0L);
@@ -436,6 +516,7 @@ inline ResLevel ResLevel_Default(int Width, int Height)
     return ResLevel::SD;
 }
 
+
 inline ColorPrim ColorPrim_Default(int Width, int Height, bool RGB)
 {
     ResLevel _ResLevel = ResLevel_Default(Width, Height);
@@ -447,6 +528,7 @@ inline ColorPrim ColorPrim_Default(int Width, int Height, bool RGB)
     return ColorPrim::bt709;
 }
 
+
 inline TransferChar TransferChar_Default(int Width, int Height, bool RGB)
 {
     ResLevel _ResLevel = ResLevel_Default(Width, Height);
@@ -457,6 +539,7 @@ inline TransferChar TransferChar_Default(int Width, int Height, bool RGB)
     if (_ResLevel == ResLevel::SD) return TransferChar::smpte170m;
     return TransferChar::bt709;
 }
+
 
 inline ColorMatrix ColorMatrix_Default(int Width, int Height)
 {
@@ -495,7 +578,7 @@ struct TransferChar_Conv_Sub
     T div = 1;
     T recDiv;
 
-    _Myt(TransferChar _TransferChar)
+    TransferChar_Conv_Sub(TransferChar _TransferChar)
     {
         ldbl _k0 = 1.0L, _phi = 1.0L, _alpha = 0.0L, _power = 1.0L, _div = 1.0L;
         TransferChar_Parameter(_TransferChar, _k0, _phi, _alpha, _power, _div);
@@ -648,7 +731,7 @@ protected:
     }
 
 public:
-    _Myt(TransferChar dst, TransferChar src)
+    TransferChar_Conv_Base(TransferChar dst, TransferChar src)
         : srcType_(TransferTypeDecision(src)), dstType_(TransferTypeDecision(dst))
     {}
 
@@ -672,7 +755,7 @@ protected:
     TransferChar_Conv_Sub<T> LinearTo;
 
 public:
-    _Myt(TransferChar dst, TransferChar src)
+    TransferChar_Conv(TransferChar dst, TransferChar src)
         : _Mybase(dst, src), ToLinear(src), LinearTo(dst)
     {
         ConvTypeDecision(ToLinear == LinearTo);

@@ -89,9 +89,7 @@ void LUT<T>::Set(const Plane &src, LevelType i, T o)
     }
     else
     {
-        const char *FunctionName = "LUT<T>::Set";
-        std::cerr << FunctionName << ": \"i\" out of range!\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("LUT<T>::Set: \"i\" out of range!");
     }
 }
 

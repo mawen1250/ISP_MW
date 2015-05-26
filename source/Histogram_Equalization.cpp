@@ -185,7 +185,7 @@ Frame & Histogram_Equalization(Frame &dst, const Frame &src, FLType strength, bo
                 i = stride * j;
                 for (upper = i + width; i < upper; i++)
                 {
-                    srcY[i] = Round_Div((srcR[i] + srcG[i] + srcB[i]), DType(3));
+                    srcY[i] = RoundDiv((srcR[i] + srcG[i] + srcB[i]), DType(3));
                 }
             }
 

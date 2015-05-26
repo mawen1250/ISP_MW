@@ -43,53 +43,6 @@ enum class QuantRange
 };
 
 
-struct Pos
-{
-    PCType y = 0;
-    PCType x = 0;
-
-    explicit Pos(PCType _y = 0, PCType _x = 0)
-        : y(_y), x(_x) {}
-
-    bool operator==(const Pos &right) const
-    {
-        return y == right.y && x == right.x;
-    }
-
-    bool operator<(const Pos &right) const
-    {
-        if (y < right.y)
-        {
-            return true;
-        }
-        else if (y > right.y)
-        {
-            return false;
-        }
-        else if (x < right.x)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    bool operator>(const Pos &right) const
-    {
-        return !(*this < right);
-    }
-
-    friend std::ostream &operator<<(std::ostream &out, const Pos &src)
-    {
-        out << "(" << src.y << ", " << src.x << ")";
-
-        return out;
-    }
-};
-
-
 class Plane;
 class Plane_FL;
 class Frame;

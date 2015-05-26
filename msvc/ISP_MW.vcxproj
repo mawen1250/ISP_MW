@@ -28,6 +28,7 @@
     <ClInclude Include="..\include\Convolution.h" />
     <ClInclude Include="..\include\Conversion.hpp" />
     <ClInclude Include="..\include\fftw3_helper.hpp" />
+    <ClInclude Include="..\include\Filter.h" />
     <ClInclude Include="..\include\Gaussian.h" />
     <ClInclude Include="..\include\Haze_Removal.h" />
     <ClInclude Include="..\include\Helper.h" />
@@ -37,7 +38,6 @@
     <ClInclude Include="..\include\ImageIO.h" />
     <ClInclude Include="..\include\Image_Type.h" />
     <ClInclude Include="..\include\Image_Type.hpp" />
-    <ClInclude Include="..\include\IO.h" />
     <ClInclude Include="..\include\ISP_MW.h" />
     <ClInclude Include="..\include\LUT.h" />
     <ClInclude Include="..\include\LUT.hpp" />

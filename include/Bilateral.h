@@ -325,7 +325,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".Bilateral")
+    Bilateral2D_IO(std::string _Tag = ".Bilateral")
         : _Mybase(std::move(_Tag)) {}
 };
 

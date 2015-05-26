@@ -18,9 +18,7 @@ Frame &Haze_Removal::process_Frame(Frame &dst, const Frame &src)
 
     if (src.isYUV() || dst.isYUV())
     {
-        const char *FunctionName = "Haze_Removal::process";
-        std::cerr << FunctionName << ": YUV input/output is not supported.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("Haze_Removal::process: YUV input/output is not supported.");
     }
     else
     {

@@ -33,7 +33,7 @@ protected:
     Gaussian2D_Para para;
 
 public:
-    _Myt(const Gaussian2D_Para &_para = Gaussian2D_Default)
+    Gaussian2D(const Gaussian2D_Para &_para = Gaussian2D_Default)
         : para(_para)
     {}
 
@@ -82,7 +82,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".Gaussian")
+    Gaussian2D_IO(std::string _Tag = ".Gaussian")
         : _Mybase(std::move(_Tag))
     {}
 };
@@ -105,7 +105,7 @@ public:
     int iter = 1;
 
 public:
-    _Myt(ldbl sigma, bool _allow_negative = true)
+    RecursiveGaussian(ldbl sigma, bool _allow_negative = true)
         : allow_negative(_allow_negative)
     {
         GetPara(sigma);
@@ -154,7 +154,7 @@ protected:
     }
 
 public:
-    _Myt(_Ty sigma)
+    GaussianFunction(_Ty sigma)
         : const1_(_Ty(1) / (sigma * sigma * -2))
     {}
 
@@ -182,7 +182,7 @@ protected:
     }
 
 public:
-    _Myt(_Ty sigma)
+    NormalizedGaussianFunction(_Ty sigma)
         : _Mybase(sigma), const2_(_Ty(1) / (_Ty(sqrt_2Pi) * sigma))
     {}
 
@@ -201,7 +201,7 @@ public:
     typedef GaussianFunction<_Ty> _Mybase;
 
 public:
-    _Myt(_Ty sigma)
+    GaussianFunctionX(_Ty sigma)
         : _Mybase(sigma)
     {}
 
@@ -220,7 +220,7 @@ public:
     typedef NormalizedGaussianFunction<_Ty> _Mybase;
 
 public:
-    _Myt(_Ty sigma)
+    NormalizedGaussianFunctionX(_Ty sigma)
         : _Mybase(sigma)
     {}
 

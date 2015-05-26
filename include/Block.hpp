@@ -2,56 +2,59 @@
 #define BLOCK_HPP_
 
 
-template < typename _St1, typename _Fn1 > inline
+template < typename _St1, typename _Fn1 >
 void Block_For_each(_St1 &data, _Fn1 &&_Func)
 {
     auto datap = data.data();
 
-    for (auto upper = datap + data.PixelCount(); datap != upper; ++datap)
+    for (auto upper = datap + data.size(); datap != upper; ++datap)
     {
         _Func(*datap);
     }
 }
 
-template < typename _St1, typename _St2, typename _Fn1 > inline
-void Block_For_each(_St1 &left, _St2 &right, _Fn1 &&_Func)
+template < typename _St1, typename _St2, typename _Fn1 >
+void Block_For_each(_St1 &data1, _St2 &data2, _Fn1 &&_Func)
 {
-    auto leftp = left.data();
-    auto rightp = right.data();
-
-    for (auto upper = leftp + left.PixelCount(); leftp != upper; ++leftp, ++rightp)
+    if (data1.size() != data2.size())
     {
-        _Func(*leftp, *rightp);
+        DEBUG_FAIL("Block_For_each: size() of data1 and data2 must be the same.");
+    }
+
+    auto data1p = data1.data();
+    auto data2p = data2.data();
+
+    for (auto upper = data1p + data1.size(); data1p != upper; ++data1p, ++data2p)
+    {
+        _Func(*data1p, *data2p);
     }
 }
 
-template < typename _St1, typename _Fn1 > inline
+template < typename _St1, typename _Fn1 >
 void Block_Transform(_St1 &data, _Fn1 &&_Func)
 {
     auto datap = data.data();
 
-    for (auto upper = datap + data.PixelCount(); datap != upper; ++datap)
+    for (auto upper = datap + data.size(); datap != upper; ++datap)
     {
         *datap = _Func(*datap);
     }
 }
 
-template < typename _Dt1, typename _St1, typename _Fn1 > inline
+template < typename _Dt1, typename _St1, typename _Fn1 >
 void Block_Transform(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 {
-    const char *FunctionName = "Block_Transform";
-    if (dst.Width() != src.Width() || dst.Height() != src.Height() || dst.PixelCount() != src.PixelCount())
+    if (dst.size() != src.size())
     {
-        std::cerr << FunctionName << ": Width(), Height() and PixelCount() of dst and src must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("Block_Transform: size() of dst and src must be the same.");
     }
 
     auto dstp = dst.data();
     auto srcp = src.data();
 
-    for (auto upper = dstp + dst.PixelCount(); dstp != upper; ++dstp, ++srcp)
+    for (auto upper = dstp + dst.size(); dstp != upper; ++dstp, ++srcp)
     {
-        *datap = _Func(*datap);
+        *dstp = _Func(*srcp);
     }
 }
 
@@ -95,7 +98,7 @@ void ExpectationVarianceFromBlocks(Block<_Ty, _FTy> E, Block<_Ty, _FTy> V, const
     auto Ep = E.data();
     auto Vp = V.data();
 
-    for (auto upper = Ep + E.PixelCount(); Ep != upper; ++Ep, ++Vp)
+    for (auto upper = Ep + E.size(); Ep != upper; ++Ep, ++Vp)
     {
         *Ep /= GroupSize;
         *Vp = *Vp / GroupSize - *Ep * *Ep;

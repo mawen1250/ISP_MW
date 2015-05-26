@@ -30,7 +30,17 @@ public:
 
     void Check() const
     {
-        if (Flag > 0) exit(EXIT_FAILURE);
+        if (Flag > 0)
+        {
+            std::cerr << "Args::Check(): Error occured while analyzing arguments! Error code: "
+                << Flag << std::endl;
+
+#ifdef _DEBUG
+            __debugbreak();
+#else
+            exit(EXIT_FAILURE);
+#endif
+        }
     }
 
     template<typename T>
@@ -42,7 +52,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -57,7 +67,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -72,7 +82,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -87,7 +97,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -102,7 +112,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -117,7 +127,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -132,7 +142,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -147,7 +157,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -170,14 +180,14 @@ public:
             }
             else
             {
-                std::cout << "Invalid argument specified for option " << args[i - 1] << ", must be \"true\" or \"false\"!\n";
+                std::cerr << "Invalid argument specified for option " << args[i - 1] << ", must be \"true\" or \"false\"!\n";
 
                 Flag |= Invalid;
             }
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }
@@ -203,7 +213,7 @@ public:
         }
         else
         {
-            std::cout << "No argument specified for option " << args[i - 1] << "!\n";
+            std::cerr << "No argument specified for option " << args[i - 1] << "!\n";
 
             Flag |= Lack;
         }

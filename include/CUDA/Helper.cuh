@@ -592,15 +592,15 @@ struct CUDA_FilterMode
     CudaMemMode mem_mode;
     cuIdx block_dim;
 
-    _Myt(CudaMemMode _mem_mode = CudaMemMode::Host2Device, cuIdx _block_dim = 256)
+    CUDA_FilterMode(CudaMemMode _mem_mode = CudaMemMode::Host2Device, cuIdx _block_dim = 256)
         : mem_mode(_mem_mode), block_dim(_block_dim)
     {}
 
-    _Myt(const _Myt &_right)
+    CUDA_FilterMode(const _Myt &_right)
         : _Myt(_right.mem_mode, _right.block_dim)
     {}
 
-    _Myt(const _Myt &&_right)
+    CUDA_FilterMode(const _Myt &&_right)
         : _Myt(_right.mem_mode, _right.block_dim)
     {}
 };
@@ -629,24 +629,24 @@ struct CUDA_FilterData
     const _Ty *src_dev = nullptr;
     _Ty *temp_dev = nullptr;
 
-    _Myt(CudaMemMode _mem_mode = CudaMemMode::Host2Device, cuIdx _block_dim = 256, int _dst_mode = 0, int _temp_mode = 0)
+    CUDA_FilterData(CudaMemMode _mem_mode = CudaMemMode::Host2Device, cuIdx _block_dim = 256, int _dst_mode = 0, int _temp_mode = 0)
         : _Mybase(_mem_mode, _block_dim), dst_mode(_dst_mode), temp_mode(_temp_mode)
     {}
 
-    _Myt(const _Mybase &_right)
+    CUDA_FilterData(const _Mybase &_right)
         : _Mybase(_right)
     {}
 
-    _Myt(const _Mybase &&_right)
+    CUDA_FilterData(const _Mybase &&_right)
         : _Mybase(_right)
     {}
 
-    _Myt(const _Myt &_right)
+    CUDA_FilterData(const _Myt &_right)
         : _Mybase(_right), height(_right.height), width(_right.width), stride(_right.stride), count(_right.count),
         dst_data(_right.dst_data), src_data(_right.src_data), dst_dev(_right.dst_dev), src_dev(_right.src_dev)
     {}
 
-    _Myt(const _Myt &&_right)
+    CUDA_FilterData(const _Myt &&_right)
         : _Mybase(_right), height(_right.height), width(_right.width), stride(_right.stride), count(_right.count),
         dst_data(_right.dst_data), src_data(_right.src_data), dst_dev(_right.dst_dev), src_dev(_right.src_dev)
     {}

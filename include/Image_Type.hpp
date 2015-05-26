@@ -6,6 +6,9 @@
 #include "Type.h"
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 // Enable C++ PPL Support
 // Define it in the source file before #include "Image_Type.h" for fast compiling
 //#define ENABLE_PPL
@@ -56,55 +59,113 @@ const PCType PPL_WP = 256; // Width piece size for PPL
 #endif
 
 
-// Template functions
-template < typename _St1 > inline
-bool isValueFloat(const _St1 &src)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+template < typename _Ty >
+void _GetQuanPara(_Ty &Floor, _Ty &Ceil, int bps, bool full, const std::false_type &)
 {
-    return isFloat(typename _St1::value_type);
+    if (full)
+    {
+        Floor = static_cast<_Ty>(0);
+        Ceil = static_cast<_Ty>((1 << bps) - 1);
+    }
+    else
+    {
+        Floor = static_cast<_Ty>(16 << (bps - 8));
+        Ceil = static_cast<_Ty>(235 << (bps - 8));
+    }
+}
+
+template < typename _Ty >
+void _GetQuanPara(_Ty &Floor, _Ty &Ceil, int bps, bool full, const std::true_type &)
+{
+    Floor = static_cast<_Ty>(0);
+    Ceil = static_cast<_Ty>(1);
+}
+
+template < typename _Ty >
+void GetQuanPara(_Ty &Floor, _Ty &Ceil, int bps, bool full)
+{
+    _GetQuanPara(Floor, Ceil, bps, full, _IsFloat<_Ty>());
+}
+
+
+template < typename _Ty >
+void _GetQuanPara(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, int bps, bool full, bool chroma, const std::false_type &)
+{
+    if (full)
+    {
+        Floor = static_cast<_Ty>(0);
+        Neutral = chroma ? static_cast<_Ty>(1 << (bps - 1)) : Floor;
+        Ceil = static_cast<_Ty>((1 << bps) - 1);
+    }
+    else
+    {
+        Floor = static_cast<_Ty>(16 << (bps - 8));
+        Neutral = chroma ? static_cast<_Ty>(1 << (bps - 1)) : Floor;
+        Ceil = static_cast<_Ty>(chroma ? 240 << (bps - 8) : 235 << (bps - 8));
+    }
+}
+
+template < typename _Ty >
+void _GetQuanPara(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, int bps, bool full, bool chroma, const std::true_type &)
+{
+    Floor = static_cast<_Ty>(chroma ? -0.5 : 0);
+    Neutral = chroma ? static_cast<_Ty>(0) : Floor;
+    Ceil = static_cast<_Ty>(chroma ? 0.5 : 1);
+}
+
+template < typename _Ty >
+void GetQuanPara(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, int bps, bool full, bool chroma)
+{
+    _GetQuanPara(Floor, Neutral, Ceil, bps, full, chroma, _IsFloat<_Ty>());
+}
+
+
+template < typename _Ty >
+void GetQuanPara(_Ty &FloorY, _Ty &CeilY, _Ty &FloorC, _Ty &NeutralC, _Ty &CeilC, int bps, bool full)
+{
+    GetQuanPara(FloorY, CeilY, bps, full);
+    GetQuanPara(FloorC, NeutralC, CeilC, bps, full, true);
 }
 
 
 template < typename _Ty >
 void Quantize_Value(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, _Ty BitDepth, QuantRange _QuantRange, bool Chroma)
 {
-    if (Chroma)
-    {
-        Floor = _QuantRange == QuantRange::PC ? _Ty(0) : _Ty(16) << (BitDepth - _Ty(8));
-        Ceil = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(240) << (BitDepth - _Ty(8));
-        Neutral = 1 << (BitDepth - 1);
-        //ValueRange = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(224) << (BitDepth - _Ty(8));
-    }
-    else
-    {
-        Floor = _QuantRange == QuantRange::PC ? _Ty(0) : _Ty(16) << (BitDepth - _Ty(8));
-        Ceil = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(235) << (BitDepth - _Ty(8));
-        Neutral = Floor;
-        //ValueRange = _QuantRange == QuantRange::PC ? (_Ty(1) << BitDepth) - _Ty(1) : _Ty(219) << (BitDepth - _Ty(8));
-    }
+    GetQuanPara(Floor, Neutral, Ceil, BitDepth, _QuantRange != QuantRange::TV, Chroma);
 }
 
 
-template < typename _Ty > inline
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+template < typename _Ty >
 bool isChroma(_Ty Floor, _Ty Neutral)
 {
     return Floor < Neutral;
 }
 
-template < typename _Ty > inline
+
+template < typename _Ty >
 bool _IsPCChroma(_Ty Floor, _Ty Neutral, _Ty Ceil, const std::false_type &)
 {
     return Floor < Neutral && (Floor + Ceil) % 2 == 1;
 }
-template < typename _Ty > inline
+
+template < typename _Ty >
 bool _IsPCChroma(_Ty Floor, _Ty Neutral, _Ty Ceil, const std::true_type &)
 {
     return false;
 }
-template < typename _Ty > inline
+
+template < typename _Ty >
 bool isPCChroma(_Ty Floor, _Ty Neutral, _Ty Ceil)
 {
     return _IsPCChroma(Floor, Neutral, Ceil, _IsFloat<_Ty>());
 }
+
 
 template < typename _Ty >
 void _ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma, const std::false_type &)
@@ -120,6 +181,7 @@ void _ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma, const std::f
         Neutral = Floor;
     }
 }
+
 template < typename _Ty >
 void _ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma, const std::true_type &)
 {
@@ -140,11 +202,15 @@ void _ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma, const std::t
         Ceil = Range;
     }
 }
-template < typename _Ty > inline
+
+template < typename _Ty >
 void ReSetChroma(_Ty &Floor, _Ty &Neutral, _Ty &Ceil, bool Chroma = false)
 {
     _ReSetChroma(Floor, Neutral, Ceil, Chroma, _IsFloat<_Ty>());
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 // Template functions of algorithm
@@ -201,6 +267,21 @@ void _Loop_VH(const PCType height, const PCType width, const PCType stride, _Fn1
     }
 }
 
+template < typename _Fn1 >
+void _Loop_VH(const PCType height, const PCType width, const PCType stride0, const PCType stride1, _Fn1 &&_Func)
+{
+    for (PCType j = 0; j < height; ++j)
+    {
+        PCType i0 = j * stride0;
+        PCType i1 = j * stride1;
+
+        for (const PCType upper = i0 + width; i0 < upper; ++i0, ++i1)
+        {
+            _Func(i0, i1);
+        }
+    }
+}
+
 
 template < typename _St1, typename _Fn1 >
 void _For_each(_St1 &data, _Fn1 &&_Func)
@@ -223,11 +304,9 @@ void _Transform(_St1 &data, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst and src must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform: Width() and Height() of dst and src must be the same.");
     }
 
     LOOP_VH(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -239,12 +318,10 @@ void _Transform(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1 and src2 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform: Width() and Height() of dst, src1 and src2 must be the same.");
     }
 
     LOOP_VH(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -256,13 +333,11 @@ void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height()
         || dst.Width() != src3.Width() || dst.Height() != src3.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1, src2 and src3 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform: Width() and Height() of dst, src1, src2 and src3 must be the same.");
     }
 
     LOOP_VH(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -274,14 +349,12 @@ void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3,
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 >
 void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height()
         || dst.Width() != src3.Width() || dst.Height() != src3.Height()
         || dst.Width() != src4.Width() || dst.Height() != src4.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1, src2, src3 and src4 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform: Width() and Height() of dst, src1, src2, src3 and src4 must be the same.");
     }
 
     LOOP_VH(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -293,11 +366,9 @@ void _Transform(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3,
 template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 >
 void _Convolute(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Convolute";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst and src must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Convolute: Width() and Height() of dst and src must be the same.");
     }
 
     LOOP_V(dst.Height(), [&](PCType j)
@@ -440,6 +511,29 @@ void _Loop_VH_PPL(const PCType height, const PCType width, const PCType stride, 
     });
 }
 
+template < typename _Fn1 >
+void _Loop_VH_PPL(const PCType height, const PCType width, const PCType dst_stride, const PCType src_stride, _Fn1 &&_Func)
+{
+    const PCType pNum = (height + PPL_HP - 1) / PPL_HP;
+
+    concurrency::parallel_for(PCType(0), pNum, [&](PCType p)
+    {
+        const PCType lower = p * PPL_HP;
+        const PCType upper = Min(height, lower + PPL_HP);
+
+        for (PCType j = lower; j < upper; ++j)
+        {
+            PCType i0 = j * dst_stride;
+            PCType i1 = j * src_stride;
+
+            for (const PCType upper = i0 + width; i0 < upper; ++i0, ++i1)
+            {
+                _Func(i0, i1);
+            }
+        }
+    });
+}
+
 
 template < typename _St1, typename _Fn1 >
 void _For_each_PPL(_St1 &data, _Fn1 &&_Func)
@@ -462,11 +556,9 @@ void _Transform_PPL(_St1 &data, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst and src must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_PPL: Width() and Height() of dst and src must be the same.");
     }
 
     LOOP_VH_PPL(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -478,11 +570,9 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height() || dst.Width() != src2.Width() || dst.Height() != src2.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1 and src2 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_PPL: Width() and Height() of dst, src1 and src2 must be the same.");
     }
 
     LOOP_VH_PPL(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -494,13 +584,11 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height()
         || dst.Width() != src3.Width() || dst.Height() != src3.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1, src2 and src3 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_PPL: Width() and Height() of dst, src1, src2 and src3 must be the same.");
     }
 
     LOOP_VH_PPL(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -512,14 +600,12 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &s
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 >
 void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_PPL";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height()
         || dst.Width() != src3.Width() || dst.Height() != src3.Height()
         || dst.Width() != src4.Width() || dst.Height() != src4.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1, src2, src3 and src4 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_PPL: Width() and Height() of dst, src1, src2, src3 and src4 must be the same.");
     }
 
     LOOP_VH_PPL(dst.Height(), dst.Width(), dst.Stride(), [&](PCType i)
@@ -531,11 +617,9 @@ void _Transform_PPL(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &s
 template < PCType VRad, PCType HRad, typename _Dt1, typename _St1, typename _Fn1 >
 void _Convolute_PPL(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Convolute_PPL";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst and src must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Convolute_PPL: Width() and Height() of dst and src must be the same.");
     }
 
     LOOP_V_PPL(dst.Height(), [&](PCType j)
@@ -625,11 +709,9 @@ void _Transform_AMP(_St1 &data, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src.Width() || dst.Height() != src.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst and src must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_AMP: Width() and Height() of dst and src must be the same.");
     }
 
     concurrency::array_view<decltype(dst.value(0)), 1> dstv(dst.PixelCount(), dst);
@@ -645,12 +727,10 @@ void _Transform_AMP(_Dt1 &dst, const _St1 &src, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _St2, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1 and src2 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_AMP: Width() and Height() of dst, src1 and src2 must be the same.");
     }
 
     concurrency::array_view<decltype(dst.value(0)), 1> dstv(dst.PixelCount(), dst);
@@ -667,13 +747,11 @@ void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, _Fn1 &&_Func)
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height()
         || dst.Width() != src3.Width() || dst.Height() != src3.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1, src2 and src3 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_AMP: Width() and Height() of dst, src1, src2 and src3 must be the same.");
     }
 
     concurrency::array_view<decltype(dst.value(0)), 1> dstv(dst.PixelCount(), dst);
@@ -691,14 +769,12 @@ void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &s
 template < typename _Dt1, typename _St1, typename _St2, typename _St3, typename _St4, typename _Fn1 >
 void _Transform_AMP(_Dt1 &dst, const _St1 &src1, const _St2 &src2, const _St3 &src3, const _St4 &src4, _Fn1 &&_Func)
 {
-    const char *FunctionName = "_Transform_AMP";
     if (dst.Width() != src1.Width() || dst.Height() != src1.Height()
         || dst.Width() != src2.Width() || dst.Height() != src2.Height()
         || dst.Width() != src3.Width() || dst.Height() != src3.Height()
         || dst.Width() != src4.Width() || dst.Height() != src4.Height())
     {
-        std::cerr << FunctionName << ": Width() and Height() of dst, src1, src2, src3 and src4 must be the same.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("_Transform_AMP: Width() and Height() of dst, src1, src2, src3 and src4 must be the same.");
     }
 
     concurrency::array_view<decltype(dst.value(0)), 1> dstv(dst.PixelCount(), dst);

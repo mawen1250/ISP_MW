@@ -394,7 +394,7 @@ Plane & EdgeDetect_Sobel(Plane &dst, const Plane &src)
             R = P8 - P0;
             R0 = R + P6 + 2 * (P7 - P1) - P2;
             R1 = R + P2 + 2 * (P5 - P3) - P6;
-            R = Round_Div(Abs(R0) + Abs(R1), sint32(8));
+            R = RoundDiv(Abs(R0) + Abs(R1), sint32(8));
             dst[i1 - radius] = static_cast<DType>(R);
         }
 
@@ -407,7 +407,7 @@ Plane & EdgeDetect_Sobel(Plane &dst, const Plane &src)
             R = P8 - P0;
             R0 = R + P6 + 2 * (P7 - P1) - P2;
             R1 = R + P2 + 2 * (P5 - P3) - P6;
-            R = Round_Div(Abs(R0) + Abs(R1), sint32(8));
+            R = RoundDiv(Abs(R0) + Abs(R1), sint32(8));
             dst[i1 - radius] = static_cast<DType>(R);
         }
     }
@@ -450,7 +450,7 @@ Plane & EdgeDetect_Prewitt(Plane &dst, const Plane &src)
             R = P8 - P0;
             R0 = R + P6 + P7 - P1 - P2;
             R1 = R + P2 + P5 - P3 - P6;
-            R = Round_Div(Abs(R0) + Abs(R1), sint32(6));
+            R = RoundDiv(Abs(R0) + Abs(R1), sint32(6));
             dst[i1 - radius] = static_cast<DType>(R);
         }
 
@@ -463,7 +463,7 @@ Plane & EdgeDetect_Prewitt(Plane &dst, const Plane &src)
             R = P8 - P0;
             R0 = R + P6 + P7 - P1 - P2;
             R1 = R + P2 + P5 - P3 - P6;
-            R = Round_Div(Abs(R0) + Abs(R1), sint32(6));
+            R = RoundDiv(Abs(R0) + Abs(R1), sint32(6));
             dst[i1 - radius] = static_cast<DType>(R);
         }
     }
@@ -504,7 +504,7 @@ Plane & EdgeDetect_Laplace1(Plane &dst, const Plane &src)
             P6 = P7; P7 = P8; P8 = static_cast<sint32>(src[i2]);
 
             R = 4 * P4 - (P1 + P3 + P5 + P7);
-            R = Round_Div(Abs(R), sint32(4));
+            R = RoundDiv(Abs(R), sint32(4));
             dst[i1 - radius] = static_cast<DType>(R);
         }
 
@@ -515,7 +515,7 @@ Plane & EdgeDetect_Laplace1(Plane &dst, const Plane &src)
             P6 = P7; P7 = P8;
 
             R = 4 * P4 - (P1 + P3 + P5 + P7);
-            R = Round_Div(Abs(R), sint32(4));
+            R = RoundDiv(Abs(R), sint32(4));
             dst[i1 - radius] = static_cast<DType>(R);
         }
     }
@@ -556,7 +556,7 @@ Plane & EdgeDetect_Laplace2(Plane &dst, const Plane &src)
             P6 = P7; P7 = P8; P8 = static_cast<sint32>(src[i2]);
 
             R = 8 * P4 - (P0 + P1 + P2 + P3 + P5 + P6 + P7 + P8);
-            R = Round_Div(Abs(R), sint32(8));
+            R = RoundDiv(Abs(R), sint32(8));
             dst[i1 - radius] = static_cast<DType>(R);
         }
 
@@ -567,7 +567,7 @@ Plane & EdgeDetect_Laplace2(Plane &dst, const Plane &src)
             P6 = P7; P7 = P8;
 
             R = 8 * P4 - (P0 + P1 + P2 + P3 + P5 + P6 + P7 + P8);
-            R = Round_Div(Abs(R), sint32(8));
+            R = RoundDiv(Abs(R), sint32(8));
             dst[i1 - radius] = static_cast<DType>(R);
         }
     }
@@ -608,7 +608,7 @@ Plane & EdgeDetect_Laplace3(Plane &dst, const Plane &src)
             P6 = P7; P7 = P8; P8 = static_cast<sint32>(src[i2]);
 
             R = 12 * P4 - 2 * (P1 + P3 + P5 + P7) - (P0 + P2 + P6 + P8);
-            R = Round_Div(Abs(R), sint32(12));
+            R = RoundDiv(Abs(R), sint32(12));
             dst[i1 - radius] = static_cast<DType>(R);
         }
 
@@ -619,7 +619,7 @@ Plane & EdgeDetect_Laplace3(Plane &dst, const Plane &src)
             P6 = P7; P7 = P8;
 
             R = 12 * P4 - 2 * (P1 + P3 + P5 + P7) - (P0 + P2 + P6 + P8);
-            R = Round_Div(Abs(R), sint32(12));
+            R = RoundDiv(Abs(R), sint32(12));
             dst[i1 - radius] = static_cast<DType>(R);
         }
     }

@@ -2,7 +2,81 @@
 #include "Conversion.hpp"
 
 
-// Functions of BM3D_Base
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Functions of struct BM3D_FilterData
+
+
+BM3D_FilterData::BM3D_FilterData(bool wiener, double sigma, PCType GroupSize, PCType BlockSize, double lambda)
+    : fp(GroupSize), bp(GroupSize), finalAMP(GroupSize), thrTable(wiener ? 0 : GroupSize),
+    wienerSigmaSqr(wiener ? GroupSize : 0)
+{
+    const unsigned int flags = FFTW_PATIENT;
+    const fftw::r2r_kind fkind = FFTW_REDFT10;
+    const fftw::r2r_kind bkind = FFTW_REDFT01;
+
+    FLType *temp = nullptr;
+
+    for (PCType i = 1; i <= GroupSize; ++i)
+    {
+        AlignedMalloc(temp, i * BlockSize * BlockSize);
+        fp[i - 1].r2r_3d(i, BlockSize, BlockSize, temp, temp, fkind, fkind, fkind, flags);
+        bp[i - 1].r2r_3d(i, BlockSize, BlockSize, temp, temp, bkind, bkind, bkind, flags);
+        AlignedFree(temp);
+
+        finalAMP[i - 1] = 2 * i * 2 * BlockSize * 2 * BlockSize;
+        double forwardAMP = sqrt(finalAMP[i - 1]);
+
+        if (wiener)
+        {
+            wienerSigmaSqr[i - 1] = static_cast<FLType>(sigma * forwardAMP * sigma * forwardAMP);
+        }
+        else
+        {
+            double thrBase = sigma * lambda * forwardAMP;
+            std::vector<double> thr(4);
+
+            thr[0] = thrBase;
+            thr[1] = thrBase * sqrt(double(2));
+            thr[2] = thrBase * double(2);
+            thr[3] = thrBase * sqrt(double(8));
+
+            thrTable[i - 1] = std::vector<FLType>(i * BlockSize * BlockSize);
+            auto thr_d = thrTable[i - 1].data();
+
+            for (PCType z = 0; z < i; ++z)
+            {
+                for (PCType y = 0; y < BlockSize; ++y)
+                {
+                    for (PCType x = 0; x < BlockSize; ++x, ++thr_d)
+                    {
+                        int flag = 0;
+
+                        if (x == 0)
+                        {
+                            ++flag;
+                        }
+                        if (y == 0)
+                        {
+                            ++flag;
+                        }
+                        if (z == 0)
+                        {
+                            ++flag;
+                        }
+
+                        *thr_d = static_cast<FLType>(thr[flag]);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Functions of class BM3D_Base
+
+
 void BM3D_Base::Kernel(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref) const
 {
     if (para.sigma[0] <= 0 || para.GroupSize == 0 || para.BlockSize <= 0
@@ -12,16 +86,14 @@ void BM3D_Base::Kernel(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref) 
         return;
     }
 
+    Plane_FL ResNum(dst, true, 0);
+    Plane_FL ResDen(dst, true, 0);
+
     PCType height = src.Height();
     PCType width = src.Width();
 
     PCType BlockPosRight = width - para.BlockSize;
     PCType BlockPosBottom = height - para.BlockSize;
-
-    block_type refBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-
-    Plane_FL ResNum(dst, true, 0);
-    Plane_FL ResDen(dst, true, 0);
 
     for (PCType j = 0;; j += para.BlockStep)
     {
@@ -47,24 +119,10 @@ void BM3D_Base::Kernel(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref) 
                 i = BlockPosRight;
             }
 
-            PosPairCode matchCode;
-
-            if (para.GroupSize == 1)
-            {
-                // Skip block matching if GroupSize is 1, and take the reference block as the only element in the group
-                matchCode = PosPairCode(1, PosPair(KeyType(0), PosType(j, i)));
-            }
-            else
-            {
-                // Get reference block from reference plane
-                refBlock.From(ref, Pos(j, i));
-
-                // Form a group by block matching between reference block and its neighborhood in reference plane
-                matchCode = refBlock.BlockMatchingMulti(ref, para.BMrange, para.BMstep, para.thMSE);
-            }
+            PosPairCode matchCode = BlockMatching(ref, j, i);
 
             // Get the filtered result through collaborative filtering and aggregation of matched blocks
-            CollaborativeFilter(data[0], ResNum, ResDen, src, ref, matchCode);
+            CollaborativeFilter(0, ResNum, ResDen, src, ref, matchCode);
         }
     }
 
@@ -92,20 +150,18 @@ void BM3D_Base::Kernel(Plane_FL &dstY, Plane_FL &dstU, Plane_FL &dstV,
         return;
     }
 
-    PCType height = srcY.Height();
-    PCType width = srcY.Width();
-
-    PCType BlockPosRight = width - para.BlockSize;
-    PCType BlockPosBottom = height - para.BlockSize;
-
-    block_type refBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-
     Plane_FL ResNumY(srcY, true, 0);
     Plane_FL ResDenY(srcY, true, 0);
     Plane_FL ResNumU(srcU, true, 0);
     Plane_FL ResDenU(srcU, true, 0);
     Plane_FL ResNumV(srcV, true, 0);
     Plane_FL ResDenV(srcV, true, 0);
+
+    PCType height = srcY.Height();
+    PCType width = srcY.Width();
+
+    PCType BlockPosRight = width - para.BlockSize;
+    PCType BlockPosBottom = height - para.BlockSize;
 
     for (PCType j = 0;; j += para.BlockStep)
     {
@@ -131,26 +187,12 @@ void BM3D_Base::Kernel(Plane_FL &dstY, Plane_FL &dstU, Plane_FL &dstV,
                 i = BlockPosRight;
             }
 
-            PosPairCode matchCode;
-
-            if (para.GroupSize == 1)
-            {
-                // Skip block matching if GroupSize is 1, and take the reference block as the only element in the group
-                matchCode = PosPairCode(1, PosPair(KeyType(0), PosType(j, i)));
-            }
-            else
-            {
-                // Get reference block from reference plane
-                refBlock.From(refY, Pos(j, i));
-
-                // Form a group by block matching between reference block and its neighborhood in reference plane
-                matchCode = refBlock.BlockMatchingMulti(refY, para.BMrange, para.BMstep, para.thMSE);
-            }
+            PosPairCode matchCode = BlockMatching(refY, j, i);
 
             // Get the filtered result through collaborative filtering and aggregation of matched blocks
-            if (para.sigma[0] > 0) CollaborativeFilter(data[0], ResNumY, ResDenY, srcY, refY, matchCode);
-            if (para.sigma[1] > 0) CollaborativeFilter(data[1], ResNumU, ResDenU, srcU, refU, matchCode);
-            if (para.sigma[2] > 0) CollaborativeFilter(data[2], ResNumV, ResDenV, srcV, refV, matchCode);
+            if (para.sigma[0] > 0) CollaborativeFilter(0, ResNumY, ResDenY, srcY, refY, matchCode);
+            if (para.sigma[1] > 0) CollaborativeFilter(1, ResNumU, ResDenU, srcU, refU, matchCode);
+            if (para.sigma[2] > 0) CollaborativeFilter(2, ResNumV, ResDenV, srcV, refV, matchCode);
         }
     }
 
@@ -176,6 +218,24 @@ void BM3D_Base::Kernel(Plane_FL &dstY, Plane_FL &dstU, Plane_FL &dstV,
 }
 
 
+BM3D_Base::PosPairCode BM3D_Base::BlockMatching(
+    const Plane_FL &ref, PCType j, PCType i) const
+{
+    // Skip block matching if GroupSize is 1 or thMSE is not positive,
+    // and take the reference block as the only element in the group
+    if (para.GroupSize == 1 || para.thMSE <= 0)
+    {
+        return PosPairCode(1, PosPair(KeyType(0), PosType(j, i)));
+    }
+
+    // Get reference block from the reference plane
+    block_type refBlock(ref, para.BlockSize, para.BlockSize, PosType(j, i));
+
+    // Block matching
+    return refBlock.BlockMatchingMulti(ref, para.BMrange, para.BMstep, para.thMSE, 1, para.GroupSize, true);
+}
+
+
 Plane_FL &BM3D_Base::process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref)
 {
     // Execute kernel
@@ -195,7 +255,9 @@ Plane &BM3D_Base::process_Plane(Plane &dst, const Plane &src, const Plane &ref)
     }
 
     Plane_FL dst_data(dst, false);
-    Plane_FL src_data(src);
+    Plane_FL src_data(src, false);
+
+    RangeConvert(src_data, src, false);
 
     // Execute kernel
     if (src.data() == ref.data())
@@ -204,7 +266,10 @@ Plane &BM3D_Base::process_Plane(Plane &dst, const Plane &src, const Plane &ref)
     }
     else
     {
-        Plane_FL ref_data(ref);
+        Plane_FL ref_data(ref, false);
+
+        RangeConvert(ref_data, ref, false);
+
         process_Plane_FL(dst_data, src_data, ref_data);
     }
 
@@ -242,19 +307,22 @@ Frame &BM3D_Base::process_Frame(Frame &dst, const Frame &src, const Frame &ref)
     }
 
     // Convert filtered image from YUV to RGB
-    MatrixConvert_YUV2RGB(dst.R(), dst.G(), dst.B(), srcY, srcU, srcV, ColorMatrix::OPP);
+    MatrixConvert_YUV2RGB(dst.R(), dst.G(), dst.B(), srcY, srcU, srcV, ColorMatrix::OPP, true);
 
     return dst;
 }
 
 
-// Functions of BM3D_Basic
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Functions of class BM3D_Basic
+
+
 bool BM3D_Basic::RGB2YUV(Plane_FL &srcY, Plane_FL &srcU, Plane_FL &srcV,
     Plane_FL &refY, Plane_FL &refU, Plane_FL &refV,
     const Plane &srcR, const Plane &srcG, const Plane &srcB,
     const Plane &refR, const Plane &refG, const Plane &refB) const
 {
-    MatrixConvert_RGB2YUV(srcY, srcU, srcV, srcR, srcG, srcB, ColorMatrix::OPP);
+    MatrixConvert_RGB2YUV(srcY, srcU, srcV, srcR, srcG, srcB, ColorMatrix::OPP, false);
 
     if (srcR.data() == refR.data() && srcG.data() == refG.data() && srcB.data() == refB.data())
     {
@@ -262,18 +330,18 @@ bool BM3D_Basic::RGB2YUV(Plane_FL &srcY, Plane_FL &srcU, Plane_FL &srcV,
     }
     else
     {
-        ConvertToY(refY, refR, refG, refB, ColorMatrix::OPP);
+        ConvertToY(refY, refR, refG, refB, ColorMatrix::OPP, false);
         return false;
     }
 }
 
 
-void BM3D_Basic::CollaborativeFilter(const BM3D_Data &d,
+void BM3D_Basic::CollaborativeFilter(int plane,
     Plane_FL &ResNum, Plane_FL &ResDen,
     const Plane_FL &src, const Plane_FL &ref,
-    const PosPairCode &posPairCode) const
+    const PosPairCode &code) const
 {
-    PCType GroupSize = static_cast<PCType>(posPairCode.size());
+    PCType GroupSize = static_cast<PCType>(code.size());
     // When para.GroupSize > 0, limit GroupSize up to para.GroupSize
     if (para.GroupSize > 0 && GroupSize > para.GroupSize)
     {
@@ -281,16 +349,16 @@ void BM3D_Basic::CollaborativeFilter(const BM3D_Data &d,
     }
 
     // Construct source group guided by matched pos code
-    BlockGroup<FLType, FLType> srcGroup(src, posPairCode, GroupSize, para.BlockSize, para.BlockSize);
+    BlockGroup<FLType, FLType> srcGroup(src, code, GroupSize, para.BlockSize, para.BlockSize);
 
     // Initialize retianed coefficients of hard threshold filtering
     int retainedCoefs = 0;
 
     // Apply forward 3D transform to the source group
-    d.fp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
+    f[plane].fp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
 
-    // Apply hard threshold filtering to the source group
-    Block_For_each(srcGroup, d.thrTable[GroupSize - 1], [&](FLType &x, FLType y)
+    // Apply hard-thresholding to the source group
+    Block_For_each(srcGroup, f[plane].thrTable[GroupSize - 1], [&](FLType &x, FLType y)
     {
         if (Abs(x) <= y)
         {
@@ -303,12 +371,12 @@ void BM3D_Basic::CollaborativeFilter(const BM3D_Data &d,
     });
 
     // Apply backward 3D transform to the filtered group
-    d.bp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
+    f[plane].bp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
 
     // Calculate weight for the filtered group
     // Also include the normalization factor to compensate for the amplification introduced in 3D transform
     FLType denWeight = retainedCoefs < 1 ? 1 : FLType(1) / static_cast<FLType>(retainedCoefs);
-    FLType numWeight = static_cast<FLType>(denWeight / d.finalAMP[GroupSize - 1]);
+    FLType numWeight = static_cast<FLType>(denWeight / f[plane].finalAMP[GroupSize - 1]);
 
     // Store the weighted filtered group to the numerator part of the final estimation
     // Store the weight to the denominator part of the final estimation
@@ -317,13 +385,16 @@ void BM3D_Basic::CollaborativeFilter(const BM3D_Data &d,
 }
 
 
-// Functions of BM3D_Final
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Functions of class BM3D_Final
+
+
 bool BM3D_Final::RGB2YUV(Plane_FL &srcY, Plane_FL &srcU, Plane_FL &srcV,
     Plane_FL &refY, Plane_FL &refU, Plane_FL &refV,
     const Plane &srcR, const Plane &srcG, const Plane &srcB,
     const Plane &refR, const Plane &refG, const Plane &refB) const
 {
-    MatrixConvert_RGB2YUV(srcY, srcU, srcV, srcR, srcG, srcB, ColorMatrix::OPP);
+    MatrixConvert_RGB2YUV(srcY, srcU, srcV, srcR, srcG, srcB, ColorMatrix::OPP, false);
 
     if (srcR.data() == refR.data() && srcG.data() == refG.data() && srcB.data() == refB.data())
     {
@@ -331,18 +402,18 @@ bool BM3D_Final::RGB2YUV(Plane_FL &srcY, Plane_FL &srcU, Plane_FL &srcV,
     }
     else
     {
-        MatrixConvert_RGB2YUV(refY, refU, refV, refR, refG, refB, ColorMatrix::OPP);
+        MatrixConvert_RGB2YUV(refY, refU, refV, refR, refG, refB, ColorMatrix::OPP, false);
         return false;
     }
 }
 
 
-void BM3D_Final::CollaborativeFilter(const BM3D_Data &d,
+void BM3D_Final::CollaborativeFilter(int plane,
     Plane_FL &ResNum, Plane_FL &ResDen,
     const Plane_FL &src, const Plane_FL &ref,
-    const PosPairCode &posPairCode) const
+    const PosPairCode &code) const
 {
-    PCType GroupSize = static_cast<PCType>(posPairCode.size());
+    PCType GroupSize = static_cast<PCType>(code.size());
     // When para.GroupSize > 0, limit GroupSize up to para.GroupSize
     if (para.GroupSize > 0 && GroupSize > para.GroupSize)
     {
@@ -350,18 +421,18 @@ void BM3D_Final::CollaborativeFilter(const BM3D_Data &d,
     }
 
     // Construct source group and reference group guided by matched pos code
-    BlockGroup<FLType, FLType> srcGroup(src, posPairCode, GroupSize, para.BlockSize, para.BlockSize);
-    BlockGroup<FLType, FLType> refGroup(ref, posPairCode, GroupSize, para.BlockSize, para.BlockSize);
+    BlockGroup<FLType, FLType> srcGroup(src, code, GroupSize, para.BlockSize, para.BlockSize);
+    BlockGroup<FLType, FLType> refGroup(ref, code, GroupSize, para.BlockSize, para.BlockSize);
 
     // Initialize L2-norm of Wiener coefficients
     FLType L2Wiener = 0;
 
     // Apply forward 3D transform to the source group and the reference group
-    d.fp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
-    d.fp[GroupSize - 1].execute_r2r(refGroup.data(), refGroup.data());
+    f[plane].fp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
+    f[plane].fp[GroupSize - 1].execute_r2r(refGroup.data(), refGroup.data());
 
     // Apply empirical Wiener filtering to the source group guided by the reference group
-    const FLType sigmaSquare = d.wienerSigmaSqr[GroupSize - 1];
+    const FLType sigmaSquare = f[plane].wienerSigmaSqr[GroupSize - 1];
 
     Block_For_each(srcGroup, refGroup, [&](FLType &x, FLType y)
     {
@@ -372,12 +443,12 @@ void BM3D_Final::CollaborativeFilter(const BM3D_Data &d,
     });
 
     // Apply backward 3D transform to the filtered group
-    d.bp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
+    f[plane].bp[GroupSize - 1].execute_r2r(srcGroup.data(), srcGroup.data());
 
     // Calculate weight for the filtered group
     // Also include the normalization factor to compensate for the amplification introduced in 3D transform
     FLType denWeight = L2Wiener <= 0 ? 1 : FLType(1) / L2Wiener;
-    FLType numWeight = static_cast<FLType>(denWeight / d.finalAMP[GroupSize - 1]);
+    FLType numWeight = static_cast<FLType>(denWeight / f[plane].finalAMP[GroupSize - 1]);
 
     // Store the weighted filtered group to the numerator part of the final estimation
     // Store the weight to the denominator part of the final estimation
@@ -386,7 +457,10 @@ void BM3D_Final::CollaborativeFilter(const BM3D_Data &d,
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions of class BM3D
+
+
 Plane_FL &BM3D::process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref)
 {
     Plane_FL tmp;
@@ -401,7 +475,9 @@ Plane_FL &BM3D::process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane
 Plane &BM3D::process_Plane(Plane &dst, const Plane &src, const Plane &ref)
 {
     Plane_FL dst_data(dst, false);
-    Plane_FL src_data(src);
+    Plane_FL src_data(src, false);
+
+    RangeConvert(src_data, src, false);
 
     if (src.data() == ref.data())
     {
@@ -409,7 +485,10 @@ Plane &BM3D::process_Plane(Plane &dst, const Plane &src, const Plane &ref)
     }
     else
     {
-        Plane_FL ref_data(ref);
+        Plane_FL ref_data(ref, false);
+
+        RangeConvert(ref_data, ref, false);
+
         process_Plane_FL(dst_data, src_data, ref_data);
     }
 
@@ -442,7 +521,7 @@ Frame &BM3D::process_Frame(Frame &dst, const Frame &src, const Frame &ref)
     final.Kernel(srcY, srcU, srcV, srcY, srcU, srcV, tmpY, tmpU, tmpV);
 
     // Convert filtered image from YUV to RGB
-    MatrixConvert_YUV2RGB(dst.R(), dst.G(), dst.B(), srcY, srcU, srcV, ColorMatrix::OPP);
+    MatrixConvert_YUV2RGB(dst.R(), dst.G(), dst.B(), srcY, srcU, srcV, ColorMatrix::OPP, true);
 
     return dst;
 }

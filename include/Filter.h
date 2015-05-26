@@ -48,11 +48,8 @@ struct FilterData
     template < typename _St1 >
     void Init(_St1 &dst, const _St1 &src)
     {
-        if (typeid(_Ty) != typeid(typename _St1::value_type))
-        {
-            std::cerr << "FilterData::Init: _Ty and _St1::value_type don't match!\n";
-            exit(EXIT_FAILURE);
-        }
+        static_assert(std::is_same<_Ty, typename _St1::value_type>::value,
+            "FilterData::Init: _Ty and _St1::value_type don't match!");
 
         InitSize(dst);
 
@@ -288,7 +285,7 @@ protected:
     virtual Frame process(const Frame &src) = 0;
 
 public:
-    _Myt(std::string _Tag = "")
+    FilterIO(std::string _Tag = "")
         : Tag(std::move(_Tag))
     {}
 
@@ -314,9 +311,9 @@ public:
         processIO();
     }
 
-    _Myt(const _Myt &src) = default;
+    FilterIO(const _Myt &src) = default;
+    FilterIO(_Myt &&src) = delete;
     _Myt &operator=(const _Myt &src) = default;
-    _Myt(_Myt &&src) = delete;
     _Myt &operator=(_Myt &&src) = delete;
 };
 

@@ -9,7 +9,10 @@
 #include "Block.h"
 
 
-struct BM3D_Para_Base
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+const struct BM3D_Para_Base
 {
     std::string profile;
     std::vector<double> sigma;
@@ -21,20 +24,26 @@ struct BM3D_Para_Base
     double thMSE;
     double lambda;
 
-    BM3D_Para_Base(std::string _profile = "lc")
+    explicit BM3D_Para_Base(std::string _profile = "fast")
         : profile(_profile), sigma({ 10.0, 10.0, 10.0 })
     {
+        BlockSize = 8;
         BMrange = 16;
         BMstep = 1;
 
-        if (profile == "lc")
+        if (profile == "fast")
+        {
+            BMrange = 9;
+        }
+        else if (profile == "lc")
         {
             BMrange = 9;
         }
     }
 
     virtual void thMSE_Default() {}
-};
+} BM3D_Base_Default;
+
 
 const struct BM3D_Basic_Para
     : public BM3D_Para_Base
@@ -42,37 +51,42 @@ const struct BM3D_Basic_Para
     typedef BM3D_Basic_Para _Myt;
     typedef BM3D_Para_Base _Mybase;
 
-    _Myt(std::string _profile = "lc")
+    explicit BM3D_Basic_Para(std::string _profile = "fast")
         : _Mybase(_profile)
     {
-        BlockSize = 8;
-        BlockStep = 3;
+        BlockStep = 4;
         GroupSize = 16;
-        lambda = 2.5;
+        lambda = 2.7;
 
-        if (profile == "lc")
+        if (profile == "fast")
+        {
+            BlockStep = 8;
+        }
+        else if (profile == "lc")
         {
             BlockStep = 6;
+        }
+        else if (profile == "high")
+        {
+            BlockStep = 3;
         }
         else if (profile == "vn")
         {
             BlockStep = 4;
             GroupSize = 32;
-        }
-        else if (profile == "high")
-        {
-            BlockStep = 2;
+            lambda = 2.8;
         }
         else if (profile != "np")
         {
-            std::cerr << "BM3D_Para: unrecognized profile \"" << profile << "\","
+            std::cerr << "BM3D_Basic_Para: unrecognized profile \"" << profile << "\","
                 " should be \"lc\", \"np\", \"vn\" or \"high\"\n";
+            DEBUG_BREAK;
         }
 
         thMSE_Default();
     }
 
-    virtual void thMSE_Default()
+    virtual void thMSE_Default() override
     {
         thMSE = 400 + sigma[0] * 80;
 
@@ -83,43 +97,49 @@ const struct BM3D_Basic_Para
     }
 } BM3D_Basic_Default;
 
+
 const struct BM3D_Final_Para
     : public BM3D_Para_Base
 {
     typedef BM3D_Final_Para _Myt;
     typedef BM3D_Para_Base _Mybase;
 
-    _Myt(std::string _profile = "lc")
+    explicit BM3D_Final_Para(std::string _profile = "fast")
         : _Mybase(_profile)
     {
-        BlockSize = 8;
         BlockStep = 3;
         GroupSize = 32;
 
-        if (profile == "lc")
+        if (profile == "fast")
+        {
+            BlockStep = 7;
+            GroupSize = 16;
+        }
+        else if (profile == "lc")
         {
             BlockStep = 5;
             GroupSize = 16;
+        }
+        else if (profile == "high")
+        {
+            BlockStep = 2;
         }
         else if (profile == "vn")
         {
             BlockSize = 11;
             BlockStep = 6;
         }
-        else if (profile == "high")
-        {
-            BlockStep = 2;
-        }
         else if (profile != "np")
         {
-            std::cerr << "BM3D_Para: unrecognized profile \"" << profile << "\","
+            std::cerr << "BM3D_Final_Para: unrecognized profile \"" << profile << "\","
                 " should be \"lc\", \"np\", \"vn\" or \"high\"\n";
+            DEBUG_BREAK;
         }
 
         thMSE_Default();
     }
 
-    virtual void thMSE_Default()
+    virtual void thMSE_Default() override
     {
         thMSE = 200 + sigma[0] * 10;
 
@@ -130,12 +150,13 @@ const struct BM3D_Final_Para
     }
 } BM3D_Final_Default;
 
+
 const struct BM3D_Para
 {
     BM3D_Basic_Para basic;
     BM3D_Final_Para final;
 
-    BM3D_Para(std::string _profile = "lc")
+    BM3D_Para(std::string _profile = "fast")
         : basic(_profile), final(_profile)
     {}
 
@@ -147,9 +168,12 @@ const struct BM3D_Para
 } BM3D_Default;
 
 
-struct BM3D_Data
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct BM3D_FilterData
 {
-    typedef BM3D_Data _Myt;
+    typedef BM3D_FilterData _Myt;
 
     typedef fftwh<FLType> fftw;
 
@@ -159,99 +183,13 @@ struct BM3D_Data
     std::vector<std::vector<FLType>> thrTable;
     std::vector<FLType> wienerSigmaSqr;
 
-    _Myt(bool wiener, double sigma, PCType GroupSize, PCType BlockSize, double lambda,
-        unsigned int flags = FFTW_PATIENT,
-        fftw::r2r_kind fkind = FFTW_REDFT01, fftw::r2r_kind bkind = FFTW_REDFT10)
-        : fp(GroupSize), bp(GroupSize), finalAMP(GroupSize), thrTable(wiener ? 0 : GroupSize),
-        wienerSigmaSqr(wiener ? GroupSize : 0)
-    {
-        FLType *temp = nullptr;
+    BM3D_FilterData() {}
 
-        for (PCType i = 1; i <= GroupSize; ++i)
-        {
-            AlignedMalloc(temp, i * BlockSize * BlockSize);
-            fp[i - 1].r2r_3d(i, BlockSize, BlockSize, temp, temp, fkind, fkind, fkind, flags);
-            bp[i - 1].r2r_3d(i, BlockSize, BlockSize, temp, temp, bkind, bkind, bkind, flags);
-            AlignedFree(temp);
+    BM3D_FilterData(bool wiener, double sigma, PCType GroupSize, PCType BlockSize, double lambda);
 
-            finalAMP[i - 1] = 2 * i * 2 * BlockSize * 2 * BlockSize;
-            double forwardAMP = sqrt(finalAMP[i - 1]);
+    BM3D_FilterData(const _Myt &right) = delete;
 
-            if (wiener)
-            {
-                wienerSigmaSqr[i - 1] = static_cast<FLType>(sigma * forwardAMP * sigma * forwardAMP);
-            }
-            else
-            {
-                double thrBase = sigma * lambda * forwardAMP;
-                std::vector<double> thr(4);
-                thr[0] = thrBase;
-                thr[1] = thrBase;
-                thr[2] = thrBase / 2.;
-                thr[3] = 0;
-
-                thrTable[i - 1] = std::vector<FLType>(i * BlockSize * BlockSize);
-                auto thr_d = thrTable[i - 1].data();
-
-                for (PCType z = 0; z < i; ++z)
-                {
-                    for (PCType y = 0; y < BlockSize; ++y)
-                    {
-                        for (PCType x = 0; x < BlockSize; ++x, ++thr_d)
-                        {
-                            int flag = 0;
-                            double scale = 1;
-
-                            if (x == 0)
-                            {
-                                ++flag;
-                            }
-                            else if (x >= BlockSize / 2)
-                            {
-                                scale *= 1.07;
-                            }
-                            else if (x >= BlockSize / 4)
-                            {
-                                scale *= 1.01;
-                            }
-
-                            if (y == 0)
-                            {
-                                ++flag;
-                            }
-                            else if (y >= BlockSize / 2)
-                            {
-                                scale *= 1.07;
-                            }
-                            else if (y >= BlockSize / 4)
-                            {
-                                scale *= 1.01;
-                            }
-
-                            if (z == 0)
-                            {
-                                ++flag;
-                            }
-                            else if (z >= i / 2)
-                            {
-                                scale *= 1.07;
-                            }
-                            else if (z >= i / 4)
-                            {
-                                scale *= 1.01;
-                            }
-
-                            *thr_d = static_cast<FLType>(thr[flag] * scale);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    _Myt(const _Myt &right) = delete;
-
-    _Myt(_Myt &&right)
+    BM3D_FilterData(_Myt &&right)
         : fp(std::move(right.fp)), bp(std::move(right.bp)),
         finalAMP(std::move(right.finalAMP)), thrTable(std::move(right.thrTable)),
         wienerSigmaSqr(std::move(right.wienerSigmaSqr))
@@ -272,7 +210,10 @@ struct BM3D_Data
 };
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // BM3D denoising algorithm based on block matching and collaborative filtering of grouped blocks
+
+
 class BM3D_Base
     : public FilterIF2
 {
@@ -284,31 +225,37 @@ public:
     typedef block_type::KeyType KeyType;
     typedef block_type::PosType PosType;
     typedef block_type::PosPair PosPair;
-    typedef block_type::PosPairCode PosPairCode;
     typedef block_type::KeyCode KeyCode;
     typedef block_type::PosCode PosCode;
+    typedef block_type::PosPairCode PosPairCode;
 
 protected:
     BM3D_Para_Base para;
-    std::vector<BM3D_Data> data;
+    std::vector<BM3D_FilterData> f;
 
 public:
-    _Myt(const BM3D_Para_Base &_para, bool wiener = false)
-        : para(_para), data()
+    BM3D_Base(const BM3D_Para_Base &_para, bool wiener = false)
+        : para(_para), f(3)
     {
         // Adjust sigma and thMSE to fit for the unnormalized YUV color space
+        double normY, normU, normV;
+
         double Yr, Yg, Yb, Ur, Ug, Ub, Vr, Vg, Vb;
         ColorMatrix_RGB2YUV_Parameter(ColorMatrix::OPP, Yr, Yg, Yb, Ur, Ug, Ub, Vr, Vg, Vb);
 
-        para.thMSE *= sqrt(Yr * Yr + Yg * Yg + Yb * Yb);
+        normY = sqrt(Yr * Yr + Yg * Yg + Yb * Yb);
+        normU = sqrt(Ur * Ur + Ug * Ug + Ub * Ub);
+        normV = sqrt(Vr * Vr + Vg * Vg + Vb * Vb);
+
+        para.thMSE *= normY;
 
         // Initialize BM3D data - FFTW plans, unnormalized transform amplification factor, hard threshold table, etc.
-        data.push_back(BM3D_Data(wiener, para.sigma[0] * sqrt(Yr * Yr + Yg * Yg + Yb * Yb) / double(255),
-            para.GroupSize, para.BlockSize, para.lambda));
-        data.push_back(BM3D_Data(wiener, para.sigma[1] * sqrt(Ur * Ur + Ug * Ug + Ub * Ub) / double(255),
-            para.GroupSize, para.BlockSize, para.lambda));
-        data.push_back(BM3D_Data(wiener, para.sigma[2] * sqrt(Vr * Vr + Vg * Vg + Vb * Vb) / double(255),
-            para.GroupSize, para.BlockSize, para.lambda));
+        if (para.sigma[0] > 0) f[0] = BM3D_FilterData(wiener, para.sigma[0] / double(255) * normY,
+            para.GroupSize, para.BlockSize, para.lambda);
+        if (para.sigma[1] > 0) f[1] = BM3D_FilterData(wiener, para.sigma[1] / double(255) * normU,
+            para.GroupSize, para.BlockSize, para.lambda);
+        if (para.sigma[2] > 0) f[2] = BM3D_FilterData(wiener, para.sigma[2] / double(255) * normV,
+            para.GroupSize, para.BlockSize, para.lambda);
     }
 
     void Kernel(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref) const;
@@ -323,15 +270,17 @@ public:
         const Plane &refR, const Plane &refG, const Plane &refB) const = 0;
 
 protected:
-    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref);
-    virtual Plane &process_Plane(Plane &dst, const Plane &src, const Plane &ref);
-    virtual Frame &process_Frame(Frame &dst, const Frame &src, const Frame &ref);
+    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref) override;
+    virtual Plane &process_Plane(Plane &dst, const Plane &src, const Plane &ref) override;
+    virtual Frame &process_Frame(Frame &dst, const Frame &src, const Frame &ref) override;
 
 protected:
-    virtual void CollaborativeFilter(const BM3D_Data &d,
+    PosPairCode BlockMatching(const Plane_FL &ref, PCType j, PCType i) const;
+
+    virtual void CollaborativeFilter(int plane,
         Plane_FL &ResNum, Plane_FL &ResDen,
         const Plane_FL &src, const Plane_FL &ref,
-        const PosPairCode &posPairCode) const = 0;
+        const PosPairCode &code) const = 0;
 };
 
 
@@ -343,20 +292,20 @@ public:
     typedef BM3D_Base _Mybase;
 
 public:
-    _Myt(const BM3D_Basic_Para &_para = BM3D_Basic_Default)
+    BM3D_Basic(const BM3D_Basic_Para &_para = BM3D_Basic_Default)
         : _Mybase(_para, false)
     {}
 
     virtual bool RGB2YUV(Plane_FL &srcY, Plane_FL &srcU, Plane_FL &srcV,
         Plane_FL &refY, Plane_FL &refU, Plane_FL &refV,
         const Plane &srcR, const Plane &srcG, const Plane &srcB,
-        const Plane &refR, const Plane &refG, const Plane &refB) const;
+        const Plane &refR, const Plane &refG, const Plane &refB) const override;
 
 protected:
-    virtual void CollaborativeFilter(const BM3D_Data &d,
+    virtual void CollaborativeFilter(int plane,
         Plane_FL &ResNum, Plane_FL &ResDen,
         const Plane_FL &src, const Plane_FL &ref,
-        const PosPairCode &posPairCode) const;
+        const PosPairCode &code) const override;
 };
 
 
@@ -368,20 +317,20 @@ public:
     typedef BM3D_Base _Mybase;
 
 public:
-    _Myt(const BM3D_Final_Para &_para = BM3D_Final_Default)
+    BM3D_Final(const BM3D_Final_Para &_para = BM3D_Final_Default)
         : _Mybase(_para, true)
     {}
 
     virtual bool RGB2YUV(Plane_FL &srcY, Plane_FL &srcU, Plane_FL &srcV,
         Plane_FL &refY, Plane_FL &refU, Plane_FL &refV,
         const Plane &srcR, const Plane &srcG, const Plane &srcB,
-        const Plane &refR, const Plane &refG, const Plane &refB) const;
+        const Plane &refR, const Plane &refG, const Plane &refB) const override;
 
 protected:
-    virtual void CollaborativeFilter(const BM3D_Data &d,
+    virtual void CollaborativeFilter(int plane,
         Plane_FL &ResNum, Plane_FL &ResDen,
         const Plane_FL &src, const Plane_FL &ref,
-        const PosPairCode &posPairCode) const;
+        const PosPairCode &code) const override;
 };
 
 
@@ -397,15 +346,18 @@ protected:
     BM3D_Final final;
 
 public:
-    _Myt(const BM3D_Para &_para = BM3D_Default)
+    BM3D(const BM3D_Para &_para = BM3D_Default)
         : basic(_para.basic), final(_para.final)
     {}
 
 protected:
-    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref);
-    virtual Plane &process_Plane(Plane &dst, const Plane &src, const Plane &ref);
-    virtual Frame &process_Frame(Frame &dst, const Frame &src, const Frame &ref);
+    virtual Plane_FL &process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Plane_FL &ref) override;
+    virtual Plane &process_Plane(Plane &dst, const Plane &src, const Plane &ref) override;
+    virtual Frame &process_Frame(Frame &dst, const Frame &src, const Frame &ref) override;
 };
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 class BM3D_IO
@@ -419,7 +371,7 @@ protected:
     BM3D_Para para;
     std::string RPath;
 
-    virtual void arguments_process()
+    virtual void arguments_process() override
     {
         _Mybase::arguments_process();
 
@@ -552,7 +504,7 @@ protected:
         if (!thMSE2_def) para.final.thMSE_Default();
     }
 
-    virtual Frame process(const Frame &src)
+    virtual Frame process(const Frame &src) override
     {
         BM3D filter(para);
 
@@ -568,10 +520,13 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".BM3D")
+    BM3D_IO(std::string _Tag = ".BM3D")
         : _Mybase(std::move(_Tag))
     {}
 };
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #endif

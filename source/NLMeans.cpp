@@ -3,11 +3,11 @@
 
 
 // Get the filtered block through weighted averaging of matched blocks in Plane src
-template < typename _St1, typename _Ty1, typename _DTy1, typename _Ty2, typename _DTy2, typename _DTy3 >
-void NLMeans::WeightedAverage(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _DTy2> &refBlock, const _St1 &src,
-    const std::vector<std::pair<_DTy3, Pos>> &posPairCode)
+template < typename _St1 >
+void NLMeans::WeightedAverage(block_type &dstBlock, const block_type &refBlock, const _St1 &src,
+    const PosPairCode &code)
 {
-    PCType GroupSize = static_cast<PCType>(posPairCode.size());
+    PCType GroupSize = static_cast<PCType>(code.size());
     // When para.GroupSize > 0, limit GroupSize up to para.GroupSize
     if (para.GroupSize > 0 && GroupSize > para.GroupSize)
     {
@@ -24,7 +24,7 @@ void NLMeans::WeightedAverage(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _D
         dstBlock.SetPos(refBlock.GetPos());
     }
 
-    Block<FLType, FLType> sumX1(refBlock, true, 0);
+    block_type sumX1(refBlock, true, 0);
 
     FLType exponentMul = static_cast<FLType>(-1 / (para.strength * para.strength));
     FLType weightSum = 0;
@@ -32,12 +32,12 @@ void NLMeans::WeightedAverage(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _D
 
     for (PCType k = 0; k < GroupSize; ++k)
     {
-        weight = exp(posPairCode[k].first * exponentMul);
+        weight = exp(code[k].first * exponentMul);
         weightSum += weight;
 
-        Pos pos = posPairCode[k].second;
-        auto sumX1p = sumX1.Data();
-        auto srcp = src.Data() + pos.y * src.Stride() + pos.x;
+        Pos pos = code[k].second;
+        auto sumX1p = sumX1.data();
+        auto srcp = src.data() + pos.y * src.Stride() + pos.x;
 
         for (PCType y = 0; y < refBlock.Height(); ++y)
         {
@@ -52,23 +52,23 @@ void NLMeans::WeightedAverage(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _D
 
     FLType weightSumRec = FLType(1) / weightSum;
 
-    auto dstp = dstBlock.Data();
-    auto sumX1p = sumX1.Data();
+    auto dstp = dstBlock.data();
+    auto sumX1p = sumX1.data();
 
     for (auto upper = dstp + dstBlock.PixelCount(); dstp != upper; ++dstp, ++sumX1p)
     {
-        *dstp = static_cast<_Ty1>(*sumX1p * weightSumRec);
+        *dstp = static_cast<FLType>(*sumX1p * weightSumRec);
     }
 }
 
 
 // Get the filtered block through weighted averaging of matched blocks in Plane src
 // A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm
-template < typename _St1, typename _Ty1, typename _DTy1, typename _Ty2, typename _DTy2, typename _DTy3 >
-void NLMeans::WeightedAverage_Correction(Block<_Ty1, _DTy1> &dstBlock, const Block<_Ty2, _DTy2> &refBlock, const _St1 &src,
-    const std::vector<std::pair<_DTy3, Pos>> &posPairCode)
+template < typename _St1 >
+void NLMeans::WeightedAverage_Correction(block_type &dstBlock, const block_type &refBlock, const _St1 &src,
+    const PosPairCode &code)
 {
-    PCType GroupSize = static_cast<PCType>(posPairCode.size());
+    PCType GroupSize = static_cast<PCType>(code.size());
     // When para.GroupSize > 0, limit GroupSize up to para.GroupSize
     if (para.GroupSize > 0 && GroupSize > para.GroupSize)
     {
@@ -85,8 +85,8 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty1, _DTy1> &dstBlock, const Blo
         dstBlock.SetPos(refBlock.GetPos());
     }
 
-    Block<FLType, FLType> sumX1(refBlock, true, 0);
-    Block<FLType, FLType> sumX2(refBlock, true, 0);
+    block_type sumX1(refBlock, true, 0);
+    block_type sumX2(refBlock, true, 0);
 
     FLType exponentMul = static_cast<FLType>(-1 / (para.strength * para.strength));
     FLType weightSum = 0;
@@ -95,13 +95,13 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty1, _DTy1> &dstBlock, const Blo
 
     for (PCType k = 0; k < GroupSize; ++k)
     {
-        weight = exp(posPairCode[k].first * exponentMul);
+        weight = exp(code[k].first * exponentMul);
         weightSum += weight;
 
-        Pos pos = posPairCode[k].second;
-        auto sumX1p = sumX1.Data();
-        auto sumX2p = sumX2.Data();
-        auto srcp = src.Data() + pos.y * src.Stride() + pos.x;
+        Pos pos = code[k].second;
+        auto sumX1p = sumX1.data();
+        auto sumX2p = sumX2.data();
+        auto srcp = src.data() + pos.y * src.Stride() + pos.x;
 
         for (PCType y = 0; y < refBlock.Height(); ++y)
         {
@@ -122,10 +122,10 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty1, _DTy1> &dstBlock, const Blo
     FLType VarN = static_cast<FLType>(sigma * sigma);
     FLType weightSumRec = FLType(1) / weightSum;
 
-    auto dstp = dstBlock.Data();
-    auto refp = refBlock.Data();
-    auto sumX1p = sumX1.Data();
-    auto sumX2p = sumX2.Data();
+    auto dstp = dstBlock.data();
+    auto refp = refBlock.data();
+    auto sumX1p = sumX1.data();
+    auto sumX2p = sumX2.data();
 
     for (auto upper = dstp + dstBlock.PixelCount(); dstp != upper; ++dstp, ++refp, ++sumX1p, ++sumX2p)
     {
@@ -136,11 +136,11 @@ void NLMeans::WeightedAverage_Correction(Block<_Ty1, _DTy1> &dstBlock, const Blo
         // estimated_Y = EX + max(0, 1 - VarN / VarX) * (X - EX);
         if (VarX > VarN)
         {
-            *dstp = static_cast<_Ty1>(X - (VarN / VarX) * (X - EX));
+            *dstp = static_cast<FLType>(X - (VarN / VarX) * (X - EX));
         }
         else
         {
-            *dstp = static_cast<_Ty1>(EX);
+            *dstp = static_cast<FLType>(EX);
         }
     }
 }
@@ -162,9 +162,9 @@ Plane_FL &NLMeans::process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Pl
     PCType BlockPosRight = width - para.BlockSize;
     PCType BlockPosBottom = height - para.BlockSize;
 
-    Block<FLType, FLType> dstBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> srcBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> refBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type dstBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type srcBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type refBlock(para.BlockSize, para.BlockSize, Pos(0, 0), false);
 
     Plane_FL ResNum(dst, true, 0);
     Plane_FL ResDen(dst, true, 0);
@@ -200,7 +200,7 @@ Plane_FL &NLMeans::process_Plane_FL(Plane_FL &dst, const Plane_FL &src, const Pl
             refBlock.From(ref, Pos(j, i));
 
             // Form a group by block matching between reference block and its neighborhood in reference plane
-            auto matchCode = refBlock.BlockMatchingMulti(ref, para.BMrange, para.BMstep, para.thMSE);
+            PosPairCode matchCode = refBlock.BlockMatchingMulti(ref, para.BMrange, para.BMstep, para.thMSE, 1, para.GroupSize, true);
 
             // Get the filtered block through weighted averaging of matched blocks in Plane src
             // A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm
@@ -283,13 +283,13 @@ Frame &NLMeans::process_Frame(Frame &dst, const Frame &src, const Frame &ref)
     PCType BlockPosRight = width - para.BlockSize;
     PCType BlockPosBottom = height - para.BlockSize;
 
-    Block<FLType, FLType> dstBlock0(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> dstBlock1(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> dstBlock2(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> srcBlock0(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> srcBlock1(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> srcBlock2(para.BlockSize, para.BlockSize, Pos(0, 0), false);
-    Block<FLType, FLType> refBlockY(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type dstBlock0(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type dstBlock1(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type dstBlock2(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type srcBlock0(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type srcBlock1(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type srcBlock2(para.BlockSize, para.BlockSize, Pos(0, 0), false);
+    block_type refBlockY(para.BlockSize, para.BlockSize, Pos(0, 0), false);
 
     Plane_FL ResNum0(dst0, true, 0);
     Plane_FL ResNum1(dst1, true, 0);
@@ -329,7 +329,7 @@ Frame &NLMeans::process_Frame(Frame &dst, const Frame &src, const Frame &ref)
             srcBlock2.From(src2, Pos(j, i));
 
             // Form a group by block matching between reference block and its neighborhood in reference plane
-            auto matchCode = refBlockY.BlockMatchingMulti(refY, para.BMrange, para.BMstep, para.thMSE);
+            PosPairCode matchCode = refBlockY.BlockMatchingMulti(refY, para.BMrange, para.BMstep, para.thMSE, 1, para.GroupSize, true);
 
             // Get the filtered block through weighted averaging of matched blocks in Plane src
             // A soft threshold optimal correction is applied by testing staionarity, to improve the NL-means algorithm

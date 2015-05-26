@@ -42,11 +42,9 @@ Plane_FL &Retinex::Kernel(Plane_FL &dst, const Plane_FL &src)
     }
     else // multi-scale Gaussian filter
     {
-        if (dst.Data() == src.Data())
+        if (dst.data() == src.data())
         {
-            const char *FunctionName = "Retinex::Kernel";
-            std::cerr << FunctionName << ": Data of Plane_FL \"dst\" and Plane_FL \"src\" can not be of the same address for multi-scale.\n";
-            exit(EXIT_FAILURE);
+            DEBUG_FAIL("Retinex::Kernel: Data of Plane_FL \"dst\" and Plane_FL \"src\" can not be of the same address for multi-scale.");
         }
 
         dst.InitValue(1);
@@ -318,9 +316,7 @@ Frame &Retinex_MSRCR::process_Frame(Frame &dst, const Frame &src)
     }
     else
     {
-        const char *FunctionName = "Retinex_MSRCR::process";
-        std::cerr << FunctionName << ": invalid PixelType of Frame \"src\", should be RGB.\n";
-        exit(EXIT_FAILURE);
+        DEBUG_FAIL("Retinex_MSRCR::process: invalid PixelType of Frame \"src\", should be RGB.");
     }
 
     return dst;

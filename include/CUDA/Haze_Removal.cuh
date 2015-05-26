@@ -12,7 +12,7 @@ struct CUDA_Haze_Removal_Para
     typedef CUDA_Haze_Removal_Para _Myt;
     typedef Haze_Removal_Para _Mybase;
 
-    _Myt() : _Mybase() { ppmode = 2; }
+    CUDA_Haze_Removal_Para() : _Mybase() { ppmode = 2; }
 };
 
 extern const CUDA_Haze_Removal_Para CUDA_Haze_Removal_Default;
@@ -46,7 +46,7 @@ private:
     cuIdx GRID_DIM;
 
 public:
-    _Myt(const Haze_Removal_Para &_para = CUDA_Haze_Removal_Default, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
+    CUDA_Haze_Removal_Retinex(const Haze_Removal_Para &_para = CUDA_Haze_Removal_Default, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
         : _Mybase(_para), d(_mem_mode, BLOCK_DIM)
     {}
 
@@ -95,7 +95,7 @@ protected:
     }
 
 public:
-    _Myt(std::string _Tag = ".Haze_Removal_Retinex")
+    CUDA_Haze_Removal_Retinex_IO(std::string _Tag = ".Haze_Removal_Retinex")
         : _Mybase(std::move(_Tag))
     {}
 };

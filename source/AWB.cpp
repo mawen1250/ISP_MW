@@ -25,7 +25,7 @@ Plane AWB::GetIntensity(const Frame &ref) const
         i = stride * j;
         for (upper = i + width; i < upper; i++)
         {
-            dst[i] = Round_Div(refR[i] + refG[i] + refB[i], DType(3));
+            dst[i] = RoundDiv(refR[i] + refG[i] + refB[i], DType(3));
         }
     }
 
