@@ -137,8 +137,8 @@ Plane &Bilateral2D_1(Plane &dst, const Plane &src, const Plane &ref, const Bilat
             }
         }
 
-        GFilter.Filter(Wk);
-        GFilter.Filter(Jk);
+        GFilter(Wk, Wk);
+        GFilter(Jk, Jk);
 
         for (j = 0; j < height; ++j)
         {

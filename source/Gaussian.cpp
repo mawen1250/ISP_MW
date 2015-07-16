@@ -5,10 +5,16 @@
 #include "Conversion.hpp"
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 const Gaussian2D_Para Gaussian2D_Default;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public functions of class Gaussian2D
+
+
 Plane &Gaussian2D::process_Plane(Plane &dst, const Plane &src)
 {
     if (para.sigma <= 0)
@@ -20,16 +26,21 @@ Plane &Gaussian2D::process_Plane(Plane &dst, const Plane &src)
     Plane_FL data(src);
     RecursiveGaussian GFilter(para.sigma, true);
     
-    GFilter.Filter(data);
+    GFilter(data, data);
     RangeConvert(dst, data, true);
     
     return dst;
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public functions of class RecursiveGaussian
-void RecursiveGaussian::GetPara(ldbl sigma)
+
+
+void RecursiveGaussian::setPara(ldbl sigma, bool _allow_negative)
 {
+    allow_negative = _allow_negative;
+
     // Constants
     const ldbl max_sigma_iter = sizeof(FLType) <= 4 ? 80.0L : 100000000.0L;
     const int max_iter = 25;
@@ -79,72 +90,75 @@ void RecursiveGaussian::GetPara(ldbl sigma)
 }
 
 
-void RecursiveGaussian::FilterV(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride)
+void RecursiveGaussian::filterV(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride)
 {
     _Dt d;
     d.Init(dst, src, height, width, stride);
 
-    FilterV_Kernel(d.dst_data, d.src_data, d.height, d.width, d.stride);
+    filterV_Kernel(d.dst_data, d.src_data, d.height, d.width, d.stride);
 
     for (int i = 1; i < iter; ++i)
     {
-        FilterV_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
+        filterV_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
     }
 
     d.End();
 }
 
-void RecursiveGaussian::FilterH(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride)
+void RecursiveGaussian::filterH(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride)
 {
     _Dt d;
     d.Init(dst, src, height, width, stride);
 
-    FilterH_Kernel(d.dst_data, d.src_data, d.height, d.width, d.stride);
+    filterH_Kernel(d.dst_data, d.src_data, d.height, d.width, d.stride);
 
     for (int i = 1; i < iter; ++i)
     {
-        FilterH_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
+        filterH_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
     }
 
     d.End();
 }
 
-void RecursiveGaussian::Filter(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride)
+void RecursiveGaussian::filter(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride)
 {
     _Dt d;
     d.Init(dst, src, height, width, stride);
 
-    FilterH_Kernel(d.dst_data, d.src_data, d.height, d.width, d.stride);
-    FilterV_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
+    filterH_Kernel(d.dst_data, d.src_data, d.height, d.width, d.stride);
+    filterV_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
 
     for (int i = 1; i < iter; ++i)
     {
-        FilterH_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
-        FilterV_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
+        filterH_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
+        filterV_Kernel(d.dst_data, d.dst_data, d.height, d.width, d.stride);
     }
 
     d.End();
 }
 
 
-void RecursiveGaussian::FilterV(Plane_FL &dst, const Plane_FL &src)
+void RecursiveGaussian::filterV(Plane_FL &dst, const Plane_FL &src)
 {
-    FilterV(dst.data(), src.data(), dst.Height(), dst.Width(), dst.Stride());
+    filterV(dst.data(), src.data(), dst.Height(), dst.Width(), dst.Stride());
 }
 
-void RecursiveGaussian::FilterH(Plane_FL &dst, const Plane_FL &src)
+void RecursiveGaussian::filterH(Plane_FL &dst, const Plane_FL &src)
 {
-    FilterH(dst.data(), src.data(), dst.Height(), dst.Width(), dst.Stride());
+    filterH(dst.data(), src.data(), dst.Height(), dst.Width(), dst.Stride());
 }
 
-void RecursiveGaussian::Filter(Plane_FL &dst, const Plane_FL &src)
+void RecursiveGaussian::filter(Plane_FL &dst, const Plane_FL &src)
 {
-    Filter(dst.data(), src.data(), dst.Height(), dst.Width(), dst.Stride());
+    filter(dst.data(), src.data(), dst.Height(), dst.Width(), dst.Stride());
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Protected functions of class RecursiveGaussian
-void RecursiveGaussian::FilterV_Kernel(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride) const
+
+
+void RecursiveGaussian::filterV_Kernel(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride) const
 {
     if (dst != src)
     {
@@ -158,15 +172,9 @@ void RecursiveGaussian::FilterV_Kernel(FLType *dst, const FLType *src, PCType he
         PCType i2 = j < 2 ? i1 : i1 - stride;
         PCType i3 = j < 3 ? i2 : i2 - stride;
 
-        FLType P0, P1, P2, P3;
-
         for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
-            P3 = dst[i3];
-            P2 = dst[i2];
-            P1 = dst[i1];
-            P0 = src[i0];
-            dst[i0] = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
+            dst[i0] = B * src[i0] + B1 * dst[i1] + B2 * dst[i2] + B3 * dst[i3];
         }
     });
 
@@ -177,22 +185,16 @@ void RecursiveGaussian::FilterV_Kernel(FLType *dst, const FLType *src, PCType he
         PCType i2 = j >= height - 2 ? i1 : i1 + stride;
         PCType i3 = j >= height - 3 ? i2 : i2 + stride;
 
-        FLType P0, P1, P2, P3;
-
         for (; i0 < upper; ++i0, ++i1, ++i2, ++i3)
         {
-            P3 = dst[i3];
-            P2 = dst[i2];
-            P1 = dst[i1];
-            P0 = dst[i0];
-            P0 = B * P0 + B1 * P1 + B2 * P2 + B3 * P3;
-            if (allow_negative || P0 >= 0) dst[i0] = P0;
+            FLType res = B * dst[i0] + B1 * dst[i1] + B2 * dst[i2] + B3 * dst[i3];
+            if (allow_negative || res >= 0) dst[i0] = res;
             else dst[i0] = 0;
         }
     });
 }
 
-void RecursiveGaussian::FilterH_Kernel(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride) const
+void RecursiveGaussian::filterH_Kernel(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride) const
 {
     LOOP_V_PPL(height, [&](const PCType j)
     {
@@ -204,7 +206,7 @@ void RecursiveGaussian::FilterH_Kernel(FLType *dst, const FLType *src, PCType he
         P3 = P2 = P1 = src[i];
         dst[i] = src[i];
 
-        for (; i < upper;)
+        while (i < upper)
         {
             ++i;
             P0 = B * src[i] + B1 * P1 + B2 * P2 + B3 * P3;
@@ -216,7 +218,7 @@ void RecursiveGaussian::FilterH_Kernel(FLType *dst, const FLType *src, PCType he
 
         P3 = P2 = P1 = dst[i];
 
-        for (; i > lower;)
+        while (i > lower)
         {
             --i;
             P0 = B * dst[i] + B1 * P1 + B2 * P2 + B3 * P3;
@@ -228,3 +230,6 @@ void RecursiveGaussian::FilterH_Kernel(FLType *dst, const FLType *src, PCType he
         }
     });
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

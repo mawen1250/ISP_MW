@@ -12,6 +12,17 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+template < typename _Ty >
+inline void CUDA_Set(_Ty *dst, const cuIdx count, _Ty value = 0, cuIdx _block_dim = 256)
+{
+    if (count < _block_dim) _block_dim = count;
+    CudaGlobalCall(CUDA_Set_Kernel, CudaGridDim(count, _block_dim), _block_dim)(dst, count, value);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 static __inline__ __device__ float atomicMinFloat(float *address, float val)
 {
     unsigned int *address_as_ul = reinterpret_cast<unsigned int *>(address);

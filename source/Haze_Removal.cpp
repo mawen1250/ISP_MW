@@ -130,7 +130,7 @@ void Haze_Removal::StoreResult(Frame &dst)
 
         ConvertToY(temp, dataR, dataG, dataB, ColorMatrix::OPP);
 
-        GFilter.Filter(temp, temp);
+        GFilter(temp, temp);
         GetMinMax(temp, min, max);
 
         if (max <= min)
@@ -174,7 +174,7 @@ void Haze_Removal_Retinex::GetTMapInv()
     {
         Plane_FL gauss(refY, false);
         RecursiveGaussian GFilter(para.sigmaVector[0], true);
-        GFilter.Filter(gauss, refY);
+        GFilter(gauss, refY);
 
         tMapInv = Plane_FL(refY, false);
 
@@ -194,11 +194,11 @@ void Haze_Removal_Retinex::GetTMapInv()
     {
         Plane_FL gauss0(refY, false);
         RecursiveGaussian GFilter0(para.sigmaVector[0], true);
-        GFilter0.Filter(gauss0, refY);
+        GFilter0(gauss0, refY);
 
         Plane_FL gauss1(refY, false);
         RecursiveGaussian GFilter1(para.sigmaVector[1], true);
-        GFilter1.Filter(gauss1, refY);
+        GFilter1(gauss1, refY);
 
         tMapInv = Plane_FL(refY, false);
 
@@ -224,7 +224,7 @@ void Haze_Removal_Retinex::GetTMapInv()
             if (para.sigmaVector[s] > 0)
             {
                 RecursiveGaussian GFilter(para.sigmaVector[s], true);
-                GFilter.Filter(gauss, refY);
+                GFilter(gauss, refY);
 
                 LOOP_VH_PPL(height, width, stride, [&](PCType i)
                 {

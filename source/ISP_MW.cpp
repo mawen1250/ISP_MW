@@ -14,7 +14,7 @@
 
 //#define Convolution_
 //#define EdgeDetect_
-//#define Gaussian_
+#define Gaussian_
 //#define Bilateral_
 //#define Transpose_
 //#define Specular_Highlight_Removal_
@@ -25,7 +25,7 @@
 //#define Histogram_Equalization_
 //#define AWB_
 //#define NLMeans_
-#define BM3D_
+//#define BM3D_
 //#define Haze_Removal_
 
 #ifdef _CUDA_
@@ -37,7 +37,7 @@
 
 int Test_Speed()
 {
-    const int Loop = 1;
+    const int Loop = 100;
 
     //Frame IFrame = ImageReader("D:\\Test Images\\Haze\\20150202_132636.jpg");
     Frame IFrame = ImageReader("D:\\Test Images\\BM3D\\_DSC8263.1noised.png");

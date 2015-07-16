@@ -416,14 +416,14 @@ void ColorMatrix_RGB2YUV_Parameter(ColorMatrix _ColorMatrix, T &Yr, T &Yg, T &Yb
         Yb = static_cast<T>(Kb);
 
         // E'Pb = 0.5 * ( E'B - E'Y ) / ( 1 - Kb )
-        Ur = static_cast<T>(-Yr * 0.5L / (1.0L - Yb));
-        Ug = static_cast<T>(-Yg * 0.5L / (1.0L - Yb));
+        Ur = static_cast<T>(-Kr * 0.5L / (1.0L - Kb));
+        Ug = static_cast<T>(-Kg * 0.5L / (1.0L - Kb));
         Ub = static_cast<T>(0.5L);
 
         // E'Pr = 0.5 * ( E'R - E'Y ) / ( 1 - Kr )
         Vr = static_cast<T>(0.5L);
-        Vg = static_cast<T>(-Yg * 0.5L / (1.0L - Yr));
-        Vb = static_cast<T>(-Yb * 0.5L / (1.0L - Yr));
+        Vg = static_cast<T>(-Kg * 0.5L / (1.0L - Kr));
+        Vb = static_cast<T>(-Kb * 0.5L / (1.0L - Kr));
     }
 }
 
@@ -494,8 +494,8 @@ void ColorMatrix_YUV2RGB_Parameter(ColorMatrix _ColorMatrix, T &Ry, T &Ru, T &Rv
 
         // E'G = E'Y - 2 * Kb * ( 1 - Kb ) / ( 1 - Kr - Kb ) * E'Pb - 2 * Kr * ( 1 - Kr ) / ( 1 - Kr - Kb ) * E'Pr
         Gy = static_cast<T>(1.0L);
-        Gu = static_cast<T>(2.0L * Kb * (1.0L - Kb) / Kg);
-        Gv = static_cast<T>(2.0L * Kr * (1.0L - Kr) / Kg);
+        Gu = static_cast<T>(-2.0L * Kb * (1.0L - Kb) / Kg);
+        Gv = static_cast<T>(-2.0L * Kr * (1.0L - Kr) / Kg);
 
         // E'B = E'Y + 2 * ( 1 - Kb ) * E'Pb
         By = static_cast<T>(1.0L);

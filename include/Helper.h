@@ -2,7 +2,10 @@
 #define HELPER_H_
 
 
-#include <random>
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <cstring>
 #include "Type.h"
 
 
@@ -33,8 +36,10 @@ enum class STAT
 // Constants
 
 
-const ldbl Pi = std::_Pi;
-const ldbl Exp1 = std::_Exp1;
+const ldbl Pi = 3.14159265358979323846264338327950288L;
+const ldbl Exp1 = 2.71828182845904523536028747135266250L;
+const ldbl Two32 = 4294967296.0L;
+const ldbl Two31 = 2147483648.0L;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,56 +66,77 @@ const size_t MEMORY_ALIGNMENT = 64;
 #endif
 
 
-template < typename _Ty >
-void AlignedMalloc(_Ty *&Memory, size_t Count, size_t Alignment = MEMORY_ALIGNMENT)
+inline void *AlignedMalloc(size_t Size, size_t Alignment = MEMORY_ALIGNMENT)
 {
+    void *Memory = nullptr;
 #ifdef _WIN32
-    Memory = reinterpret_cast<_Ty *>(_aligned_malloc(sizeof(_Ty) * Count, Alignment));
+    Memory = _aligned_malloc(Size, Alignment);
 #else
-    void *temp = nullptr;
-
-    if (posix_memalign(&temp, Alignment, sizeof(_Ty) * Count))
+    if (posix_memalign(&Memory, Alignment, Size))
     {
         Memory = nullptr;
-    }
-    else
-    {
-        Memory = reinterpret_cast<_Ty *>(temp);
     }
 #endif
     if (Memory == nullptr)
     {
         DEBUG_FAIL("AlignedMalloc: memory allocation failed!");
     }
+    return Memory;
+}
+
+template < typename _Ty >
+void AlignedMalloc(_Ty *&Memory, size_t Count, size_t Alignment = MEMORY_ALIGNMENT)
+{
+    Memory = reinterpret_cast<_Ty *>(AlignedMalloc(Count * sizeof(_Ty), Alignment));
 }
 
 
-template < typename _Ty >
-void AlignedRealloc(_Ty *&Memory, size_t NewCount, size_t Alignment = MEMORY_ALIGNMENT)
+inline void AlignedFree(void **Memory)
 {
 #ifdef _WIN32
-    Memory = reinterpret_cast<_Ty *>(_aligned_realloc(Memory, sizeof(_Ty) * NewCount, Alignment));
-    
+    _aligned_free(*Memory);
+#else
+    free(*Memory);
+#endif
+    *Memory = nullptr;
+}
+
+template < typename _Ty >
+void AlignedFree(_Ty *&Memory)
+{
+    void *temp = reinterpret_cast<void *>(Memory);
+    AlignedFree(&temp);
+    Memory = reinterpret_cast<_Ty *>(temp);
+}
+
+
+inline void *AlignedRealloc(void *Memory, size_t NewSize, size_t Alignment = MEMORY_ALIGNMENT)
+{
+#ifdef _WIN32
+    Memory = _aligned_realloc(Memory, NewSize, Alignment);
     if (Memory == nullptr)
     {
         DEBUG_FAIL("AlignedRealloc: memory allocation failed!");
     }
 #else
-    AlignedFree(Memory);
-    AlignedMalloc(Memory, NewCount, Alignment);
+    AlignedFree(&Memory);
+    Memory = AlignedMalloc(NewSize, Alignment);
 #endif
+    return Memory;
+}
+
+template < typename _Ty >
+void AlignedRealloc(_Ty *&Memory, size_t NewCount, size_t Alignment = MEMORY_ALIGNMENT)
+{
+    Memory = reinterpret_cast<_Ty *>(AlignedRealloc(reinterpret_cast<void *>(Memory), NewCount * sizeof(_Ty), Alignment));
 }
 
 
 template < typename _Ty >
-void AlignedFree(_Ty *&Memory)
+size_t CalStride(PCType width, size_t Alignment = MEMORY_ALIGNMENT)
 {
-#ifdef _WIN32
-    _aligned_free(Memory);
-#else
-    free(Memory);
-#endif
-    Memory = nullptr;
+    size_t line_size = static_cast<size_t>(width) * sizeof(_Ty);
+    return line_size % Alignment == 0 ? line_size : (line_size / Alignment + 1) * Alignment;
 }
 
 
@@ -119,39 +145,66 @@ void AlignedFree(_Ty *&Memory)
 
 
 template < typename _Dt1, typename _St1 >
-void MatCopy(_Dt1 *dstp, const _St1 *srcp, PCType height, PCType width, PCType dst_stride, PCType src_stride)
+void MatCopy(void *dstp, const void *srcp, PCType height, PCType width, size_t dst_stride, size_t src_stride)
 {
     for (PCType j = 0; j < height; ++j)
     {
+        auto dst = reinterpret_cast<_Dt1 *>(reinterpret_cast<uint8_t *>(dstp) + dst_stride);
+        auto src = reinterpret_cast<const _St1 *>(reinterpret_cast<const uint8_t *>(srcp) + src_stride);
+
         for (PCType i = 0; i < width; ++i)
         {
-            dstp[i] = static_cast<_Dt1>(srcp[i]);
+            dst[i] = static_cast<_Dt1>(src[i]);
         }
-
-        dstp += dst_stride;
-        srcp += src_stride;
     }
 }
 
-template < typename _Ty >
-void MatCopy(_Ty *dstp, const _Ty *srcp, PCType height, PCType width, PCType dst_stride, PCType src_stride)
+template < typename _Dt1, typename _St1 >
+void MatCopy(_Dt1 *dstp, const _St1 *srcp, PCType height, PCType width, PCType dst_stride, PCType src_stride)
 {
+    static_assert(!std::is_same<_Dt1, void>::value && !std::is_same<_St1, void>::value,
+        "MatCopy: instantiating with void pointer is not allowed here in this template function.");
+    MatCopy<_Dt1, _St1>(reinterpret_cast<void *>(dstp), reinterpret_cast<const void *>(srcp),
+        height, width, dst_stride * sizeof(_Dt1), src_stride * sizeof(_St1));
+}
+
+
+inline void MatCopy(void *dstp, const void *srcp, PCType height, size_t row_size, size_t dst_stride, size_t src_stride)
+{
+    if (dstp == srcp)
+    {
+        return;
+    }
+
     if (height > 0)
     {
-        if (src_stride == dst_stride && src_stride == width)
+        if (src_stride == dst_stride && src_stride == row_size)
         {
-            memcpy(dstp, srcp, sizeof(_Ty) * height * width);
+            memcpy(dstp, srcp, height * row_size);
         }
         else
         {
             for (PCType j = 0; j < height; ++j)
             {
-                memcpy(dstp, srcp, sizeof(_Ty) * width);
-                dstp += dst_stride;
-                srcp += src_stride;
+                memcpy(dstp, srcp, row_size);
+                dstp = reinterpret_cast<uint8_t *>(dstp) + dst_stride;
+                srcp = reinterpret_cast<const uint8_t *>(srcp) + src_stride;
             }
         }
     }
+}
+
+template < typename _Ty >
+void MatCopy(void *dstp, const void *srcp, PCType height, PCType width, size_t dst_stride, size_t src_stride)
+{
+    MatCopy(dstp, srcp, height, width * sizeof(_Ty), dst_stride * sizeof(_Ty), src_stride * sizeof(_Ty));
+}
+
+template < typename _Ty >
+void MatCopy(_Ty *dstp, const _Ty *srcp, PCType height, PCType width, PCType dst_stride, PCType src_stride)
+{
+    MatCopy(reinterpret_cast<void *>(dstp), reinterpret_cast<const void *>(srcp),
+        height, width * sizeof(_Ty), dst_stride * sizeof(_Ty), src_stride * sizeof(_Ty));
 }
 
 
@@ -225,7 +278,7 @@ _Ty RoundDiv(_Ty dividend, _Ty divisor)
 template < typename _Ty >
 _Ty RoundBitRsh(_Ty input, int shift)
 {
-    static_assert(_IsInt<_Ty>, "Invalid arguments for template instantiation! Must be integer.");
+    static_assert(_IsInt<_Ty>::value, "Invalid arguments for template instantiation! Must be integer.");
     return (input + (1 << (shift - 1))) >> shift;
 }
 

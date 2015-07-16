@@ -20,8 +20,6 @@ Frame ImageReader(const std::string &filename, const FCType FrameNum, const DTyp
 
     const PCType sw = image.cols;
     const PCType sh = image.rows;
-    const PCType nCols = sw * image.channels();
-    const PCType nRows = sh;
 
     Frame src(FrameNum, PixelType::RGB, sw, sh, BitDepth, false);
 

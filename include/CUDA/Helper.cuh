@@ -3,7 +3,6 @@
 
 
 #include <iostream>
-#include <xutility>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -852,13 +851,6 @@ __global__ void CUDA_Set_Kernel(_Ty *dst, const cuIdx count, _Ty value)
     {
         dst[idx] = value;
     }
-}
-
-template < typename _Ty >
-inline void CUDA_Set(_Ty *dst, const cuIdx count, _Ty value = 0, cuIdx _block_dim = 256)
-{
-    if (count < _block_dim) _block_dim = count;
-    CudaGlobalCall(CUDA_Set_Kernel, CudaGridDim(count, _block_dim), _block_dim)(dst, count, value);
 }
 
 
