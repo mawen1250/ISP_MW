@@ -250,16 +250,16 @@ static __global__ void GetAtmosLight_Kernel(int *count, FLType *AL_Rsum, FLType 
         }
     }
 
-    for (cuIdx stride = GetAtmosLight_THREADS / 2; stride > 0; stride >>= 1)
+    for (cuIdx step = GetAtmosLight_THREADS / 2; step > 0; step >>= 1)
     {
         __syncthreads();
 
-        if (threadIdx.x < stride)
+        if (threadIdx.x < step)
         {
-            *count_thread += count_thread[stride];
-            *AL_Rsum_thread += AL_Rsum_thread[stride];
-            *AL_Gsum_thread += AL_Gsum_thread[stride];
-            *AL_Bsum_thread += AL_Bsum_thread[stride];
+            *count_thread += count_thread[step];
+            *AL_Rsum_thread += AL_Rsum_thread[step];
+            *AL_Gsum_thread += AL_Gsum_thread[step];
+            *AL_Bsum_thread += AL_Bsum_thread[step];
         }
     }
 

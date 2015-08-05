@@ -66,8 +66,6 @@ public:
         : _Mybase(sigma, _allow_negative), d(_mem_mode, BLOCK_DIM)
     {}
 
-    __device__ const _Dt &D() const { return d; }
-
     virtual void FilterV(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
     virtual void FilterH(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);
     virtual void Filter(FLType *dst, const FLType *src, PCType height, PCType width, PCType stride);

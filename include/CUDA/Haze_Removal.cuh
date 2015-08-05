@@ -24,13 +24,10 @@ class CUDA_Haze_Removal_Retinex
 public:
     typedef CUDA_Haze_Removal_Retinex _Myt;
     typedef Haze_Removal _Mybase;
-    typedef CUDA_FilterData<FLType> _Dt;
 
     static const cuIdx BLOCK_DIM = 256;
 
 private:
-    _Dt d;
-
     PCType pcount;
     DType sFloor;
     DType sCeil;
@@ -47,7 +44,7 @@ private:
 
 public:
     CUDA_Haze_Removal_Retinex(const Haze_Removal_Para &_para = CUDA_Haze_Removal_Default, CudaMemMode _mem_mode = CudaMemMode::Host2Device)
-        : _Mybase(_para), d(_mem_mode, BLOCK_DIM)
+        : _Mybase(_para)
     {}
 
 protected:
