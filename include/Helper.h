@@ -18,18 +18,8 @@
 #define DEBUG_FAIL(mesg) __debugbreak(); _STD _DEBUG_ERROR(mesg);
 #else
 #define DEBUG_BREAK exit(EXIT_FAILURE);
-#define DEBUG_FAIL(mesg) std::cerr << mesg << std::endl; exit(EXIT_FAILURE);
+#define DEBUG_FAIL(mesg) std::cerr << mesg << std::endl; std::cin.get();;
 #endif
-
-
-enum class STAT
-{
-    Null = 0,
-    OK,
-    Error,
-    Alloc_Fail,
-    PixelType_Invalid
-};
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,11 +49,7 @@ std::string GetStr(const _Ty &src)
 // Memory allocation
 
 
-#ifdef _CUDA_
-const size_t MEMORY_ALIGNMENT = 4096;
-#else
 const size_t MEMORY_ALIGNMENT = 64;
-#endif
 
 
 inline void *AlignedMalloc(size_t Size, size_t Alignment = MEMORY_ALIGNMENT)
@@ -253,19 +239,19 @@ _Ty AbsSub(const _Ty &a, const _Ty &b)
 
 
 template < typename _Ty >
-_Ty _RoundDiv(_Ty dividend, _Ty divisor, const std::false_type &)
+_Ty _RoundDiv(const _Ty &dividend, const _Ty &divisor, const std::false_type &)
 {
     return (dividend + divisor / 2) / divisor;
 }
 
 template < typename _Ty >
-_Ty _RoundDiv(_Ty dividend, _Ty divisor, const std::true_type &)
+_Ty _RoundDiv(const _Ty &dividend, const _Ty &divisor, const std::true_type &)
 {
     return dividend / divisor;
 }
 
 template < typename _Ty >
-_Ty RoundDiv(_Ty dividend, _Ty divisor)
+_Ty RoundDiv(const _Ty &dividend, const _Ty &divisor)
 {
     return _RoundDiv(dividend, divisor, _IsFloat<_Ty>());
 }
@@ -276,7 +262,7 @@ _Ty RoundDiv(_Ty dividend, _Ty divisor)
 
 
 template < typename _Ty >
-_Ty RoundBitRsh(_Ty input, int shift)
+_Ty RoundBitRsh(const _Ty &input, const int &shift)
 {
     static_assert(_IsInt<_Ty>::value, "Invalid arguments for template instantiation! Must be integer.");
     return (input + (1 << (shift - 1))) >> shift;
@@ -289,7 +275,7 @@ _Ty RoundBitRsh(_Ty input, int shift)
 
 // UInt to UInt
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Int2Int(_St1 input, const std::false_type &, const std::false_type &)
+_Dt1 _Round_Int2Int(const _St1 &input, const std::false_type &, const std::false_type &)
 {
     _St1 max = _St1(TypeMax<_Dt1>() < TypeMax<_St1>() ? TypeMax<_Dt1>() : TypeMax<_St1>());
     return static_cast<_Dt1>(input >= max ? max : input);
@@ -297,7 +283,7 @@ _Dt1 _Round_Int2Int(_St1 input, const std::false_type &, const std::false_type &
 
 // UInt to SInt
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Int2Int(_St1 input, const std::false_type &, const std::true_type &)
+_Dt1 _Round_Int2Int(const _St1 &input, const std::false_type &, const std::true_type &)
 {
     _St1 max = _St1(TypeMax<_Dt1>() < TypeMax<_St1>() ? TypeMax<_Dt1>() : TypeMax<_St1>());
     return static_cast<_Dt1>(input >= max ? max : input);
@@ -305,7 +291,7 @@ _Dt1 _Round_Int2Int(_St1 input, const std::false_type &, const std::true_type &)
 
 // SInt to UInt
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Int2Int(_St1 input, const std::true_type &, const std::false_type &)
+_Dt1 _Round_Int2Int(const _St1 &input, const std::true_type &, const std::false_type &)
 {
     _St1 min = _St1(0);
     _St1 max = _St1(TypeMax<_Dt1>() < TypeMax<_St1>() ? TypeMax<_Dt1>() : TypeMax<_St1>());
@@ -314,7 +300,7 @@ _Dt1 _Round_Int2Int(_St1 input, const std::true_type &, const std::false_type &)
 
 // SInt to SInt
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Int2Int(_St1 input, const std::true_type &, const std::true_type &)
+_Dt1 _Round_Int2Int(const _St1 &input, const std::true_type &, const std::true_type &)
 {
     _St1 min = _St1(TypeMin<_Dt1>() > TypeMin<_St1>() ? TypeMin<_Dt1>() : TypeMin<_St1>());
     _St1 max = _St1(TypeMax<_Dt1>() < TypeMax<_St1>() ? TypeMax<_Dt1>() : TypeMax<_St1>());
@@ -323,28 +309,28 @@ _Dt1 _Round_Int2Int(_St1 input, const std::true_type &, const std::true_type &)
 
 // Int to Int
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Int2(_St1 input, const std::false_type &)
+_Dt1 _Round_Int2(const _St1 &input, const std::false_type &)
 {
     return _Round_Int2Int<_Dt1, _St1>(input, _IsSInt<_St1>(), _IsSInt<_Dt1>());
 }
 
 // Int to Float
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Int2(_St1 input, const std::true_type &)
+_Dt1 _Round_Int2(const _St1 &input, const std::true_type &)
 {
     return static_cast<_Dt1>(input);
 }
 
 // Int to Any
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round(_St1 input, const std::false_type &)
+_Dt1 _Round(const _St1 &input, const std::false_type &)
 {
     return _Round_Int2<_Dt1, _St1>(input, _IsFloat<_Dt1>());
 }
 
 // Float to Int
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Float2(_St1 input, const std::false_type &)
+_Dt1 _Round_Float2(const _St1 &input, const std::false_type &)
 {
     _St1 min = _St1(TypeMin<_Dt1>());
     _St1 max = _St1(TypeMax<_Dt1>());
@@ -353,7 +339,7 @@ _Dt1 _Round_Float2(_St1 input, const std::false_type &)
 
 // Float to Float
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round_Float2(_St1 input, const std::true_type &)
+_Dt1 _Round_Float2(const _St1 &input, const std::true_type &)
 {
     _St1 min = _St1(TypeMin<_Dt1>() > TypeMin<_St1>() ? TypeMin<_Dt1>() : TypeMin<_St1>());
     _St1 max = _St1(TypeMax<_Dt1>() < TypeMax<_St1>() ? TypeMax<_Dt1>() : TypeMax<_St1>());
@@ -362,14 +348,14 @@ _Dt1 _Round_Float2(_St1 input, const std::true_type &)
 
 // Float to Any
 template < typename _Dt1, typename _St1 >
-_Dt1 _Round(_St1 input, const std::true_type &)
+_Dt1 _Round(const _St1 &input, const std::true_type &)
 {
     return _Round_Float2<_Dt1, _St1>(input, _IsFloat<_Dt1>());
 }
 
 // Any to Any
 template < typename _Dt1, typename _St1 >
-_Dt1 Round(_St1 input)
+_Dt1 Round(const _St1 &input)
 {
     return _Round<_Dt1, _St1>(input, _IsFloat<_St1>());
 }
@@ -380,20 +366,20 @@ _Dt1 Round(_St1 input)
 
 
 template < typename _Ty >
-_Ty limit_dif_abs(_Ty value, _Ty ref, _Ty dthr, _Ty uthr, _Ty elast, bool smooth)
+_Ty limit_dif_abs(const _Ty &value, const _Ty &ref, _Ty dthr, _Ty uthr, _Ty elast, bool smooth)
 {
-    _Ty diff, abdiff, thr, alpha, beta, output;
+    _Ty output;
 
     dthr = Max(dthr, T(0.0));
     uthr = Max(uthr, T(0.0));
     elast = Max(elast, T(1.0));
     smooth = elast == 1 ? false : smooth;
 
-    diff = value - ref;
-    abdiff = Abs(diff);
-    thr = diff > 0 ? uthr : dthr;
-    alpha = 1. / (thr * (elast - 1));
-    beta = elast * thr;
+    const _Ty diff = value - ref;
+    const _Ty abdiff = Abs(diff);
+    const _Ty thr = diff > 0 ? uthr : dthr;
+    const _Ty alpha = 1. / (thr * (elast - 1));
+    const _Ty beta = elast * thr;
 
     if (smooth)
     {
@@ -412,57 +398,53 @@ _Ty limit_dif_abs(_Ty value, _Ty ref, _Ty dthr, _Ty uthr, _Ty elast, bool smooth
 }
 
 template < typename _Ty >
-_Ty limit_dif_abs(_Ty value, _Ty ref, _Ty thr, _Ty elast = 2.0, bool smooth = true)
+_Ty limit_dif_abs(const _Ty &value, const _Ty &ref, _Ty thr, _Ty elast = 2, bool smooth = true)
 {
     return limit_dif_abs(value, ref, thr, thr, elast, smooth);
 }
 
 
 template < typename _Ty >
-_Ty limit_dif_ratio(_Ty value, _Ty ref, _Ty dthr, _Ty uthr, _Ty elast, bool smooth)
+_Ty limit_dif_ratio(const _Ty &value, const _Ty &ref, _Ty dthr, _Ty uthr, _Ty elast, bool smooth)
 {
-    _Ty ratio, abratio, negative, inverse, nratio, thr, lratio, output;
-
     dthr = Max(dthr, T(0.0));
     uthr = Max(uthr, T(0.0));
     elast = Max(elast, T(1.0));
     smooth = elast == 1 ? false : smooth;
 
-    ratio = value / ref;
-    abratio = Abs(ratio);
-    negative = ratio*abratio < 0;
-    inverse = abratio < 1;
-    nratio = inverse ? 1. / abratio : abratio;
-    thr = inverse ? dthr : uthr;
+    const _Ty ratio = value / ref;
+    const _Ty abratio = Abs(ratio);
+    const _Ty negative = ratio * abratio < 0;
+    const _Ty inverse = abratio < 1;
+    const _Ty nratio = inverse ? 1. / abratio : abratio;
+    _Ty thr = inverse ? dthr : uthr;
     thr = thr < 1 ? 1. / thr - 1 : thr - 1;
 
-    lratio = limit_dif_abs(nratio, 1., smooth, thr, thr, elast);
+    _Ty lratio = limit_dif_abs(nratio, 1., smooth, thr, thr, elast);
     lratio = inverse ? 1. / lratio : lratio;
-    output = negative ? -lratio*ref : lratio*ref;
+    const _Ty output = negative ? -lratio * ref : lratio * ref;
 
     return output;
 }
 
 template < typename _Ty >
-_Ty limit_dif_ratio(_Ty value, _Ty ref, _Ty thr, _Ty elast = 2.0, bool smooth = true)
+_Ty limit_dif_ratio(const _Ty &value, const _Ty &ref, _Ty thr, _Ty elast = 2, bool smooth = true)
 {
     return limit_dif_ratio(value, ref, thr, thr, elast, smooth);
 }
 
 
 template < typename _Ty >
-_Ty damp_ratio(_Ty ratio, _Ty damp)
+_Ty damp_ratio(const _Ty &ratio, const _Ty &damp)
 {
-    _Ty abratio, negative, inverse, nratio, dratio, output;
+    const _Ty abratio = Abs(ratio);
+    const _Ty negative = ratio * abratio < 0;
+    const _Ty inverse = abratio < 1;
+    const _Ty nratio = inverse ? 1. / abratio : abratio;
 
-    abratio = Abs(ratio);
-    negative = ratio*abratio < 0;
-    inverse = abratio < 1;
-    nratio = inverse ? 1. / abratio : abratio;
-
-    dratio = (nratio - 1)*damp + 1;
+    _Ty dratio = (nratio - 1) * damp + 1;
     dratio = inverse ? 1. / dratio : dratio;
-    output = negative ? -dratio : dratio;
+    const _Ty output = negative ? -dratio : dratio;
 
     return output;
 }
@@ -473,7 +455,7 @@ _Ty damp_ratio(_Ty ratio, _Ty damp)
 
 
 template < typename _Ty >
-_Ty Linear2(_Ty x, _Ty x1, _Ty y1, _Ty x2, _Ty y2)
+_Ty Linear2(const _Ty &x, const _Ty &x1, const _Ty &y1, const _Ty &x2, const _Ty &y2)
 {
     return (y2 - y1) / (x2 - x1) * (x - x1) + y1;
 }
