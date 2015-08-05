@@ -1,5 +1,3 @@
-#ifdef __CUDACC__
-
 #ifndef HELPERCU_CUH_
 #define HELPERCU_CUH_
 
@@ -9,8 +7,57 @@
 #include <math_functions.h>
 
 
+#ifdef __CUDACC__
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+// Max Min
+template < typename T >
+static __inline__ __device__ T cuMax(T a, T b)
+{
+    return a < b ? b : a;
+}
+
+template < typename T >
+static __inline__ __device__ T cuMin(T a, T b)
+{
+    return a > b ? b : a;
+}
+
+template < typename T >
+static __inline__ __device__ T cuClip(T input, T lower, T upper)
+{
+    return input >= upper ? upper : input <= lower ? lower : input;
+}
+
+
+// Abs
+template < typename T >
+static __inline__ __device__ T cuAbs(T input)
+{
+    return input < 0 ? -input : input;
+}
+
+template < typename T >
+static __inline__ __device__ T cuAbsSub(T a, T b)
+{
+    return a >= b ? a - b : b - a;
+}
+
+
+// Initialization
+template < typename _Ty >
+__global__ void CUDA_Set_Kernel(_Ty *dst, const cuIdx count, _Ty value)
+{
+    const cuIdx idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < count)
+    {
+        dst[idx] = value;
+    }
+}
 
 template < typename _Ty >
 inline void CUDA_Set(_Ty *dst, const cuIdx count, _Ty value = 0, cuIdx _block_dim = 256)
@@ -130,6 +177,7 @@ static __inline__ __device__ double atomicMaxFloat(double *address, double val)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-#endif
-
 #endif // __CUDACC__
+
+
+#endif
