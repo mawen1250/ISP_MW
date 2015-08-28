@@ -679,6 +679,8 @@ public:
     }
 
 public:
+    static _Myt &Null();
+
     static void PriorityRange(int &leastPriority, int &greatestPriority)
     {
         checkCudaErrors(::cudaDeviceGetStreamPriorityRange(&leastPriority, &greatestPriority));
@@ -776,6 +778,14 @@ private:
 };
 
 
+static CudaStream CUDA_STREAM_NULL(::cudaStream_t(nullptr));
+
+inline CudaStream &CudaStream::Null()
+{
+    return CUDA_STREAM_NULL;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -785,6 +795,7 @@ inline cuIdx CudaGridDim(cuIdx _thread_count, cuIdx _block_dim)
 }
 
 #define CudaGlobalCall(_func, _grid_dim, _block_dim) _func<<<_grid_dim, _block_dim>>>
+#define CudaStreamCall(_func, _grid_dim, _block_dim, _stream) _func<<<_grid_dim, _block_dim, 0, _stream>>>
 
 inline void CudaGlobalCheck()
 {

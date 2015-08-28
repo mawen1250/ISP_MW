@@ -121,7 +121,7 @@ static __inline__ __device__ float atomicAddFloat(float *address, float val)
 #else
 static __inline__ __device__ float atomicAddFloat(float *address, float val)
 {
-    atomicAdd(address, val);
+    return atomicAdd(address, val);
 }
 
 static __inline__ __device__ double atomicAddFloat(double *address, double val)
@@ -172,6 +172,79 @@ static __inline__ __device__ double atomicMaxFloat(double *address, double val)
     return __longlong_as_double(old);
 }
 #endif
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+template < typename _Ty1, typename _Ty2 >
+struct CUDA_KeyPair
+    : public std::pair<_Ty1, _Ty2>
+{
+    typedef CUDA_KeyPair<_Ty1, _Ty2> _Myt;
+    typedef std::pair<_Ty1, _Ty2> _Mybase;
+
+    typedef _Ty1 KeyType;
+    typedef _Ty2 ValType;
+
+    CUDA_KeyPair()
+        : _Mybase()
+    {}
+
+    CUDA_KeyPair(const _Ty1& _Val1, const _Ty2& _Val2)
+        : _Mybase(_Val1, _Val2)
+    {}
+
+    CUDA_KeyPair(const _Myt &_Right)
+        : _Mybase(_Right)
+    {}
+
+    CUDA_KeyPair(_Myt &&_Right)
+        : _Mybase(_Right)
+    {}
+
+    __device__ _Myt &operator=(const _Myt &_Right)
+    {
+        _Mybase::operator=(_Right);
+        return *this;
+    }
+
+    __device__ _Myt &operator=(_Myt &&_Right)
+    {
+        _Mybase::operator=(_Right);
+        return *this;
+    }
+
+    __device__ bool operator==(const _Myt &_Right)
+    {
+        return this->first == _Right.first;
+    }
+
+    __device__ bool operator!=(const _Myt &_Right)
+    {
+        return this->first != _Right.first;
+    }
+
+    __device__ bool operator<(const _Myt &_Right)
+    {
+        return this->first < _Right.first;
+    }
+
+    __device__ bool operator>(const _Myt &_Right)
+    {
+        return this->first > _Right.first;
+    }
+
+    __device__ bool operator<=(const _Myt &_Right)
+    {
+        return this->first <= _Right.first;
+    }
+
+    __device__ bool operator>=(const _Myt &_Right)
+    {
+        return this->first >= _Right.first;
+    }
+};
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
